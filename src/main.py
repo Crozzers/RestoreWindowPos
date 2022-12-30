@@ -27,173 +27,169 @@ def size_from_rect(rect) -> tuple[int]:
     ]
 
 
-def capture_window_snapshot():
-    def callback(hwnd, extra):
-        if win32gui.IsWindowVisible(hwnd):
-            title = win32gui.GetWindowText(hwnd)
-            rect = win32gui.GetWindowRect(hwnd)
-            if not title or rect == (0, 0, 0, 0):
-                return
-            snapshot.append(
-                {
-                    'id': hwnd,
-                    'name': title,
-                    'size': size_from_rect(rect),
-                    'rect': rect,
-                    'placement': win32gui.GetWindowPlacement(hwnd)
-                }
-            )
+class Window:
+    def capture_snapshot():
+        def callback(hwnd, extra):
+            if win32gui.IsWindowVisible(hwnd):
+                title = win32gui.GetWindowText(hwnd)
+                rect = win32gui.GetWindowRect(hwnd)
+                if not title or rect == (0, 0, 0, 0):
+                    return
+                snapshot.append(
+                    {
+                        'id': hwnd,
+                        'name': title,
+                        'size': size_from_rect(rect),
+                        'rect': rect,
+                        'placement': win32gui.GetWindowPlacement(hwnd)
+                    }
+                )
 
-    snapshot = []
-    win32gui.EnumWindows(callback, None)
-    return snapshot
+        snapshot = []
+        win32gui.EnumWindows(callback, None)
+        return snapshot
 
+    def restore_snapshot(snap: dict):
+        def callback(hwnd, extra):
+            for item in snap:
+                if hwnd != item['id']:
+                    continue
 
-def restore_window_snapshot(snap: dict):
-    def callback(hwnd, extra):
-        for item in snap:
-            if hwnd != item['id']:
-                continue
+                rect = item['rect']
+                if win32gui.GetWindowRect(hwnd) == rect:
+                    return
 
-            rect = item['rect']
-            if win32gui.GetWindowRect(hwnd) == rect:
-                return
+                try:
+                    placement = item['placement']
+                except KeyError:
+                    placement = None
 
-            try:
-                placement = item['placement']
-            except KeyError:
-                placement = None
+                try:
+                    if placement:
+                        win32gui.SetWindowPlacement(hwnd, placement)
+                    win32gui.MoveWindow(
+                        hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+                except pywintypes.error as e:
+                    print('err moving window', win32gui.GetWindowText(hwnd), ':', e)
 
-            try:
-                if placement:
-                    win32gui.SetWindowPlacement(hwnd, placement)
-                win32gui.MoveWindow(
-                    hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
-            except pywintypes.error as e:
-                print('err moving window', win32gui.GetWindowText(hwnd), ':', e)
-
-    win32gui.EnumWindows(callback, None)
-
-
-def enum_display_devices():
-    result = []
-    for monitor in win32api.EnumDisplayMonitors():
-        info = win32api.GetMonitorInfo(monitor[0])
-        dev_rect = info['Monitor']
-        for adaptor_index in range(5):
-            try:
-                device = win32api.EnumDisplayDevices(
-                    info['Device'], adaptor_index, 1)
-                dev_uid = re.findall(r'UID[0-9]+', device.DeviceID)[0]
-                dev_name = device.DeviceID.split('#')[1]
-            except Exception:
-                # print('err enum_display_devices:', e)
-                pass
-            else:
-                result.append({
-                    'uid': dev_uid,
-                    'name': dev_name,
-                    'resolution': size_from_rect(dev_rect),
-                    'rect': list(dev_rect)
-                })
-    return result
+        win32gui.EnumWindows(callback, None)
 
 
-def OnDeviceChange(hwnd, msg, wp, lp):
-    # print(hwnd, msg, wp, lp)
-    # print("Device change notification:", wp)
-    if msg == win32con.WM_DISPLAYCHANGE:
-        global RESTORE_IN_PROGRESS
-        RESTORE_IN_PROGRESS = True
-        restore_snapshot()
-        RESTORE_IN_PROGRESS = False
-    return True
+class Display:
+    def enum_display_devices():
+        result = []
+        for monitor in win32api.EnumDisplayMonitors():
+            info = win32api.GetMonitorInfo(monitor[0])
+            dev_rect = info['Monitor']
+            for adaptor_index in range(5):
+                try:
+                    device = win32api.EnumDisplayDevices(
+                        info['Device'], adaptor_index, 1)
+                    dev_uid = re.findall(r'UID[0-9]+', device.DeviceID)[0]
+                    dev_name = device.DeviceID.split('#')[1]
+                except Exception:
+                    # print('err enum_display_devices:', e)
+                    pass
+                else:
+                    result.append({
+                        'uid': dev_uid,
+                        'name': dev_name,
+                        'resolution': size_from_rect(dev_rect),
+                        'rect': list(dev_rect)
+                    })
+        return result
+
+    def OnDeviceChange(hwnd, msg, wp, lp):
+        if msg == win32con.WM_DISPLAYCHANGE:
+            global RESTORE_IN_PROGRESS
+            RESTORE_IN_PROGRESS = True
+            Snapshot.restore()
+            RESTORE_IN_PROGRESS = False
+        return True
+
+    @classmethod
+    def TestDeviceNotifications(cls, flags):
+        wc = win32gui.WNDCLASS()
+        wc.lpszClassName = 'test_devicenotify'
+        wc.style = win32con.CS_GLOBALCLASS | win32con.CS_VREDRAW | win32con.CS_HREDRAW
+        wc.hbrBackground = win32con.COLOR_WINDOW+1
+        wc.lpfnWndProc = {
+            win32con.WM_DISPLAYCHANGE: cls.OnDeviceChange,
+            win32con.WM_WINDOWPOSCHANGING: cls.OnDeviceChange
+        }
+        win32gui.RegisterClass(wc)
+        hwnd = win32gui.CreateWindow(
+            wc.lpszClassName,
+            'WinSnapper',
+            # no need for it to be visible.
+            win32con.WS_CAPTION,
+            100, 100, 900, 900, 0, 0, 0, None
+        )
+
+        filter = win32gui_struct.PackDEV_BROADCAST_DEVICEINTERFACE(
+            GUID_DEVINTERFACE_DISPLAY_DEVICE
+        )
+        win32gui.RegisterDeviceNotification(
+            hwnd, filter, win32con.DEVICE_NOTIFY_WINDOW_HANDLE
+        )
+
+        while flags['alive']:
+            win32gui.PumpWaitingMessages()
+            time.sleep(0.01)
+        print('MT exit')
+
+        win32gui.DestroyWindow(hwnd)
+        win32gui.UnregisterClass(wc.lpszClassName, None)
 
 
-def TestDeviceNotifications(flags):
-    wc = win32gui.WNDCLASS()
-    wc.lpszClassName = 'test_devicenotify'
-    wc.style = win32con.CS_GLOBALCLASS | win32con.CS_VREDRAW | win32con.CS_HREDRAW
-    wc.hbrBackground = win32con.COLOR_WINDOW+1
-    wc.lpfnWndProc = {
-        win32con.WM_DISPLAYCHANGE: OnDeviceChange,
-        win32con.WM_WINDOWPOSCHANGING: OnDeviceChange
-    }
-    win32gui.RegisterClass(wc)
-    hwnd = win32gui.CreateWindow(
-        wc.lpszClassName,
-        'WinSnapper',
-        # no need for it to be visible.
-        win32con.WS_CAPTION,
-        100, 100, 900, 900, 0, 0, 0, None
-    )
+class Snapshot:
+    @classmethod
+    def restore(cls):
+        snap = cls.load()
+        displays = Display.enum_display_devices()
 
-    filter = win32gui_struct.PackDEV_BROADCAST_DEVICEINTERFACE(
-        GUID_DEVINTERFACE_DISPLAY_DEVICE
-    )
-    win32gui.RegisterDeviceNotification(
-        hwnd, filter, win32con.DEVICE_NOTIFY_WINDOW_HANDLE
-    )
+        for ss in snap:
+            if ss['displays'] == displays:
+                Window.restore_snapshot(ss['windows'])
 
-    while flags['alive']:
-        win32gui.PumpWaitingMessages()
-        time.sleep(0.01)
-    print('MT exit')
+    def load():
+        try:
+            with open('history.json', 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            return []
 
-    win32gui.DestroyWindow(hwnd)
-    win32gui.UnregisterClass(wc.lpszClassName, None)
+    def capture():
+        return {
+            'displays': Display.enum_display_devices(),
+            'windows': Window.capture_snapshot()
+        }
 
+    def save(snap):
+        with open('history.json', 'w') as f:
+            json.dump(snap, f)
 
-def restore_snapshot():
-    snap = load_snapshot()
-    displays = enum_display_devices()
-
-    for ss in snap:
-        if ss['displays'] == displays:
-            restore_window_snapshot(ss['windows'])
-
-
-def load_snapshot():
-    try:
-        with open('history.json', 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.decoder.JSONDecodeError):
-        return []
-
-
-def capture_snapshot():
-    return {
-        'displays': enum_display_devices(),
-        'windows': capture_window_snapshot()
-    }
-
-
-def save_snapshot(snap):
-    with open('history.json', 'w') as f:
-        json.dump(snap, f)
-
-
-def update_snapshot(history, snapshot):
-    for item in history:
-        if item['displays'] == snapshot['displays']:
-            item['windows'] = snapshot['windows']
-            break
-    else:
-        history.append(snapshot)
+    def update(history, snapshot):
+        for item in history:
+            if item['displays'] == snapshot['displays']:
+                item['windows'] = snapshot['windows']
+                break
+        else:
+            history.append(snapshot)
 
 
 if __name__ == '__main__':
     flags = {'alive': True}
     monitor_thread = threading.Thread(
-        target=TestDeviceNotifications, args=(flags,), daemon=True)
+        target=Display.TestDeviceNotifications, args=(flags,), daemon=True)
     monitor_thread.start()
-    snap = load_snapshot()
+    snap = Snapshot.load()
     try:
         while True:
-            if RESTORE_IN_PROGRESS:
+            if not RESTORE_IN_PROGRESS:
                 print('Save snapshot')
-                update_snapshot(snap, capture_snapshot())
-                save_snapshot(snap)
+                Snapshot.update(snap, Snapshot.capture())
+                Snapshot.save(snap)
 
             time.sleep(5)
     except KeyboardInterrupt:
