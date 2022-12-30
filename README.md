@@ -17,8 +17,10 @@ Run the program in an admin powershell prompt.
 * Snapshots taken every 5 seconds (will change to something longer in the future)
 * Can detect monitors being connected/disconnected
 * Can restore most windows to their original sizes and positions
+* Can restore snapped windows
 
 ## TODO
 
-* Restoring snapped windows to their positions correctly
 * Creating rules for matching window names
+* Test on Windows 11
+* Create installer to run as a service on startup
