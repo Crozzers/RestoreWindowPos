@@ -10,6 +10,7 @@ import re
 import json
 import threading
 import time
+import pywintypes
 
 import win32con
 import win32gui
@@ -17,6 +18,7 @@ import win32gui_struct
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 RESTORE_EVENT = time.time()
+RESTORE_IN_PROGRESS = False
 
 
 def size_from_rect(rect) -> tuple[int]:
@@ -38,7 +40,8 @@ def capture_window_snapshot():
                     'id': hwnd,
                     'name': title,
                     'size': size_from_rect(rect),
-                    'rect': rect
+                    'rect': rect,
+                    'placement': win32gui.GetWindowPlacement(hwnd)
                 }
             )
 
@@ -48,6 +51,9 @@ def capture_window_snapshot():
 
 
 def restore_window_snapshot(snap: dict):
+    global RESTORE_IN_PROGRESS
+    RESTORE_IN_PROGRESS = True
+
     def callback(hwnd, extra):
         for item in snap:
             if hwnd != item['id']:
@@ -57,10 +63,21 @@ def restore_window_snapshot(snap: dict):
             if win32gui.GetWindowRect(hwnd) == rect:
                 return
 
-            win32gui.MoveWindow(
-                hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+            try:
+                placement = item['placement']
+            except KeyError:
+                placement = None
+
+            try:
+                if placement:
+                    win32gui.SetWindowPlacement(hwnd, placement)
+                win32gui.MoveWindow(
+                    hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+            except pywintypes.error as e:
+                print('err moving window', win32gui.GetWindowText(hwnd), ':', e)
 
     win32gui.EnumWindows(callback, None)
+    RESTORE_IN_PROGRESS = True
 
 
 def enum_display_devices():
@@ -178,7 +195,7 @@ if __name__ == '__main__':
     snap = load_snapshot()
     try:
         while True:
-            if time.time() - RESTORE_EVENT >= 0.5:
+            if time.time() - RESTORE_EVENT >= 0.5 or not RESTORE_IN_PROGRESS:
                 # give the thread enough time to restore the windows before touching the snapshot
                 print('Save snapshot')
                 update_snapshot(snap, capture_snapshot())
