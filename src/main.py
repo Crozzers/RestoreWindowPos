@@ -69,12 +69,15 @@ class Window:
                     win32gui.MoveWindow(
                         hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
                 except pywintypes.error as e:
-                    print('err moving window', win32gui.GetWindowText(hwnd), ':', e)
+                    print('err moving window',
+                          win32gui.GetWindowText(hwnd), ':', e)
 
         win32gui.EnumWindows(callback, None)
 
 
 class Display:
+    THREAD_ALIVE = False
+
     def enum_display_devices():
         result = []
         for monitor in win32api.EnumDisplayMonitors():
@@ -98,20 +101,22 @@ class Display:
                     })
         return result
 
-    def OnDeviceChange(hwnd, msg, wp, lp):
+    def on_device_change(hwnd, msg, wp, lp):
         if msg == win32con.WM_DISPLAYCHANGE:
             Snapshot.restore()
         return True
 
     @classmethod
-    def TestDeviceNotifications(cls, flags):
+    def monitor_device_changes(cls):
+        cls.THREAD_ALIVE = True
+
         wc = win32gui.WNDCLASS()
         wc.lpszClassName = 'test_devicenotify'
         wc.style = win32con.CS_GLOBALCLASS | win32con.CS_VREDRAW | win32con.CS_HREDRAW
         wc.hbrBackground = win32con.COLOR_WINDOW+1
         wc.lpfnWndProc = {
-            win32con.WM_DISPLAYCHANGE: cls.OnDeviceChange,
-            win32con.WM_WINDOWPOSCHANGING: cls.OnDeviceChange
+            win32con.WM_DISPLAYCHANGE: cls.on_device_change,
+            win32con.WM_WINDOWPOSCHANGING: cls.on_device_change
         }
         win32gui.RegisterClass(wc)
         hwnd = win32gui.CreateWindow(
@@ -129,7 +134,7 @@ class Display:
             hwnd, filter, win32con.DEVICE_NOTIFY_WINDOW_HANDLE
         )
 
-        while flags['alive']:
+        while cls.THREAD_ALIVE:
             win32gui.PumpWaitingMessages()
             time.sleep(0.01)
         print('MT exit')
@@ -180,9 +185,8 @@ class Snapshot:
 
 
 if __name__ == '__main__':
-    flags = {'alive': True}
     monitor_thread = threading.Thread(
-        target=Display.TestDeviceNotifications, args=(flags,), daemon=True)
+        target=Display.monitor_device_changes, daemon=True)
     monitor_thread.start()
     snap = Snapshot.load()
     try:
@@ -194,7 +198,7 @@ if __name__ == '__main__':
 
             time.sleep(5)
     except KeyboardInterrupt:
-        flags['alive'] = False
+        Display.THREAD_ALIVE = False
 
     print('wait for monitor thread to exit')
     while monitor_thread.is_alive():
