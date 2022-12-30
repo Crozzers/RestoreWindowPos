@@ -17,7 +17,6 @@ import win32gui
 import win32gui_struct
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
-RESTORE_IN_PROGRESS = False
 
 
 def size_from_rect(rect) -> tuple[int]:
@@ -101,10 +100,7 @@ class Display:
 
     def OnDeviceChange(hwnd, msg, wp, lp):
         if msg == win32con.WM_DISPLAYCHANGE:
-            global RESTORE_IN_PROGRESS
-            RESTORE_IN_PROGRESS = True
             Snapshot.restore()
-            RESTORE_IN_PROGRESS = False
         return True
 
     @classmethod
@@ -143,14 +139,19 @@ class Display:
 
 
 class Snapshot:
+    RESTORE_IN_PROGRESS = False
+
     @classmethod
     def restore(cls):
+        cls.RESTORE_IN_PROGRESS = True
         snap = cls.load()
         displays = Display.enum_display_devices()
 
         for ss in snap:
             if ss['displays'] == displays:
                 Window.restore_snapshot(ss['windows'])
+
+        cls.RESTORE_IN_PROGRESS = False
 
     def load():
         try:
@@ -186,7 +187,7 @@ if __name__ == '__main__':
     snap = Snapshot.load()
     try:
         while True:
-            if not RESTORE_IN_PROGRESS:
+            if not Snapshot.RESTORE_IN_PROGRESS:
                 print('Save snapshot')
                 Snapshot.update(snap, Snapshot.capture())
                 Snapshot.save(snap)
