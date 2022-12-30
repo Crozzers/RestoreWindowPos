@@ -17,7 +17,6 @@ import win32gui
 import win32gui_struct
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
-RESTORE_EVENT = time.time()
 RESTORE_IN_PROGRESS = False
 
 
@@ -51,9 +50,6 @@ def capture_window_snapshot():
 
 
 def restore_window_snapshot(snap: dict):
-    global RESTORE_IN_PROGRESS
-    RESTORE_IN_PROGRESS = True
-
     def callback(hwnd, extra):
         for item in snap:
             if hwnd != item['id']:
@@ -77,7 +73,6 @@ def restore_window_snapshot(snap: dict):
                 print('err moving window', win32gui.GetWindowText(hwnd), ':', e)
 
     win32gui.EnumWindows(callback, None)
-    RESTORE_IN_PROGRESS = True
 
 
 def enum_display_devices():
@@ -108,10 +103,10 @@ def OnDeviceChange(hwnd, msg, wp, lp):
     # print(hwnd, msg, wp, lp)
     # print("Device change notification:", wp)
     if msg == win32con.WM_DISPLAYCHANGE:
-        print('restore')
-        global RESTORE_EVENT
-        RESTORE_EVENT = time.time()
+        global RESTORE_IN_PROGRESS
+        RESTORE_IN_PROGRESS = True
         restore_snapshot()
+        RESTORE_IN_PROGRESS = False
     return True
 
 
@@ -195,8 +190,7 @@ if __name__ == '__main__':
     snap = load_snapshot()
     try:
         while True:
-            if time.time() - RESTORE_EVENT >= 0.5 or not RESTORE_IN_PROGRESS:
-                # give the thread enough time to restore the windows before touching the snapshot
+            if RESTORE_IN_PROGRESS:
                 print('Save snapshot')
                 update_snapshot(snap, capture_snapshot())
                 save_snapshot(snap)
