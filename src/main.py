@@ -15,6 +15,7 @@ import pywintypes
 import win32con
 import win32gui
 import win32gui_struct
+from infi.systray import SysTrayIcon
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
@@ -185,23 +186,34 @@ class Snapshot:
 
 
 if __name__ == '__main__':
-    monitor_thread = threading.Thread(
-        target=Display.monitor_device_changes, daemon=True)
-    monitor_thread.start()
-    snap = Snapshot.load()
-    try:
-        while True:
-            if not Snapshot.RESTORE_IN_PROGRESS:
-                print('Save snapshot')
-                Snapshot.update(snap, Snapshot.capture())
-                Snapshot.save(snap)
+    EXIT = False
 
-            time.sleep(5)
-    except KeyboardInterrupt:
-        Display.THREAD_ALIVE = False
+    def notify(*_):
+        global EXIT
+        EXIT = True
 
+    menu_options = (("Test", None, lambda *_: print('test')),)
+
+    with SysTrayIcon('assets/icon32.ico', 'RestoreWindowPos', menu_options, on_quit=notify) as systray:
+        monitor_thread = threading.Thread(
+            target=Display.monitor_device_changes, daemon=True)
+        monitor_thread.start()
+        snap = Snapshot.load()
+
+        try:
+            while not EXIT:
+                if not Snapshot.RESTORE_IN_PROGRESS:
+                    print('Save snapshot')
+                    Snapshot.update(snap, Snapshot.capture())
+                    Snapshot.save(snap)
+
+                time.sleep(5)
+        except KeyboardInterrupt:
+            pass
+
+    Display.THREAD_ALIVE = False
     print('wait for monitor thread to exit')
     while monitor_thread.is_alive():
-        time.sleep(1)
+        time.sleep(0.5)
 
     print('exit')
