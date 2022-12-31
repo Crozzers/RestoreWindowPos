@@ -10,6 +10,11 @@ The project is currently in "messy early prototype phase" but hopefully I can fl
 
 ## Running the program
 
+```
+pip install -r requirements.txt
+python src/main.py
+```
+
 Run using Python in a powershell window.
 If you run this program as a normal user, some windows will not be moveable. If you want to move a program
 that is running as admin, you will need to run this program as admin.
