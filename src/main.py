@@ -5,17 +5,22 @@
 # Todo:
 # https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
 # https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
-import win32api
-import re
 import json
+import os
+import re
+import sys
 import threading
 import time
-import pywintypes
 
+import pythoncom
+import pywintypes
+import win32api
+import win32com.client
 import win32con
 import win32gui
 import win32gui_struct
 from infi.systray import SysTrayIcon
+from win32com.shell import shell
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
@@ -186,6 +191,29 @@ class Snapshot:
 
 
 if __name__ == '__main__':
+    args = sys.argv[1:]
+    if '--install' in args:
+        shortcut_file = os.path.expanduser(
+            '~\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\RestoreWindowPos.lnk')
+        if os.path.isfile(shortcut_file):
+            os.remove(shortcut_file)
+
+        shortcut = pythoncom.CoCreateInstance(
+            shell.CLSID_ShellLink,
+            None,
+            pythoncom.CLSCTX_INPROC_SERVER,
+            shell.IID_IShellLink
+        )
+        shortcut.SetPath(sys.executable.replace('python.exe', 'pythonw.exe'))
+        shortcut.SetArguments(__file__)
+        shortcut.SetWorkingDirectory(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+        shortcut.SetIconLocation(os.path.abspath('assets/icon32.ico'), 0)
+
+        persist_file = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
+        persist_file.Save(shortcut_file, 0)
+
+        sys.exit(0)
+
     EXIT = False
 
     def notify(*_):
