@@ -10,17 +10,19 @@ The project is currently in "messy early prototype phase" but hopefully I can fl
 
 ## Installation
 
+You will need to install NSIS in order to compile the installer for the program.
+
 The following commands will allow you to download and install the program so that it runs when you log in.
 
 ```
 git clone https://github.com/Crozzers/RestoreWindowPos.git
 cd RestoreWindowPos
-pip install -r requirements.txt
-python src/main.py --install
+pip install -r requirements-dev.txt
+.\compile
 ```
 
-The install process will create a shortcut to the downloaded python script in the `shell:startup` folder.
-This means if you move the downloaded repo at any point, you will need to re-run `python src/main.py --install`.
+The install process will bundle the python script into an EXE and install it to your `AppData\Local\Programs` folder.
+It will also add itself as a startup task, which you can then disable in the "start-up" tab of Task Manager.
 
 ## Features
 
