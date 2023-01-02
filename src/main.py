@@ -118,8 +118,11 @@ class Display:
         return result
 
     def on_device_change(hwnd, msg, wp, lp):
-        if msg == win32con.WM_DISPLAYCHANGE:
-            Snapshot.restore()
+        if msg == win32con.WM_POWERBROADCAST:
+            if wp == win32con.PBT_APMRESUMEAUTOMATIC:
+                Snapshot.RESTORE_IN_PROGRESS = True
+                time.sleep(1)
+        Snapshot.restore()
         return True
 
     @classmethod
@@ -132,12 +135,13 @@ class Display:
         wc.hbrBackground = win32con.COLOR_WINDOW+1
         wc.lpfnWndProc = {
             win32con.WM_DISPLAYCHANGE: cls.on_device_change,
-            win32con.WM_WINDOWPOSCHANGING: cls.on_device_change
+            win32con.WM_WINDOWPOSCHANGING: cls.on_device_change,
+            win32con.WM_POWERBROADCAST: cls.on_device_change
         }
         win32gui.RegisterClass(wc)
         hwnd = win32gui.CreateWindow(
             wc.lpszClassName,
-            'WinSnapper',
+            'RestoreWindowPos',
             # no need for it to be visible.
             win32con.WS_CAPTION,
             100, 100, 900, 900, 0, 0, 0, None
@@ -265,7 +269,7 @@ if __name__ == '__main__':
             count = 0
             while not EXIT:
                 if not Snapshot.RESTORE_IN_PROGRESS:
-                    print('Capture snapshot')
+                    print('Capture snapshot', time.time())
                     Snapshot.update(snap, Snapshot.capture())
                     count += 1
 
