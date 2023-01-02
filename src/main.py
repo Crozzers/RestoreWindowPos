@@ -15,7 +15,6 @@ import time
 import pythoncom
 import pywintypes
 import win32api
-import win32com.client
 import win32con
 import win32gui
 import win32gui_struct
@@ -23,6 +22,19 @@ from infi.systray import SysTrayIcon
 from win32com.shell import shell
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
+
+
+def local_path(path, asset=False):
+    if getattr(sys, 'frozen', False):
+        if asset:
+            base = sys._MEIPASS
+        else:
+            base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), os.pardir))
+
+    return os.path.abspath(os.path.join(base, path))
 
 
 def size_from_rect(rect) -> tuple[int]:
@@ -166,7 +178,7 @@ class Snapshot:
 
     def load():
         try:
-            with open('history.json', 'r') as f:
+            with open(local_path('history.json'), 'r') as f:
                 return json.load(f)
         except (FileNotFoundError, json.decoder.JSONDecodeError):
             return []
@@ -178,7 +190,7 @@ class Snapshot:
         }
 
     def save(snap):
-        with open('history.json', 'w') as f:
+        with open(local_path('history.json'), 'w') as f:
             json.dump(snap, f)
 
     def update(history, snapshot):
@@ -206,8 +218,9 @@ if __name__ == '__main__':
         )
         shortcut.SetPath(sys.executable.replace('python.exe', 'pythonw.exe'))
         shortcut.SetArguments(__file__)
-        shortcut.SetWorkingDirectory(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        shortcut.SetIconLocation(os.path.abspath('assets/icon32.ico'), 0)
+        shortcut.SetWorkingDirectory(local_path('..'))
+        shortcut.SetIconLocation(local_path(
+            'assets/icon32.ico', asset=True), 0)
 
         persist_file = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
         persist_file.Save(shortcut_file, 0)
@@ -222,7 +235,7 @@ if __name__ == '__main__':
 
     menu_options = (("Test", None, lambda *_: print('test')),)
 
-    with SysTrayIcon('assets/icon32.ico', 'RestoreWindowPos', menu_options, on_quit=notify) as systray:
+    with SysTrayIcon(local_path('assets/icon32.ico', asset=True), 'RestoreWindowPos', menu_options, on_quit=notify) as systray:
         monitor_thread = threading.Thread(
             target=Display.monitor_device_changes, daemon=True)
         monitor_thread.start()

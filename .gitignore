@@ -1,2 +1,6 @@
 **/history.json
 __pycache__
+assets/*.png
+build/
+dist/
+*.spec
