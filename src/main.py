@@ -278,7 +278,13 @@ if __name__ == '__main__':
                     Snapshot.save(snap)
                     count = 0
 
-                time.sleep(SETTINGS.get('snapshot_freq', 30))
+                for i in range(SETTINGS.get('snapshot_freq', 30)):
+                    time.sleep(1)
+                    if EXIT:
+                        break
+                else:
+                    continue
+                break
         except KeyboardInterrupt:
             pass
 
