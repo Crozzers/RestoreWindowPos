@@ -7,7 +7,7 @@ if not os.path.isdir('build'):
 
 pyinstaller_versionfile.create_versionfile(
     output_file="build/versionfile.txt",
-    version="0.2.0.0",
+    version="0.2.1.0",
     file_description="RestoreWindowPos",
     legal_copyright="© Crozzers (github.com/Crozzers) 2023",
     product_name="RestoreWindowPos"
