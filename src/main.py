@@ -207,7 +207,8 @@ if __name__ == '__main__':
         global EXIT
         EXIT = True
 
-    menu_options = (("Test", None, lambda *_: print('test')),)
+    # menu_options = (("Test", None, lambda *_: print('test')),)
+    menu_options = ()
 
     with SysTrayIcon(local_path('assets/icon32.ico', asset=True), 'RestoreWindowPos', menu_options, on_quit=notify) as systray:
         monitor_thread = threading.Thread(
