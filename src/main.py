@@ -283,4 +283,7 @@ if __name__ == '__main__':
     while monitor_thread.is_alive():
         time.sleep(0.5)
 
+    print('Save snapshot before shutting down')
+    Snapshot.save(snap)
+
     print('exit')
