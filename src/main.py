@@ -159,6 +159,27 @@ class Display:
         win32gui.UnregisterClass(wc.lpszClassName, None)
 
 
+class JSONFile(dict):
+    def __init__(self, file, *a, **kw):
+        self.file = file
+        super().__init__(*a, **kw)
+
+    def load(self, default=None):
+        try:
+            with open(local_path(self.file), 'r') as f:
+                self.update(json.load(f))
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            return default if default is not None else {}
+
+    def save(self):
+        with open(local_path(self.file), 'w') as f:
+            json.dump(self, f)
+
+    def set(self, key, value):
+        self[key] = value
+        self.save()
+
+
 class Snapshot:
     RESTORE_IN_PROGRESS = False
 
@@ -201,29 +222,59 @@ class Snapshot:
 
 
 if __name__ == '__main__':
+    SETTINGS = JSONFile('settings.json')
+    SETTINGS.load()
     EXIT = False
 
     def notify(*_):
         global EXIT
         EXIT = True
 
-    # menu_options = (("Test", None, lambda *_: print('test')),)
-    menu_options = ()
+    menu_options = (
+        (
+            "Snapshot frequency", None, (
+                ('2 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 2)),
+                ('5 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 5)),
+                ('30 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 30)),
+                ('1 minute', None, lambda *_: SETTINGS.set('snapshot_freq', 60)),
+                ('5 minutes', None, lambda *_: SETTINGS.set('snapshot_freq', 300)),
+            )
+        ), (
+            "Save frequency", None, (
+                ('Every snapshot', None, lambda *_: SETTINGS.set('save_freq', 1)),
+                ('Every 2 snapshots', None, lambda *_: SETTINGS.set('save_freq', 2)),
+                ('Every 3 snapshots', None, lambda *_: SETTINGS.set('save_freq', 3)),
+                ('Every 4 snapshots', None, lambda *_: SETTINGS.set('save_freq', 4)),
+                ('Every 5 snapshots', None, lambda *_: SETTINGS.set('save_freq', 5)),
+            )
+        )
+    )
 
-    with SysTrayIcon(local_path('assets/icon32.ico', asset=True), 'RestoreWindowPos', menu_options, on_quit=notify) as systray:
+    with SysTrayIcon(
+        local_path('assets/icon32.ico', asset=True),
+        'RestoreWindowPos',
+        menu_options,
+        on_quit=notify
+    ) as systray:
         monitor_thread = threading.Thread(
             target=Display.monitor_device_changes, daemon=True)
         monitor_thread.start()
         snap = Snapshot.load()
 
         try:
+            count = 0
             while not EXIT:
                 if not Snapshot.RESTORE_IN_PROGRESS:
-                    print('Save snapshot')
+                    print('Capture snapshot')
                     Snapshot.update(snap, Snapshot.capture())
-                    Snapshot.save(snap)
+                    count += 1
 
-                time.sleep(5)
+                if count >= SETTINGS.get('save_freq', 1):
+                    print('Save snapshot')
+                    Snapshot.save(snap)
+                    count = 0
+
+                time.sleep(SETTINGS.get('snapshot_freq', 30))
         except KeyboardInterrupt:
             pass
 
