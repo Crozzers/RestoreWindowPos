@@ -28,13 +28,15 @@ It will also add itself as a startup task, which you can then disable in the "st
 
 ## Features
 
-* Snapshots taken every 5 seconds (will change to something longer in the future)
+* Snapshots taken every 30 seconds (with options for various different intervals)
 * Can detect monitors being connected/disconnected
 * Can restore most windows to their original sizes and positions
 * Can restore snapped windows
+* Easy to use installer that registers the program as a startup task
 
 ## TODO
 
 * Creating rules for matching window names
 * Test on Windows 11
-* Create installer to run as a service on startup
+* Replace print statements with proper logging
+* Options to "Capture now" or perhaps "restore snapshot now"
