@@ -10,9 +10,11 @@ The project is currently in "messy early prototype phase" but hopefully I can fl
 
 ## Installation
 
-You will need to install NSIS in order to compile the installer for the program.
+Head over to the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) to grab the latest installer
+for the program. Alternatively, you can compile it yourself.
 
-The following commands will allow you to download and install the program so that it runs when you log in.
+You will need to install NSIS and add it to your PATH in order to compile the installer for the program, but you can bundle the app
+itself with the following commands alone:
 
 ```
 git clone https://github.com/Crozzers/RestoreWindowPos.git
