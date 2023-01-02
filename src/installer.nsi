@@ -13,12 +13,13 @@ BrandingText "RestoreWindowPos By Crozzers"
 
 !define PRODUCT "RestoreWindowPos"
 !define DESCRIPTION "Restore window positions when displays are connected and disconnected"
-!define VERSION "0.1.0.0"
+!getdllversion "..\dist\${PRODUCT}.exe" VERSION_
+!define VERSION "${VERSION_1}.${VERSION_2}.${VERSION_3}.${VERSION_4}"
 
 VIAddVersionKey "ProductName" "${PRODUCT} Installer"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "Install ${PRODUCT} ${VERSION}"
-VIAddVersionKey "LegalCopyright" "Copyright © 2023"
+VIAddVersionKey "LegalCopyright" "© Crozzers (github.com/Crozzers) 2023"
 
 ; use the version thing pyinstaller in the future
 ; https://stackoverflow.com/questions/14624245/what-does-a-version-file-look-like
