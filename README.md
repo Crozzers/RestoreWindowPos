@@ -20,7 +20,7 @@ itself with the following commands alone:
 git clone https://github.com/Crozzers/RestoreWindowPos.git
 cd RestoreWindowPos
 pip install -r requirements-dev.txt
-.\compile
+.\tools\compile
 ```
 
 The install process will bundle the python script into an EXE and install it to your `AppData\Local\Programs` folder.
