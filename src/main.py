@@ -71,8 +71,9 @@ class Window:
                 if hwnd != item['id']:
                     continue
 
-                rect = item['rect']
-                if win32gui.GetWindowRect(hwnd) == rect:
+                rect = tuple(item['rect'])
+                current = win32gui.GetWindowRect(hwnd)
+                if current == rect:
                     return
 
                 try:
@@ -85,6 +86,8 @@ class Window:
                         win32gui.SetWindowPlacement(hwnd, placement)
                     win32gui.MoveWindow(
                         hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+                    log.debug(
+                        f'restore window "{win32gui.GetWindowText(hwnd)}" {current} -> {rect}')
                 except pywintypes.error as e:
                     log.error('err moving window %s : %s' %
                               (win32gui.GetWindowText(hwnd), e))
