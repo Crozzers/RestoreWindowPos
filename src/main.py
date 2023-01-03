@@ -6,6 +6,7 @@
 # https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
 # https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
 import json
+import logging
 import os
 import re
 import sys
@@ -85,8 +86,8 @@ class Window:
                     win32gui.MoveWindow(
                         hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
                 except pywintypes.error as e:
-                    print('err moving window',
-                          win32gui.GetWindowText(hwnd), ':', e)
+                    log.error('err moving window %s : %s' %
+                              (win32gui.GetWindowText(hwnd), e))
 
         win32gui.EnumWindows(callback, None)
 
@@ -106,7 +107,6 @@ class Display:
                     dev_uid = re.findall(r'UID[0-9]+', device.DeviceID)[0]
                     dev_name = device.DeviceID.split('#')[1]
                 except Exception:
-                    # print('err enum_display_devices:', e)
                     pass
                 else:
                     result.append({
@@ -157,7 +157,7 @@ class Display:
         while cls.THREAD_ALIVE:
             win32gui.PumpWaitingMessages()
             time.sleep(0.01)
-        print('MT exit')
+        log.debug('monitor thread exit')
 
         win32gui.DestroyWindow(hwnd)
         win32gui.UnregisterClass(wc.lpszClassName, None)
@@ -207,12 +207,14 @@ class Snapshot:
             return []
 
     def capture():
+        log.debug('capture snapshot')
         return {
             'displays': Display.enum_display_devices(),
             'windows': Window.capture_snapshot()
         }
 
     def save(snap):
+        log.debug('save snapshot')
         with open(local_path('history.json'), 'w') as f:
             json.dump(snap, f)
 
@@ -226,6 +228,13 @@ class Snapshot:
 
 
 if __name__ == '__main__':
+    logging.basicConfig(filename=local_path('log.txt'),
+                        filemode='w',
+                        format='%(asctime)s:%(levelname)s:%(message)s',
+                        level=logging.DEBUG)
+    log = logging.getLogger(__name__)
+    log.info('start')
+
     SETTINGS = JSONFile('settings.json')
     SETTINGS.load()
     EXIT = False
@@ -269,12 +278,10 @@ if __name__ == '__main__':
             count = 0
             while not EXIT:
                 if not Snapshot.RESTORE_IN_PROGRESS:
-                    print('Capture snapshot', time.time())
                     Snapshot.update(snap, Snapshot.capture())
                     count += 1
 
                 if count >= SETTINGS.get('save_freq', 1):
-                    print('Save snapshot')
                     Snapshot.save(snap)
                     count = 0
 
@@ -289,11 +296,11 @@ if __name__ == '__main__':
             pass
 
     Display.THREAD_ALIVE = False
-    print('wait for monitor thread to exit')
+    log.info('wait for monitor thread to exit')
     while monitor_thread.is_alive():
         time.sleep(0.5)
 
-    print('Save snapshot before shutting down')
+    log.info('save snapshot before shutting down')
     Snapshot.save(snap)
 
-    print('exit')
+    log.info('exit')
