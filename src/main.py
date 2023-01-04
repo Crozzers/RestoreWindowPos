@@ -5,11 +5,8 @@
 # Todo:
 # https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
 # https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
-import json
 import logging
-import os
 import re
-import sys
 import threading
 import time
 
@@ -20,27 +17,9 @@ import win32gui
 import win32gui_struct
 from infi.systray import SysTrayIcon
 
+from common import JSONFile, local_path, size_from_rect
+
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
-
-
-def local_path(path, asset=False):
-    if getattr(sys, 'frozen', False):
-        if asset:
-            base = sys._MEIPASS
-        else:
-            base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), os.pardir))
-
-    return os.path.abspath(os.path.join(base, path))
-
-
-def size_from_rect(rect) -> tuple[int]:
-    return [
-        rect[2] - rect[0],
-        rect[3] - rect[1]
-    ]
 
 
 class Window:
@@ -164,32 +143,6 @@ class Display:
 
         win32gui.DestroyWindow(hwnd)
         win32gui.UnregisterClass(wc.lpszClassName, None)
-
-
-class JSONFile():
-    def __init__(self, file, *a, **kw):
-        self.file = file
-
-    def load(self, default=None):
-        try:
-            with open(local_path(self.file), 'r') as f:
-                self.data = json.load(f)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            self.data = default if default is not None else {}
-
-    def save(self):
-        with open(local_path(self.file), 'w') as f:
-            json.dump(self.data, f)
-
-    def set(self, key, value):
-        self.data[key] = value
-        self.save()
-
-    def get(self, key, default=None):
-        try:
-            return self.data[key]
-        except (IndexError, KeyError):
-            return default
 
 
 class Snapshot(JSONFile):
