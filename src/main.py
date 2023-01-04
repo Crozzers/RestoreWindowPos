@@ -72,7 +72,7 @@ class Display:
 if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
-                        format='%(asctime)s:%(levelname)s:%(message)s',
+                        format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
                         level=logging.DEBUG)
     log = logging.getLogger(__name__)
     log.info('start')
