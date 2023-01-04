@@ -166,25 +166,30 @@ class Display:
         win32gui.UnregisterClass(wc.lpszClassName, None)
 
 
-class JSONFile(dict):
+class JSONFile():
     def __init__(self, file, *a, **kw):
         self.file = file
-        super().__init__(*a, **kw)
 
     def load(self, default=None):
         try:
             with open(local_path(self.file), 'r') as f:
-                self.update(json.load(f))
+                self.data = json.load(f)
         except (FileNotFoundError, json.decoder.JSONDecodeError):
-            return default if default is not None else {}
+            self.data = default if default is not None else {}
 
     def save(self):
         with open(local_path(self.file), 'w') as f:
-            json.dump(self, f)
+            json.dump(self.data, f)
 
     def set(self, key, value):
-        self[key] = value
+        self.data[key] = value
         self.save()
+
+    def get(self, key, default=None):
+        try:
+            return self.data[key]
+        except (IndexError, KeyError):
+            return default
 
 
 class Snapshot:
