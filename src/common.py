@@ -35,10 +35,17 @@ class JSONFile():
                 self.data = json.load(f)
         except (FileNotFoundError, json.decoder.JSONDecodeError):
             self.data = default if default is not None else {}
+        except Exception:
+            self._log.exception('failed to load file "%s"' % self.file)
+            raise
 
     def save(self):
-        with open(local_path(self.file), 'w') as f:
-            json.dump(self.data, f)
+        try:
+            with open(local_path(self.file), 'w') as f:
+                json.dump(self.data, f)
+        except Exception:
+            self._log.exception('failed to save file "%s"' % self.file)
+            raise
 
     def set(self, key, value):
         self.data[key] = value
