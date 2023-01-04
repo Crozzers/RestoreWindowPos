@@ -1,5 +1,6 @@
 import logging
 import re
+import threading
 
 import pywintypes
 import win32api
@@ -88,7 +89,6 @@ class Window:
 
 
 class Snapshot(JSONFile):
-    RESTORE_IN_PROGRESS = False
     # kind of a hack until I get a proper messaging system between threads
     INSTANCE = None
 
@@ -97,16 +97,15 @@ class Snapshot(JSONFile):
         super().load(default=[])
         # keep a ref so Display.on_device_change can invoke a restore
         self.__class__.INSTANCE = self
+        self.lock = threading.RLock()
 
     def restore(self):
-        self.__class__.RESTORE_IN_PROGRESS = True
         displays = enum_display_devices()
 
-        for ss in self.data:
-            if ss['displays'] == displays:
-                Window.restore_snapshot(ss['windows'])
-
-        self.__class__.RESTORE_IN_PROGRESS = False
+        with self.lock:
+            for ss in self.data:
+                if ss['displays'] == displays:
+                    Window.restore_snapshot(ss['windows'])
 
     def capture(self):
         self._log.debug('capture snapshot')
@@ -119,9 +118,10 @@ class Snapshot(JSONFile):
         if snap is None:
             snap = self.capture()
 
-        for item in self.data:
-            if item['displays'] == snap['displays']:
-                item['windows'] = snap['windows']
-                break
-        else:
-            self.data.append(snap)
+        with self.lock:
+            for item in self.data:
+                if item['displays'] == snap['displays']:
+                    item['windows'] = snap['windows']
+                    break
+            else:
+                self.data.append(snap)

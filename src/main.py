@@ -58,17 +58,16 @@ if __name__ == '__main__':
         menu_options,
         on_quit=notify
     ) as systray:
-        monitor_thread = threading.Thread(
-            target=Display.monitor_device_changes, daemon=True)
-        monitor_thread.start()
         snap = Snapshot()
+        monitor_thread = threading.Thread(
+            target=Display.monitor_device_changes, args=(snap.lock,), daemon=True)
+        monitor_thread.start()
 
         try:
             count = 0
             while not EXIT:
-                if not snap.RESTORE_IN_PROGRESS:
-                    snap.update()
-                    count += 1
+                snap.update()
+                count += 1
 
                 if count >= SETTINGS.get('save_freq', 1):
                     snap.save()
