@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 
@@ -25,7 +26,7 @@ def size_from_rect(rect) -> tuple[int]:
 
 class JSONFile():
     def __init__(self, file, *a, **kw):
-        # TODO: add some logging here
+        self._log = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
         self.file = file
 
     def load(self, default=None):
