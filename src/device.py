@@ -11,9 +11,10 @@ GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
 
 class Display:
-    _log = logging.getLogger(__name__).getChild('Window')
+    _log = logging.getLogger(__name__).getChild('Display')
     THREAD_ALIVE = False
 
+    @staticmethod
     def wndproc(hwnd, msg, wp, lp):
         if msg == win32con.WM_POWERBROADCAST:
             if wp == win32con.PBT_APMRESUMEAUTOMATIC:
@@ -22,18 +23,17 @@ class Display:
         return True
 
     @classmethod
-    def on_device_change(cls, snapshot_lock):
-        def wrapped(hwnd, msg, wp, lp):
-            print('called')
-            with snapshot_lock:
-                ret = cls.wndproc(hwnd, msg, wp, lp)
-                Snapshot.INSTANCE.restore()
+    def on_device_change(cls, callback, lock):
+        def wrapped(*args):
+            with lock:
+                ret = cls.wndproc(*args)
+                callback()
                 return ret
 
         return wrapped
 
     @classmethod
-    def monitor_device_changes(cls, snapshot_lock):
+    def monitor_device_changes(cls, callback, lock):
         cls.THREAD_ALIVE = True
 
         wc = win32gui.WNDCLASS()
@@ -41,11 +41,11 @@ class Display:
         wc.style = win32con.CS_GLOBALCLASS | win32con.CS_VREDRAW | win32con.CS_HREDRAW
         wc.hbrBackground = win32con.COLOR_WINDOW + 1
 
-        callback = cls.on_device_change(snapshot_lock)
+        cb = cls.on_device_change(callback, lock)
         wc.lpfnWndProc = {
-            win32con.WM_DISPLAYCHANGE: callback,
-            win32con.WM_WINDOWPOSCHANGING: callback,
-            win32con.WM_POWERBROADCAST: callback
+            win32con.WM_DISPLAYCHANGE: cb,
+            win32con.WM_WINDOWPOSCHANGING: cb,
+            win32con.WM_POWERBROADCAST: cb
         }
         win32gui.RegisterClass(wc)
         hwnd = win32gui.CreateWindow(

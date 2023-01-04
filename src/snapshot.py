@@ -89,14 +89,9 @@ class Window:
 
 
 class Snapshot(JSONFile):
-    # kind of a hack until I get a proper messaging system between threads
-    INSTANCE = None
-
     def __init__(self):
         super().__init__(local_path('history.json'))
         super().load(default=[])
-        # keep a ref so Display.on_device_change can invoke a restore
-        self.__class__.INSTANCE = self
         self.lock = threading.RLock()
 
     def restore(self):

@@ -56,7 +56,7 @@ if __name__ == '__main__':
     ) as systray:
         snap = Snapshot()
         monitor_thread = threading.Thread(
-            target=Display.monitor_device_changes, args=(snap.lock,), daemon=True)
+            target=Display.monitor_device_changes, args=(snap.restore, snap.lock,), daemon=True)
         monitor_thread.start()
 
         try:
