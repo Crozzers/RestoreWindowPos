@@ -125,7 +125,7 @@ class Display:
             if wp == win32con.PBT_APMRESUMEAUTOMATIC:
                 Snapshot.RESTORE_IN_PROGRESS = True
                 time.sleep(1)
-        Snapshot.restore()
+        Snapshot.INSTANCE.restore()
         return True
 
     @classmethod
@@ -192,47 +192,44 @@ class JSONFile():
             return default
 
 
-class Snapshot:
+class Snapshot(JSONFile):
     RESTORE_IN_PROGRESS = False
+    # kind of a hack until I get a proper messaging system between threads
+    INSTANCE = None
 
-    @classmethod
-    def restore(cls):
-        cls.RESTORE_IN_PROGRESS = True
-        snap = cls.load()
+    def __init__(self):
+        super().__init__(local_path('history.json'))
+        super().load(default=[])
+        # keep a ref so Display.on_device_change can invoke a restore
+        self.__class__.INSTANCE = self
+
+    def restore(self):
+        self.__class__.RESTORE_IN_PROGRESS = True
         displays = Display.enum_display_devices()
 
-        for ss in snap:
+        for ss in self.data:
             if ss['displays'] == displays:
                 Window.restore_snapshot(ss['windows'])
 
-        cls.RESTORE_IN_PROGRESS = False
+        self.__class__.RESTORE_IN_PROGRESS = False
 
-    def load():
-        try:
-            with open(local_path('history.json'), 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            return []
-
-    def capture():
+    def capture(self):
         log.debug('capture snapshot')
         return {
             'displays': Display.enum_display_devices(),
             'windows': Window.capture_snapshot()
         }
 
-    def save(snap):
-        log.debug('save snapshot')
-        with open(local_path('history.json'), 'w') as f:
-            json.dump(snap, f)
+    def update(self, snap=None):
+        if snap is None:
+            snap = self.capture()
 
-    def update(history, snapshot):
-        for item in history:
-            if item['displays'] == snapshot['displays']:
-                item['windows'] = snapshot['windows']
+        for item in self.data:
+            if item['displays'] == snap['displays']:
+                item['windows'] = snap['windows']
                 break
         else:
-            history.append(snapshot)
+            self.data.append(snap)
 
 
 if __name__ == '__main__':
@@ -280,17 +277,17 @@ if __name__ == '__main__':
         monitor_thread = threading.Thread(
             target=Display.monitor_device_changes, daemon=True)
         monitor_thread.start()
-        snap = Snapshot.load()
+        snap = Snapshot()
 
         try:
             count = 0
             while not EXIT:
-                if not Snapshot.RESTORE_IN_PROGRESS:
-                    Snapshot.update(snap, Snapshot.capture())
+                if not snap.RESTORE_IN_PROGRESS:
+                    snap.update()
                     count += 1
 
                 if count >= SETTINGS.get('save_freq', 1):
-                    Snapshot.save(snap)
+                    snap.save()
                     count = 0
 
                 for i in range(SETTINGS.get('snapshot_freq', 30)):
@@ -309,6 +306,6 @@ if __name__ == '__main__':
         time.sleep(0.5)
 
     log.info('save snapshot before shutting down')
-    Snapshot.save(snap)
+    snap.save()
 
     log.info('exit')
