@@ -26,11 +26,7 @@ if __name__ == '__main__':
 
     SETTINGS = JSONFile('settings.json')
     SETTINGS.load()
-    EXIT = False
-
-    def notify(*_):
-        global EXIT
-        EXIT = True
+    EXIT = threading.Event()
 
     menu_options = (
         (
@@ -56,7 +52,7 @@ if __name__ == '__main__':
         local_path('assets/icon32.ico', asset=True),
         'RestoreWindowPos',
         menu_options,
-        on_quit=notify
+        on_quit=lambda *_: EXIT.set()
     ) as systray:
         snap = Snapshot()
         monitor_thread = threading.Thread(
@@ -65,7 +61,7 @@ if __name__ == '__main__':
 
         try:
             count = 0
-            while not EXIT:
+            while not EXIT.is_set():
                 snap.update()
                 count += 1
 
@@ -75,7 +71,7 @@ if __name__ == '__main__':
 
                 for i in range(SETTINGS.get('snapshot_freq', 30)):
                     time.sleep(1)
-                    if EXIT:
+                    if EXIT.is_set():
                         break
                 else:
                     continue
