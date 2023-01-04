@@ -25,6 +25,7 @@ def size_from_rect(rect) -> tuple[int]:
 
 class JSONFile():
     def __init__(self, file, *a, **kw):
+        # TODO: add some logging here
         self.file = file
 
     def load(self, default=None):
