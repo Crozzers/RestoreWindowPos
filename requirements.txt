@@ -1,1 +1,2 @@
 infi.systray
+pywin32
