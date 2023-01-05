@@ -1,4 +1,5 @@
 infi.systray
 pywin32
+pypiwin32
 pyinstaller
 pyinstaller-versionfile
