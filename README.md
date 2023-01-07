@@ -11,7 +11,15 @@ The project is currently in "messy early prototype phase" but hopefully I can fl
 ## Installation
 
 Head over to the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) to grab the latest installer
-for the program. Alternatively, you can compile it yourself.
+for the program.
+
+#### Updating
+
+To update to the latest version, download the latest installer from the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) and run it. Make sure to shutdown any running instances of RestoreWindowPos beforehand, otherwise the installer won't be able to overwrite your previous install.
+
+To shutdown RestoreWindowPos, simply right click the system tray icon and click "Quit". Wait a couple of seconds for the program to shut itself down properly then launch the latest installer.
+
+#### Compilation
 
 You will need to install NSIS and add it to your PATH in order to compile the installer for the program, but you can bundle the app
 itself with the following commands alone:
