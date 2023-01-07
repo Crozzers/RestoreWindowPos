@@ -59,3 +59,11 @@ class JSONFile():
             return self.data[key]
         except (IndexError, KeyError):
             return default
+
+
+def format_unit(unit, value):
+    if unit == 'second' and value % 60 == 0:
+        unit, value = 'minute', int(value / 60)
+    if value == 1:
+        return f'{value} {unit}'
+    return f'{value} {unit}s'

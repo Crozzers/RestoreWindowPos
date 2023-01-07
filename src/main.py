@@ -12,7 +12,7 @@ import time
 from common import JSONFile, local_path
 from device import Display
 from snapshot import Snapshot
-from systray import SysTray, update_tuple
+from systray import SysTray, submenu_from_settings
 
 
 def pause_snapshots(systray):
@@ -24,9 +24,8 @@ def pause_snapshots(systray):
         verb = 'Resume'
 
     global menu_options
-    menu_options = update_tuple(
-        menu_options, [0, 0], f'{verb} snapshots')
-    systray.update(menu_options=menu_options)
+    menu_options[0][0] = f'{verb} snapshots'
+    systray.update(menu_options=True)
 
 
 if __name__ == '__main__':
@@ -42,31 +41,22 @@ if __name__ == '__main__':
     SETTINGS.set('pause_snapshots', False)  # reset this key
     EXIT = threading.Event()
 
-    menu_options = (
-        ('Pause Snapshots', None, pause_snapshots),
-        (
-            "Snapshot frequency", None, (
-                ('2 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 2)),
-                ('5 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 5)),
-                ('30 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 30)),
-                ('1 minute', None, lambda *_: SETTINGS.set('snapshot_freq', 60)),
-                ('5 minutes', None, lambda *_: SETTINGS.set('snapshot_freq', 300)),
-            )
-        ), (
-            "Save frequency", None, (
-                ('Every snapshot', None, lambda *_: SETTINGS.set('save_freq', 1)),
-                ('Every 2 snapshots', None, lambda *_: SETTINGS.set('save_freq', 2)),
-                ('Every 3 snapshots', None, lambda *_: SETTINGS.set('save_freq', 3)),
-                ('Every 4 snapshots', None, lambda *_: SETTINGS.set('save_freq', 4)),
-                ('Every 5 snapshots', None, lambda *_: SETTINGS.set('save_freq', 5)),
-            )
-        )
-    )
+    menu_options = [
+        ['Pause Snapshots', None, pause_snapshots],
+        [
+            "Snapshot frequency", None, submenu_from_settings(
+                SETTINGS, 'snapshot_freq', 'second', [2, 5, 30, 60, 300])
+        ], [
+            "Save frequency", None,
+            submenu_from_settings(
+                SETTINGS, 'save_freq', 'snapshot', [1, 2, 3, 4, 5])
+        ]
+    ]
 
     with SysTray(
         local_path('assets/icon32.ico', asset=True),
         'RestoreWindowPos',
-        menu_options,
+        menu_options=menu_options,
         on_quit=lambda *_: EXIT.set()
     ) as systray:
         snap = Snapshot()
