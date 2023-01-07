@@ -5,8 +5,6 @@ import win32con
 import win32gui
 import win32gui_struct
 
-from snapshot import Snapshot
-
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
 

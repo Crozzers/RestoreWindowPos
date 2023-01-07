@@ -1,4 +1,4 @@
-infi.systray
+infi.systray==0.1.12
 pywin32
 pypiwin32
 pyinstaller

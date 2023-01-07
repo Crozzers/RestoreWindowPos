@@ -9,11 +9,24 @@ import logging
 import threading
 import time
 
-from infi.systray import SysTrayIcon
-
 from common import JSONFile, local_path
 from device import Display
 from snapshot import Snapshot
+from systray import SysTray, update_tuple
+
+
+def pause_snapshots(systray):
+    if SETTINGS.get('pause_snapshots', False):
+        SETTINGS.set('pause_snapshots', False)
+        verb = 'Pause'
+    else:
+        SETTINGS.set('pause_snapshots', True)
+        verb = 'Resume'
+
+    global menu_options
+    menu_options = update_tuple(
+        menu_options, [0, 0], f'{verb} snapshots')
+    systray.update(menu_options=menu_options)
 
 
 if __name__ == '__main__':
@@ -26,9 +39,11 @@ if __name__ == '__main__':
 
     SETTINGS = JSONFile('settings.json')
     SETTINGS.load()
+    SETTINGS.set('pause_snapshots', False)  # reset this key
     EXIT = threading.Event()
 
     menu_options = (
+        ('Pause Snapshots', None, pause_snapshots),
         (
             "Snapshot frequency", None, (
                 ('2 seconds', None, lambda *_: SETTINGS.set('snapshot_freq', 2)),
@@ -48,7 +63,7 @@ if __name__ == '__main__':
         )
     )
 
-    with SysTrayIcon(
+    with SysTray(
         local_path('assets/icon32.ico', asset=True),
         'RestoreWindowPos',
         menu_options,
@@ -62,8 +77,9 @@ if __name__ == '__main__':
         try:
             count = 0
             while not EXIT.is_set():
-                snap.update()
-                count += 1
+                if not SETTINGS.get('pause_snapshots', False):
+                    snap.update()
+                    count += 1
 
                 if count >= SETTINGS.get('save_freq', 1):
                     snap.save()
