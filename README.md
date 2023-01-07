@@ -33,10 +33,10 @@ It will also add itself as a startup task, which you can then disable in the "st
 * Can restore most windows to their original sizes and positions
 * Can restore snapped windows
 * Easy to use installer that registers the program as a startup task
+* Snapshots can be paused and resumed
 
 ## TODO
 
 * Creating rules for matching window names
 * Test on Windows 11
-* Replace print statements with proper logging
 * Options to "Capture now" or perhaps "restore snapshot now"
