@@ -48,11 +48,11 @@ if __name__ == '__main__':
         ['Pause Snapshots', None, pause_snapshots],
         [
             "Snapshot frequency", None, submenu_from_settings(
-                SETTINGS, 'snapshot_freq', 'second', [2, 5, 30, 60, 300])
+                SETTINGS, 'snapshot_freq', 30, 'second', [2, 5, 30, 60, 300])
         ], [
             "Save frequency", None,
             submenu_from_settings(
-                SETTINGS, 'save_freq', 'snapshot', [1, 2, 3, 4, 5])
+                SETTINGS, 'save_freq', 1, 'snapshot', [1, 2, 3, 4, 5])
         ]
     ]
 

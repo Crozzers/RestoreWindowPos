@@ -34,7 +34,7 @@ def list_to_tuple(item, to=tuple):
     return item
 
 
-def submenu_from_settings(settings, key, label_unit, allowed_values):
+def submenu_from_settings(settings, key, default, label_unit, allowed_values):
     def cb(systray, options, index, value):
         settings.set(key, value)
         for i, opt in enumerate(options):
@@ -47,7 +47,7 @@ def submenu_from_settings(settings, key, label_unit, allowed_values):
     opts = []
     for index, val in enumerate(allowed_values):
         label = format_unit(label_unit, val)
-        if val == settings.get(key):
+        if val == settings.get(key, default):
             label += ' [current]'
         opts.append([label, None, lambda s, i=index, v=val: cb(s, opts, i, v)])
     return opts
