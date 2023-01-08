@@ -8,11 +8,17 @@ import win32gui
 
 from common import JSONFile, local_path, size_from_rect
 
+log = logging.getLogger(__name__)
+
 
 def enum_display_devices():
     result = []
     for monitor in win32api.EnumDisplayMonitors():
-        info = win32api.GetMonitorInfo(monitor[0])
+        try:
+            info = win32api.GetMonitorInfo(monitor[0])
+        except pywintypes.error:
+            log.exception(f'GetMonitorInfo failed on handle {monitor[0]}')
+            continue
         dev_rect = info['Monitor']
         for adaptor_index in range(5):
             try:
@@ -33,7 +39,7 @@ def enum_display_devices():
 
 
 class Window:
-    _log = logging.getLogger(__name__).getChild('Window')
+    _log = log.getChild('Window')
 
     def capture_snapshot():
         def callback(hwnd, extra):
