@@ -41,7 +41,10 @@ if __name__ == '__main__':
     SETTINGS.set('pause_snapshots', False)  # reset this key
     EXIT = threading.Event()
 
+    snap = Snapshot()
+
     menu_options = [
+        ['Capture Now', None, lambda s: snap.capture()],
         ['Pause Snapshots', None, pause_snapshots],
         [
             "Snapshot frequency", None, submenu_from_settings(
@@ -59,7 +62,6 @@ if __name__ == '__main__':
         menu_options=menu_options,
         on_quit=lambda *_: EXIT.set()
     ) as systray:
-        snap = Snapshot()
         monitor_thread = threading.Thread(
             target=Display.monitor_device_changes, args=(snap.restore, snap.lock,), daemon=True)
         monitor_thread.start()
