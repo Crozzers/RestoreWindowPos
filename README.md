@@ -47,4 +47,4 @@ It will also add itself as a startup task, which you can then disable in the "st
 
 * Creating rules for matching window names
 * Test on Windows 11
-* Options to "Capture now" or perhaps "restore snapshot now"
+* Options to "restore snapshot now" or maybe in the future "restore previous"
