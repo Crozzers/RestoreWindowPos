@@ -48,3 +48,6 @@ It will also add itself as a startup task, which you can then disable in the "st
 * Creating rules for matching window names
 * Test on Windows 11
 * Options to "restore snapshot now" or maybe in the future "restore previous"
+* Ability to "Save as" with a particular layout.
+    * Ideally you would be able to save the current layout and give it a memorable name
+    * Perhaps the user could then add window name rules to that layout
