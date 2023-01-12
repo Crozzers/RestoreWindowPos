@@ -12,7 +12,7 @@ import time
 
 import win32con
 
-from _version import __version__
+from _version import __version__, __build__
 from common import JSONFile, local_path
 from device import Display
 from snapshot import Snapshot
@@ -22,6 +22,7 @@ from systray import SysTray, submenu_from_settings
 def about(_):
     caption = '\n'.join((
         f"Version: v{__version__}",
+        f"Build: {__build__}",
         "URL: https://github.com/Crozzers/RestoreWindowPos",
         "\nCreated by: Crozzers (https://github.com/Crozzers)",
         "License: MIT License",
