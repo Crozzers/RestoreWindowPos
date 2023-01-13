@@ -1,6 +1,7 @@
 import logging
 import re
 import threading
+import time
 
 import pywintypes
 import win32api
@@ -97,8 +98,22 @@ class Window:
 class Snapshot(JSONFile):
     def __init__(self):
         super().__init__(local_path('history.json'))
-        super().load(default=[])
+        self.load()
         self.lock = threading.RLock()
+
+    def load(self):
+        super().load(default=[])
+        for snapshot in self.data:
+            if 'history' in snapshot:
+                snapshot['history'].sort(key=lambda a: a.get('time'))
+            else:
+                if 'windows' in snapshot:
+                    snapshot['history'] = [{
+                        'time': time.time(),
+                        'windows': snapshot.pop('windows')
+                    }]
+                else:
+                    snapshot['history'] = []
 
     def restore(self):
         displays = enum_display_devices()
@@ -106,23 +121,32 @@ class Snapshot(JSONFile):
         with self.lock:
             for ss in self.data:
                 if ss['displays'] == displays:
-                    Window.restore_snapshot(ss['windows'])
+                    Window.restore_snapshot(ss['history'][-1]['windows'])
 
     def capture(self):
         self._log.debug('capture snapshot')
-        return {
-            'displays': enum_display_devices(),
-            'windows': Window.capture_snapshot()
-        }
+        return time.time(), enum_display_devices(), Window.capture_snapshot()
 
-    def update(self, snap=None):
-        if snap is None:
-            snap = self.capture()
+    def update(self):
+        timestamp, displays, windows = self.capture()
+
+        if not displays:
+            return
 
         with self.lock:
             for item in self.data:
-                if item['displays'] == snap['displays']:
-                    item['windows'] = snap['windows']
+                if item['displays'] == displays:
+                    # add current config to history
+                    item['history'].append({
+                        'time': timestamp,
+                        'windows': windows
+                    })
                     break
             else:
-                self.data.append(snap)
+                self.data.append({
+                    'displays': displays,
+                    'history': [{
+                        'time': timestamp,
+                        'windows': windows
+                    }]
+                })
