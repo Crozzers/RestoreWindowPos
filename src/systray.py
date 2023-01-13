@@ -6,9 +6,15 @@ from common import format_unit
 
 
 class SysTray(SysTrayIcon):
-    def __init__(self, *a, menu_options=None, **kw):
+    def __init__(self, *a, menu_options=None, on_click=None, **kw):
+        self.on_click = on_click
         self.menu_options_orig = menu_options
         super().__init__(*a, menu_options=list_to_tuple(menu_options), **kw)
+
+    def _show_menu(self):
+        if callable(self.on_click):
+            self.on_click(self)
+        return super()._show_menu()
 
     def update(self, *a, menu_options=None, **kw):
         super().update(*a, **kw)

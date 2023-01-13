@@ -115,17 +115,31 @@ class Snapshot(JSONFile):
                 else:
                     snapshot['history'] = []
 
-    def restore(self):
+    def restore(self, timestamp=None):
+        with self.lock:
+            history = self.get_history()
+            if history is None:
+                return
+
+            if timestamp is None:
+                Window.restore_snapshot(history[-1]['windows'])
+            else:
+                for config in history:
+                    if config['time'] == timestamp:
+                        Window.restore_snapshot(config['windows'])
+                        break
+
+    def capture(self):
+        self._log.debug('capture snapshot')
+        return time.time(), enum_display_devices(), Window.capture_snapshot()
+
+    def get_history(self):
         displays = enum_display_devices()
 
         with self.lock:
             for ss in self.data:
                 if ss['displays'] == displays:
-                    Window.restore_snapshot(ss['history'][-1]['windows'])
-
-    def capture(self):
-        self._log.debug('capture snapshot')
-        return time.time(), enum_display_devices(), Window.capture_snapshot()
+                    return ss['history']
 
     def prune_history(self):
         with self.lock:

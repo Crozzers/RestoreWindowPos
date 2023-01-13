@@ -45,6 +45,18 @@ def pause_snapshots(systray):
     systray.update(menu_options=True)
 
 
+def update_restore_options(systray):
+    menu = []
+    for config in snap.get_history():
+        timestamp = config['time']
+        label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
+        menu.append([label, None, lambda s, t=timestamp: snap.restore(t)])
+
+    global menu_options
+    menu_options[2][2][:-1] = menu
+    systray.update(menu_options=menu_options)
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
@@ -63,6 +75,7 @@ if __name__ == '__main__':
     menu_options = [
         ['Capture Now', None, lambda s: snap.update()],
         ['Pause Snapshots', None, pause_snapshots],
+        ['Restore Snapshot', None, [['Most recent', None, lambda s: snap.restore]]],
         [
             "Snapshot frequency", None, submenu_from_settings(
                 SETTINGS, 'snapshot_freq', 30, 'second', [2, 5, 30, 60, 300])
@@ -78,6 +91,7 @@ if __name__ == '__main__':
         local_path('assets/icon32.ico', asset=True),
         'RestoreWindowPos',
         menu_options=menu_options,
+        on_click=update_restore_options,
         on_quit=lambda *_: EXIT.set()
     ) as systray:
         monitor_thread = threading.Thread(
