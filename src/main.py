@@ -61,7 +61,7 @@ if __name__ == '__main__':
     snap = Snapshot()
 
     menu_options = [
-        ['Capture Now', None, lambda s: snap.capture()],
+        ['Capture Now', None, lambda s: snap.update()],
         ['Pause Snapshots', None, pause_snapshots],
         [
             "Snapshot frequency", None, submenu_from_settings(
