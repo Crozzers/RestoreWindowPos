@@ -37,9 +37,9 @@ It will also add itself as a startup task, which you can then disable in the "st
 ## Features
 
 * Snapshots taken every 30 seconds (with options for various different intervals)
-* Can detect monitors being connected/disconnected
-* Can restore most windows to their original sizes and positions
+* Remembers window sizes and positions and restores them when monitors are connected/disconnected
 * Can restore snapped windows
+* Can restore past snapshots (remembers up to 10 unique layouts)
 * Easy to use installer that registers the program as a startup task
 * Snapshots can be paused and resumed
 
@@ -47,7 +47,6 @@ It will also add itself as a startup task, which you can then disable in the "st
 
 * Creating rules for matching window names
 * Test on Windows 11
-* Options to "restore snapshot now" or maybe in the future "restore previous"
 * Ability to "Save as" with a particular layout.
     * Ideally you would be able to save the current layout and give it a memorable name
     * Perhaps the user could then add window name rules to that layout
