@@ -127,6 +127,12 @@ class Snapshot(JSONFile):
         self._log.debug('capture snapshot')
         return time.time(), enum_display_devices(), Window.capture_snapshot()
 
+    def prune_history(self):
+        with self.lock:
+            for snapshot in self.data:
+                if len(snapshot['history']) > 10:
+                    snapshot['history'] = snapshot['history'][-10:]
+
     def update(self):
         timestamp, displays, windows = self.capture()
 
@@ -134,6 +140,8 @@ class Snapshot(JSONFile):
             return
 
         with self.lock:
+            self.prune_history()
+
             for item in self.data:
                 if item['displays'] == displays:
                     # add current config to history
