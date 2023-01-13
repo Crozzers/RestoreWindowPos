@@ -141,9 +141,44 @@ class Snapshot(JSONFile):
                 if ss['displays'] == displays:
                     return ss['history']
 
+    def squash(self, history):
+        index = len(history) - 1
+        while index > 0:
+            current = history[index]['windows']
+            previous = history[index - 1]['windows']
+
+            if len(current) > len(previous):
+                # if current is greater but contains all the items of previous
+                smaller, greater = previous, current
+                to_pop = index - 1
+            else:
+                # if current is lesser but all items are already in previous
+                smaller, greater = current, previous
+                to_pop = index
+
+            for window_a in smaller:
+                if window_a in greater:
+                    continue
+
+                for window_b in greater:
+                    if window_a['id'] == window_b['id']:  # in future compare program of origin
+                        if window_a['rect'] == window_b['rect']:
+                            if window_a['placement'] == window_b['placement']:
+                                break
+                else:
+                    break
+            else:
+                # successful loop, all items in smaller are already present in greater.
+                # remove smaller
+                history.pop(to_pop)
+
+            index -= 1
+
     def prune_history(self):
         with self.lock:
             for snapshot in self.data:
+                self.squash(snapshot['history'])
+
                 if len(snapshot['history']) > 10:
                     snapshot['history'] = snapshot['history'][-10:]
 
@@ -154,8 +189,6 @@ class Snapshot(JSONFile):
             return
 
         with self.lock:
-            self.prune_history()
-
             for item in self.data:
                 if item['displays'] == displays:
                     # add current config to history
@@ -172,3 +205,5 @@ class Snapshot(JSONFile):
                         'windows': windows
                     }]
                 })
+
+            self.prune_history()
