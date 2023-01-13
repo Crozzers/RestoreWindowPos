@@ -117,29 +117,44 @@ class Snapshot(JSONFile):
 
     def restore(self, timestamp=None):
         with self.lock:
-            history = self.get_history()
-            if history is None:
+            snap = self.get_current_snapshot()
+            if snap is None or snap.get('history') is None:
                 return
 
-            if timestamp is None:
-                Window.restore_snapshot(history[-1]['windows'])
-            else:
+            history = snap['history']
+
+            def restore_ts(timestamp):
                 for config in history:
                     if config['time'] == timestamp:
                         Window.restore_snapshot(config['windows'])
-                        break
+                        snap['mru'] = timestamp
+                        return True
+
+            if timestamp:
+                restore_ts(timestamp)
+            elif timestamp == -1:
+                Window.restore_snapshot(history[-1]['windows'])
+            else:
+                if not (snap.get('mru') and restore_ts(snap.get('mru'))):
+                    Window.restore_snapshot(history[-1]['windows'])
 
     def capture(self):
         self._log.debug('capture snapshot')
         return time.time(), enum_display_devices(), Window.capture_snapshot()
 
-    def get_history(self):
+    def get_current_snapshot(self):
         displays = enum_display_devices()
 
         with self.lock:
             for ss in self.data:
                 if ss['displays'] == displays:
-                    return ss['history']
+                    return ss
+
+    def get_history(self):
+        with self.lock:
+            snap = self.get_current_snapshot()
+            if snap is not None:
+                return snap['history']
 
     def squash(self, history):
         index = len(history) - 1
@@ -196,6 +211,7 @@ class Snapshot(JSONFile):
                         'time': timestamp,
                         'windows': windows
                     })
+                    item['mru'] = None
                     break
             else:
                 self.data.append({
