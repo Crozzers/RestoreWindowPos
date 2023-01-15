@@ -71,6 +71,10 @@ class Window:
                     continue
 
                 rect = tuple(item['rect'])
+                title = win32gui.GetWindowText(hwnd)
+                if not title or rect == (0, 0, 0, 0):
+                    return
+
                 current = win32gui.GetWindowRect(hwnd)
                 if current == rect:
                     return
@@ -130,6 +134,7 @@ class Snapshot(JSONFile):
                         snap['mru'] = timestamp
                         return True
 
+            self._log.info(f'restore snapshot, timestamp={timestamp}')
             if timestamp:
                 restore_ts(timestamp)
             elif timestamp == -1:
