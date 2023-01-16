@@ -14,7 +14,7 @@ import win32con
 
 from _version import __version__, __build__
 from common import JSONFile, local_path
-from device import Display
+from device import DeviceChangeService
 from snapshot import Snapshot
 from systray import SysTray, submenu_from_settings
 
@@ -94,8 +94,7 @@ if __name__ == '__main__':
         on_click=update_restore_options,
         on_quit=lambda *_: EXIT.set()
     ) as systray:
-        monitor_thread = threading.Thread(
-            target=Display.monitor_device_changes, args=(snap.restore, snap.lock,), daemon=True)
+        monitor_thread = DeviceChangeService(snap.restore, snap.lock)
         monitor_thread.start()
 
         try:
@@ -119,10 +118,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
 
-    Display.THREAD_ALIVE = False
-    log.info('wait for monitor thread to exit')
-    while monitor_thread.is_alive():
-        time.sleep(0.5)
+    monitor_thread.stop()
 
     log.info('save snapshot before shutting down')
     snap.save()
