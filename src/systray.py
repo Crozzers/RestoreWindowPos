@@ -34,9 +34,9 @@ class SysTray(SysTrayIcon):
             self._menu = None
 
 
-def list_to_tuple(item, to=tuple):
-    if isinstance(item, (tuple, list)):
-        item = to(list_to_tuple(sub, to=to) for sub in item)
+def list_to_tuple(item):
+    if isinstance(item, list):
+        item = tuple(list_to_tuple(sub) for sub in item)
     return item
 
 
