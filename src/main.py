@@ -78,7 +78,7 @@ if __name__ == '__main__':
         ['Restore Snapshot', None, [['Most recent', None, lambda s: snap.restore(-1)]]],
         [
             "Snapshot frequency", None, submenu_from_settings(
-                SETTINGS, 'snapshot_freq', 30, 'second', [2, 5, 30, 60, 300])
+                SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])
         ], [
             "Save frequency", None,
             submenu_from_settings(

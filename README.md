@@ -36,7 +36,7 @@ It will also add itself as a startup task, which you can then disable in the "st
 
 ## Features
 
-* Snapshots taken every 30 seconds (with options for various different intervals)
+* Snapshots taken every minute (with options for various different intervals)
 * Remembers window sizes and positions and restores them when monitors are connected/disconnected
 * Can restore snapped windows
 * Can restore past snapshots (remembers up to 10 unique layouts)
