@@ -1,12 +1,8 @@
 # RestoreWindowPos
 
 Whenever I connect/disconnect a monitor, all of my windows jump around, resize and teleport to places they are not meant to be in.
-They should just go back to their previous positions on that monitor.
 
-The aim of this project is to fix this behaviour by detecting when a display is connected/disconnected and restoring
-windows to their last known positions on that display.
-
-The project is currently in "messy early prototype phase" but hopefully I can flesh it out further in the future.
+This project aims to fix this behaviour by taking regular snapshots of window positions. Once it detects a display being connected/disconnected, it will restore windows to their last known positions on that display.
 
 ## Installation
 
@@ -32,7 +28,7 @@ pip install -r requirements-dev.txt
 ```
 
 The install process will bundle the python script into an EXE and install it to your `AppData\Local\Programs` folder.
-It will also add itself as a startup task, which you can then disable in the "start-up" tab of Task Manager.
+It will also add itself as a startup task, which you can manage in the "start-up" tab of Task Manager.
 
 ## Features
 
@@ -41,7 +37,7 @@ It will also add itself as a startup task, which you can then disable in the "st
 * Can restore snapped windows
 * Can restore past snapshots (remembers up to 10 unique layouts)
 * Easy to use installer that registers the program as a startup task
-* Snapshots can be paused and resumed
+* Can pause and resume taking snapshots
 
 ## TODO
 
