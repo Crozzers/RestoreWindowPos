@@ -11,8 +11,9 @@ import threading
 import time
 
 import win32con
+import win32gui
 
-from _version import __version__, __build__
+from _version import __build__, __version__
 from common import JSONFile, local_path
 from device import DeviceChangeService
 from snapshot import Snapshot
@@ -52,9 +53,23 @@ def update_restore_options(systray):
         label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
         menu.append([label, None, lambda s, t=timestamp: snap.restore(t)])
 
+    if menu:
+        menu.insert(0, ['Clear history', None, lambda s: clear_restore_options()])
+
     global menu_options
     menu_options[2][2][:-1] = menu
     systray.update(menu_options=menu_options)
+
+
+def clear_restore_options():
+    result = win32gui.MessageBox(
+        None,
+        'Are you sure you want to clear the snapshot history for this display configuration?',
+        'Clear snapshot history?',
+        win32con.MB_YESNO | win32con.MB_ICONWARNING
+    )
+    if result == win32con.IDYES:
+        snap.clear_history()
 
 
 if __name__ == '__main__':
@@ -75,7 +90,9 @@ if __name__ == '__main__':
     menu_options = [
         ['Capture Now', None, lambda s: snap.update()],
         ['Pause Snapshots', None, pause_snapshots],
-        ['Restore Snapshot', None, [['Most recent', None, lambda s: snap.restore(-1)]]],
+        ['Restore Snapshot', None, [
+            ['Most recent', None, lambda s: snap.restore(-1)]
+        ]],
         [
             "Snapshot frequency", None, submenu_from_settings(
                 SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])

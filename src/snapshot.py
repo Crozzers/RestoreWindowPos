@@ -161,6 +161,12 @@ class Snapshot(JSONFile):
             if snap is not None:
                 return snap['history']
 
+    def clear_history(self):
+        with self.lock:
+            snap = self.get_current_snapshot()
+            if snap is not None:
+                snap['history'] = []
+
     def squash(self, history):
         index = len(history) - 1
         while index > 0:
