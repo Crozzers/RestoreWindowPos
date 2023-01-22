@@ -135,10 +135,10 @@ class Snapshot(JSONFile):
                         return True
 
             self._log.info(f'restore snapshot, timestamp={timestamp}')
-            if timestamp:
-                restore_ts(timestamp)
-            elif timestamp == -1:
+            if timestamp == -1:
                 Window.restore_snapshot(history[-1]['windows'])
+            elif timestamp:
+                restore_ts(timestamp)
             else:
                 if not (snap.get('mru') and restore_ts(snap.get('mru'))):
                     Window.restore_snapshot(history[-1]['windows'])
