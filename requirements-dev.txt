@@ -1,5 +1,6 @@
 infi.systray==0.1.12
 pywin32
+wmi
 pypiwin32
 pyinstaller
 pyinstaller-versionfile
