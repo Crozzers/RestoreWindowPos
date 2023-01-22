@@ -3,6 +3,7 @@ import re
 import threading
 import time
 
+import pythoncom
 import pywintypes
 import win32api
 import win32gui
@@ -54,6 +55,8 @@ class Window:
 
     @staticmethod
     def from_hwnd(hwnd: int) -> dict:
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
         w = wmi.WMI()
         # https://stackoverflow.com/a/14973422
         _, pid = win32process.GetWindowThreadProcessId(hwnd)
