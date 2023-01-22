@@ -10,8 +10,7 @@ GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
 
 class DeviceChangeService(Service):
-    @staticmethod
-    def pre_callback(hwnd, msg, wp, lp):
+    def pre_callback(self, hwnd, msg, wp, lp):
         super().pre_callback()
         if msg == win32con.WM_POWERBROADCAST:
             if wp == win32con.PBT_APMRESUMEAUTOMATIC:
