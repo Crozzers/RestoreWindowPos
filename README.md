@@ -46,3 +46,4 @@ It will also add itself as a startup task, which you can manage in the "start-up
 * Ability to "Save as" with a particular layout.
     * Ideally you would be able to save the current layout and give it a memorable name
     * Perhaps the user could then add window name rules to that layout
+* Remove all not-alive windows from snapshot history
