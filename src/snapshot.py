@@ -104,14 +104,10 @@ class Window:
                 return False
 
         for rule in rules:
-            if rule.get('name'):
-                if match(rule.get('name'), window['name']):
-                    yield rule
-                    continue
-            if rule.get('executable'):
-                if match(rule.get('executable'), window['executable']):
-                    yield rule
-                    continue
+            name_match = rule.get('name') is None or match(rule.get('name'), window['name'])
+            exe_match = rule.get('executable') is None or match(rule.get('executable'), window['executable'])
+            if name_match and exe_match:
+                yield rule
 
     @classmethod
     def apply_positioning(cls, hwnd: int, rect: tuple, placement: list = None):
