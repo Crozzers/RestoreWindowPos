@@ -16,6 +16,7 @@ import win32gui
 from _version import __build__, __version__
 from common import JSONFile, local_path
 from device import DeviceChangeService
+from gui import spawn_rule_manager
 from snapshot import Snapshot
 from systray import SysTray, submenu_from_settings
 
@@ -54,7 +55,8 @@ def update_restore_options(systray):
         menu.append([label, None, lambda s, t=timestamp: snap.restore(t)])
 
     if menu:
-        menu.insert(0, ['Clear history', None, lambda s: clear_restore_options()])
+        menu.insert(0, ['Clear history', None,
+                    lambda s: clear_restore_options()])
 
     global menu_options
     menu_options[2][2][:-1] = menu
@@ -101,6 +103,8 @@ if __name__ == '__main__':
             submenu_from_settings(
                 SETTINGS, 'save_freq', 1, 'snapshot', [1, 2, 3, 4, 5])
         ],
+        ['Configure Rules', None, lambda s: spawn_rule_manager(
+            snap)],
         ['About', None, about]
     ]
 
