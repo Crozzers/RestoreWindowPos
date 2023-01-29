@@ -7,6 +7,7 @@ import time
 import pythoncom
 import pywintypes
 import win32api
+import win32con
 import win32gui
 import win32process
 import wmi
@@ -46,8 +47,13 @@ def enum_display_devices():
 class Window:
     _log = log.getChild('Window')
 
-    @staticmethod
-    def is_window_valid(hwnd: int) -> bool:
+    class TitleBarInfo(ctypes.Structure):
+        _fields_ = [('cbSize', ctypes.wintypes.DWORD),
+                    ('rcTitleBar', ctypes.wintypes.RECT),
+                    ('rgState', ctypes.wintypes.DWORD * 6)]
+
+    @classmethod
+    def is_window_valid(cls, hwnd: int) -> bool:
         if not win32gui.IsWindowVisible(hwnd):
             return False
         if not win32gui.GetWindowText(hwnd):
@@ -59,10 +65,14 @@ class Window:
         # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
         # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
         cloaked = ctypes.c_int(0)
-        if ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked)):
-            # if this throws error then assume window is safe
-            return True
-        return cloaked.value == 0
+        ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
+        if cloaked.value != 0:
+            return False
+
+        titlebar = cls.TitleBarInfo()
+        titlebar.cbSize = ctypes.sizeof(titlebar)
+        ctypes.windll.user32.GetTitleBarInfo(hwnd, ctypes.byref(titlebar))
+        return not titlebar.rgState[0] & win32con.STATE_SYSTEM_INVISIBLE
 
     @staticmethod
     def from_hwnd(hwnd: int) -> dict:
