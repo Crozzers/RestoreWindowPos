@@ -61,8 +61,8 @@ class Window:
         cloaked = ctypes.c_int(0)
         if ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked)):
             # if this throws error then assume window is safe
-            cloaked = 0
-        return cloaked == 0
+            return True
+        return cloaked.value == 0
 
     @staticmethod
     def from_hwnd(hwnd: int) -> dict:
