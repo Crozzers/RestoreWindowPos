@@ -85,9 +85,6 @@ class Window:
         def callback(hwnd, extra):
             if cls.is_window_valid(hwnd):
                 window = cls.from_hwnd(hwnd)
-                if not window['name'] or window['rect'] == (0, 0, 0, 0):
-                    return
-
                 snapshot.append(
                     {
                         'id': hwnd,
