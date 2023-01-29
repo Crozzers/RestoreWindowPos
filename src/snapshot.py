@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import re
 import threading
@@ -51,7 +52,17 @@ class Window:
             return False
         if not win32gui.GetWindowText(hwnd):
             return False
-        return win32gui.GetWindowRect(hwnd) != (0, 0, 0, 0)
+        if win32gui.GetWindowRect(hwnd) == (0, 0, 0, 0):
+            return False
+
+        # https://stackoverflow.com/a/64597308
+        # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
+        # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
+        cloaked = ctypes.c_int(0)
+        if ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked)):
+            # if this throws error then assume window is safe
+            cloaked = 0
+        return cloaked == 0
 
     @staticmethod
     def from_hwnd(hwnd: int) -> dict:
