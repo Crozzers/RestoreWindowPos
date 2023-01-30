@@ -54,6 +54,8 @@ class Window:
 
     @classmethod
     def is_window_valid(cls, hwnd: int) -> bool:
+        if not win32gui.IsWindow(hwnd):
+            return False
         if not win32gui.IsWindowVisible(hwnd):
             return False
         if not win32gui.GetWindowText(hwnd):
@@ -65,7 +67,8 @@ class Window:
         # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
         # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
         cloaked = ctypes.c_int(0)
-        ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
+        ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
         if cloaked.value != 0:
             return False
 
@@ -122,8 +125,10 @@ class Window:
                 return False
 
         for rule in rules:
-            name_match = rule.get('name') is None or match(rule.get('name'), window['name'])
-            exe_match = rule.get('executable') is None or match(rule.get('executable'), window['executable'])
+            name_match = rule.get('name') is None or match(
+                rule.get('name'), window['name'])
+            exe_match = rule.get('executable') is None or match(
+                rule.get('executable'), window['executable'])
             if name_match and exe_match:
                 yield rule
 
@@ -250,10 +255,25 @@ class Snapshot(JSONFile):
                 snap['history'] = []
 
     def squash(self, history):
+        def should_keep(window):
+            if not win32gui.IsWindow(window['id']):
+                return False
+            return (
+                window['id'] in exe_by_id
+                and window['executable'] == exe_by_id[window['id']]
+            )
+
         index = len(history) - 1
+        exe_by_id = {}
         while index > 0:
-            current = history[index]['windows']
-            previous = history[index - 1]['windows']
+            for window in history[index]['windows']:
+                if window['id'] not in exe_by_id:
+                    exe_by_id[window['id']] = window['executable']
+
+            current = history[index]['windows'] = list(
+                filter(should_keep, history[index]['windows']))
+            previous = history[index - 1]['windows'] = list(
+                filter(should_keep, history[index - 1]['windows']))
 
             if len(current) > len(previous):
                 # if current is greater but contains all the items of previous
