@@ -13,8 +13,13 @@ class DeviceChangeService(Service):
     def pre_callback(self, hwnd, msg, wp, lp):
         super().pre_callback()
         if msg == win32con.WM_POWERBROADCAST:
+            self.log.debug('trigger WM_POWERBROADCAST')
             if wp == win32con.PBT_APMRESUMEAUTOMATIC:
                 time.sleep(1)
+        elif msg == win32con.WM_DISPLAYCHANGE:
+            self.log.debug('trigger WM_DISPLAYCHANGE')
+        elif msg == win32con.WM_WINDOWPOSCHANGING:
+            self.log.debug('trigger WM_WINDOWPOSCHANGING')
 
         return True
 
