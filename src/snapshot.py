@@ -1,4 +1,5 @@
 import ctypes
+import ctypes.wintypes
 import logging
 import re
 import threading
