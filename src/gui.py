@@ -52,10 +52,12 @@ class RuleWindow():
 
         # place everything
         self.frame.pack(fill='both', expand=True)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=1)
         self.window_name_label.grid(row=0, column=0)
-        self.window_name.grid(row=0, column=1)
+        self.window_name.grid(row=0, column=1, sticky='nsew')
         self.window_exe_label.grid(row=1, column=0)
-        self.window_exe.grid(row=1, column=1)
+        self.window_exe.grid(row=1, column=1, sticky='nsew')
         self.reset_btn.grid(row=2, column=0, sticky='nesw')
         self.save_btn.grid(row=2, column=1, sticky='nesw')
         self.delete_rule_btn.grid(row=3, column=0, sticky='nesw')
