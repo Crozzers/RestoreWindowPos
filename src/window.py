@@ -2,6 +2,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import re
+import sys
 import threading
 
 import pythoncom
@@ -27,9 +28,12 @@ def is_window_valid(hwnd: int) -> bool:
         return False
     if not win32gui.IsWindowVisible(hwnd):
         return False
-    if not win32gui.GetWindowText(hwnd):
+    window = from_hwnd(hwnd)
+    if not window['name']:
         return False
-    if win32gui.GetWindowRect(hwnd) == (0, 0, 0, 0):
+    if window['rect'] == (0, 0, 0, 0):
+        return False
+    if window['executable'] == sys.executable:
         return False
 
     # https://stackoverflow.com/a/64597308
