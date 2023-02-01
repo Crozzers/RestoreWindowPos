@@ -91,12 +91,12 @@ class RuleWindow():
     def save(self):
         self.rule['name'] = self.window_name.get() or None
         self.rule['executable'] = self.window_exe.get() or None
-        minimized = self.window.state() != 'normal'
+        minimized = self.window.state() not in ('normal', 'zoomed')
         if minimized:
             self.window.deiconify()
         self.rule['rect'] = self.get_rect()
         if minimized:
-            self.window.withdraw()
+            self.window.iconify()
         self.rule['placement'] = self.get_placement()
 
     def save_all(self):
