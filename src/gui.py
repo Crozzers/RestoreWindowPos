@@ -132,6 +132,18 @@ class RuleWindow():
             self.__class__._instances.remove(self)
 
 
+def _new_rule():
+    # should probably build some kind of rule manager tbh
+    rect = [0, 0, 1000, 500]
+    return {
+        'name': None,
+        'executable': None,
+        'size': size_from_rect(rect),
+        'rect': rect,
+        'placement': [0, 1, [-1, -1], [-1, -1], rect]
+    }
+
+
 def spawn_rule_manager(snap):
     root = init_root()
 
@@ -142,7 +154,10 @@ def spawn_rule_manager(snap):
         # root has been destroyed
         root = init_root(refresh=True)
 
-    rules = snap.get_current_snapshot().get('rules', [])
+    snap.get_current_snapshot().setdefault('rules', [_new_rule()])
+    rules = snap.get_current_snapshot().get('rules')
+    if not rules:
+        rules.append(_new_rule())
     for rule in rules:
         w = RuleWindow(root, rule, snap)
         w.window.focus_force()
