@@ -67,3 +67,9 @@ def format_unit(unit, value):
     if value == 1:
         return f'{value} {unit}'
     return f'{value} {unit}s'
+
+
+def tuple_convert(item, to=tuple, from_=list):
+    if isinstance(item, from_):
+        item = to(tuple_convert(sub, to=to, from_=from_) for sub in item)
+    return item

@@ -1,137 +1,123 @@
 import ctypes
-import re
 import threading
-import tkinter as tk
 
 import win32gui
+import wx
+from copy import deepcopy
 
-from common import local_path, size_from_rect
+from common import size_from_rect
 
 RULE_MANAGER_THREAD: threading.Thread = None
-ROOT: tk.Tk = None
+ROOT: wx.App = None
 
 
-class RuleWindow():
+class RuleWindow(wx.Frame):
     _instances = []
     _count = 0
 
-    def __init__(self, root: tk.Tk, rule: dict, snapshot):
+    def __init__(self, root: wx.App, rule: dict, snapshot):
         self.__class__._instances.append(self)
         self.__class__._count += 1
         self._snapshot = snapshot
-
-        self.root = root
         self.rule = rule
-        self.window = tk.Toplevel(root)
-        self.window.title(f'Rule {self._count}')
-        self.window.iconbitmap(local_path('assets/icon32.ico', asset=True))
-        self.set_rect()
-        self.get_rect()
-        self.window.protocol('WM_DELETE_WINDOW', self.destroy)
+        self.snapshot = snapshot
 
-        # now create widgets for user to use
-        self.frame = tk.Frame(self.window)
-        self.window_name_label = tk.Label(
-            self.frame, text='Window Name (regex or exact match) (leave empty to ignore):')
-        self.window_name = tk.Entry(self.frame, width=50)
-        self.window_exe_label = tk.Label(
-            self.frame, text='Window Executable (regex or exact match) (leave empty to ignore):')
-        self.window_exe = tk.Entry(self.frame, width=50)
-        self.reset_btn = tk.Button(
-            self.frame, text='Reset Rule', command=self.set_rect)
-        self.save_btn = tk.Button(
-            self.frame, text='Save', command=self.save)
-        self.delete_rule_btn = tk.Button(
-            self.frame, text='Delete Rule', command=self.delete_rule)
-        self.new_rule_btn = tk.Button(
-            self.frame, text='New Rule', command=self.new_rule)
-        self.cancel_btn = tk.Button(
-            self.frame, text='Discard All Unsaved Changes', command=self.destroy)
-        self.save_all_btn = tk.Button(
-            self.frame, text='Save All', command=self.save_all)
+        # create widgets and such
+        self.root = root
+        super().__init__(parent=None, title=f'Rule {self._count}')
+        self.panel = wx.Panel(self)
+        self.window_name_label = wx.StaticText(
+            self.panel, label='Window name (regex) (leave empty to ignore)')
+        self.window_name = wx.TextCtrl(self.panel)
+        self.window_exe_label = wx.StaticText(
+            self.panel, label='Executable path (regex) (leave empty to ignore)')
+        self.window_exe = wx.TextCtrl(self.panel)
+        self.reset_btn = wx.Button(self.panel, label='Reset rule')
+        self.save_btn = wx.Button(self.panel, label='Save')
+        self.delete_rule_btn = wx.Button(self.panel, label='Delete rule')
+        self.new_rule_btn = wx.Button(self.panel, label='New rule')
+        self.cancel_btn = wx.Button(
+            self.panel, label='Discard all unsaved changes')
+        self.save_all_btn = wx.Button(self.panel, label='Save all')
+
+        # bind events
+        self.reset_btn.Bind(wx.EVT_BUTTON, self.set_pos)
+        self.save_btn.Bind(wx.EVT_BUTTON, self.save)
+        self.delete_rule_btn.Bind(wx.EVT_BUTTON, self.delete)
+        self.new_rule_btn.Bind(wx.EVT_BUTTON, self.new_rule)
+        self.cancel_btn.Bind(wx.EVT_BUTTON, self.destroy)
+        self.save_all_btn.Bind(wx.EVT_BUTTON, self.save_all)
 
         # place everything
-        self.frame.pack(fill='both', expand=True)
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.columnconfigure(1, weight=1)
-        self.window_name_label.grid(row=0, column=0)
-        self.window_name.grid(row=0, column=1, sticky='nsew')
-        self.window_exe_label.grid(row=1, column=0)
-        self.window_exe.grid(row=1, column=1, sticky='nsew')
-        self.reset_btn.grid(row=2, column=0, sticky='nesw')
-        self.save_btn.grid(row=2, column=1, sticky='nesw')
-        self.delete_rule_btn.grid(row=3, column=0, sticky='nesw')
-        self.new_rule_btn.grid(row=3, column=1, sticky='nesw')
-        self.cancel_btn.grid(row=4, column=0, sticky='nesw')
-        self.save_all_btn.grid(row=4, column=1, sticky='nesw')
+        self.sizer = wx.GridSizer(wx.VERTICAL, 2, 5, 5)
+        self.sizer.Add(self.window_name_label, 0, wx.EXPAND)
+        self.sizer.Add(self.window_name, 0, wx.EXPAND)
+        self.sizer.Add(self.window_exe_label, 0, wx.EXPAND)
+        self.sizer.Add(self.window_exe, 0, wx.EXPAND)
+        self.sizer.Add(self.reset_btn, 0, wx.EXPAND)
+        self.sizer.Add(self.save_btn, 0, wx.EXPAND)
+        self.sizer.Add(self.delete_rule_btn, 0, wx.EXPAND)
+        self.sizer.Add(self.new_rule_btn, 0, wx.EXPAND)
+        self.sizer.Add(self.cancel_btn, 0, wx.EXPAND)
+        self.sizer.Add(self.save_all_btn, 0, wx.EXPAND)
+        self.panel.SetSizer(self.sizer)
 
         # insert data
-        self.window_name.insert(0, self.rule.get('name') or '')
-        self.window_exe.insert(0, self.rule.get('executable') or '')
+        self.window_name.Value = self.rule.get('name') or ''
+        self.window_exe.Value = self.rule.get('executable') or ''
 
-    def set_rect(self, rect=None, placement=None):
-        if rect is None:
-            rect = self.rule.get('rect')
-        if placement is None:
-            placement = self.rule.get('placement')
-        w, h = size_from_rect(rect)
-        h -= self.window.winfo_rooty() - self.window.winfo_y()
-        self.window.geometry('%dx%d+%d+%d' % (w, h, rect[0], rect[1]))
-        win32gui.SetWindowPlacement(self.window.winfo_id(), placement)
-
-    def get_rect(self):
-        geom = self.window.geometry()
-        w, h, x, y = (int(i) for i in re.match(
-            r'(-?\d+)x(-?\d+)\+(-?\d+)\+(-?\d+).*', geom).groups())
-        h += self.window.winfo_rooty() - self.window.winfo_y()
-        return [x, y, x + w, y + h]
+        # final steps
+        self.set_pos()
+        self.Show()
 
     def get_placement(self):
-        return win32gui.GetWindowPlacement(
-            self.window.winfo_id())
+        return win32gui.GetWindowPlacement(self.GetHandle())
 
-    def save(self):
-        self.rule['name'] = self.window_name.get() or None
-        self.rule['executable'] = self.window_exe.get() or None
-        minimized = self.window.state() not in ('normal', 'zoomed')
-        if minimized:
-            self.window.deiconify()
+    def set_placement(self):
+        placement = self.rule.get('placement')
+        win32gui.SetWindowPlacement(self.GetHandle(), placement)
+
+    def get_rect(self):
+        return win32gui.GetWindowRect(self.GetHandle())
+
+    def set_rect(self):
+        rect = self.rule.get('rect')
+        win32gui.MoveWindow(self.GetHandle(),
+                            *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+
+    def set_pos(self, *_):
+        self.set_rect()
+        self.set_placement()
+
+    def save(self, *_):
+        self.rule['name'] = self.window_name.Value
+        self.rule['executable'] = self.window_exe.Value
         self.rule['rect'] = self.get_rect()
-        if minimized:
-            self.window.iconify()
         self.rule['placement'] = self.get_placement()
 
-    def save_all(self):
-        for window in self.__class__._instances:
-            window.window.focus_force()
-            window.save()
-        self.window.focus_force()
-        self._snapshot.save()
+    def save_all(self, *_):
+        for instance in self._instances:
+            instance.save()
+        self.snapshot.save()
 
-    def new_rule(self):
-        rect = self.get_rect()
-        rule = {
-            'name': None,
-            'executable': None,
-            'size': size_from_rect(rect),
-            'rect': rect,
-            'placement': self.get_placement()
-        }
-        self._snapshot.get_current_snapshot()['rules'].append(rule)
-        self.__class__(self.root, rule, self._snapshot)
+    def new_rule(self, *_):
+        rule = deepcopy(self.rule)
+        self.snapshot.get_current_snapshot().get('rules').append(rule)
+        RuleWindow(self.root, rule, self.snapshot)
 
-    def delete_rule(self):
-        # todo: refactor all rule management into some rule manager class.
-        self.destroy(False)
-        self._snapshot.get_current_snapshot()['rules'].remove(self.rule)
+    def delete(self, *_):
+        try:
+            self.snapshot.get_current_snapshot()['rules'].remove(self.rule)
+        except ValueError:
+            pass
+        self.destroy(root=False)
 
-    def destroy(self, root=True):
+    def destroy(self, *_, root=True):
         if root:
-            self.root.destroy()
-            self.__class__._instances = []
-        else:
-            self.window.destroy()
-            self.__class__._instances.remove(self)
+            for instance in self.__class__._instances:
+                instance.destroy(root=False)
+        self.Close()
+        self._instances.remove(self)
 
 
 def _new_rule():
@@ -150,9 +136,11 @@ def spawn_rule_manager(snap):
     root = init_root()
 
     try:
-        if root.winfo_exists() and root.winfo_children():
+        if root.IsMainLoopRunning() and root.IsActive():
             return
-    except tk.TclError:
+        else:
+            root = init_root(refresh=True)
+    except RuntimeError:
         # root has been destroyed
         root = init_root(refresh=True)
 
@@ -161,23 +149,20 @@ def spawn_rule_manager(snap):
     if not rules:
         rules.append(_new_rule())
     for rule in rules:
-        w = RuleWindow(root, rule, snap)
-        w.window.focus_force()
+        RuleWindow(root, rule, snap)
 
     root = init_root()
-    root.mainloop()
-    root.quit()
+    root.MainLoop()
     RuleWindow._count = 0
 
 
 def init_root(refresh=False):
     global ROOT
     if refresh and ROOT is not None:
-        ROOT.quit()
+        ROOT.Destroy()
         ROOT = None
 
     if ROOT is None:
-        ROOT = tk.Tk()
+        ROOT = wx.App()
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        ROOT.withdraw()
     return ROOT

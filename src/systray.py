@@ -2,7 +2,7 @@ import ctypes
 
 from infi.systray import SysTrayIcon
 
-from common import format_unit
+from common import format_unit, tuple_convert
 
 
 class SysTray(SysTrayIcon):
@@ -35,9 +35,7 @@ class SysTray(SysTrayIcon):
 
 
 def list_to_tuple(item):
-    if isinstance(item, list):
-        item = tuple(list_to_tuple(sub) for sub in item)
-    return item
+    return tuple_convert(item, to=tuple, from_=list)
 
 
 def submenu_from_settings(settings, key, default, label_unit, allowed_values):
