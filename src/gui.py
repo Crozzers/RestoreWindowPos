@@ -25,7 +25,7 @@ class RuleWindow(wx.Frame):
 
         # create widgets and such
         self.root = root
-        super().__init__(parent=None, title=f'Rule {self._count}')
+        super().__init__(parent=None, title=f'Rule {self._count} (Beta)')
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.window_name_label = wx.StaticText(
