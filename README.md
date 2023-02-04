@@ -4,6 +4,9 @@ Whenever I connect/disconnect a monitor, all of my windows jump around, resize a
 
 This project aims to fix this behaviour by taking regular snapshots of window positions. Once it detects a display being connected/disconnected, it will restore windows to their last known positions on that display.
 
+You can also define rules for windows with specific titles and/or created by specific programs. Rules will be automatically applied to matching windows that are not part of your current snapshot (eg: windows that have been created since a snapshot was last taken).
+You can also give these rules memorable names, and apply any and/or all of them at any time
+
 ## Installation
 
 Head over to the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) to grab the latest installer
@@ -38,12 +41,13 @@ It will also add itself as a startup task, which you can manage in the "start-up
 * Can restore past snapshots (remembers up to 10 unique layouts)
 * Easy to use installer that registers the program as a startup task
 * Can pause and resume taking snapshots
+* Create and apply rules for specific windows
 
 ## TODO
 
-* Creating rules for matching window names
 * Test on Windows 11
 * Ability to "Save as" with a particular layout.
     * Ideally you would be able to save the current layout and give it a memorable name
-    * Perhaps the user could then add window name rules to that layout
-* Remove all not-alive windows from snapshot history
+    * This will likely auto-create rules matching the current windows
+* Central rule manager GUI
+    * And also, probably as part of this central GUI, a settings panel to tweak the less useful settings, like "Save frequency"
