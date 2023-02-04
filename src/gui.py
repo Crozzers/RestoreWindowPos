@@ -110,20 +110,21 @@ class RuleWindow(wx.Frame):
                             *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
 
     def set_pos(self, *_):
-        self.set_rect()
         self.set_placement()
+        self.set_rect()
 
     def save(self, *_):
         self.rule['rule_name'] = self.rule_name.Value or None
         self.rule['name'] = self.window_name.Value or None
         self.rule['executable'] = self.window_exe.Value or None
         self.rule['rect'] = self.get_rect()
+        self.rule['size'] = size_from_rect(self.rule['rect'])
         self.rule['placement'] = self.get_placement()
+        self.snapshot.save()
 
     def save_all(self, *_):
         for instance in self._instances:
             instance.save()
-        self.snapshot.save()
 
     def new_rule(self, *_):
         rule = deepcopy(self.rule)
@@ -132,7 +133,7 @@ class RuleWindow(wx.Frame):
 
     def delete(self, *_):
         try:
-            self.snapshot.get_current_snapshot()['rules'].remove(self.rule)
+            self.snapshot.get_rules().remove(self.rule)
         except ValueError:
             pass
         self.destroy()
@@ -169,8 +170,7 @@ def spawn_rule_manager(snap):
         # root has been destroyed
         root = init_root(refresh=True)
 
-    snap.get_current_snapshot().setdefault('rules', [_new_rule()])
-    rules = snap.get_current_snapshot().get('rules')
+    rules = snap.get_rules()
     if not rules:
         rules.append(_new_rule())
     for rule in rules:

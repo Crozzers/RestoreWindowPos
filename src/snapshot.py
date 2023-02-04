@@ -105,6 +105,14 @@ class Snapshot(JSONFile):
             if snap is not None:
                 return snap['history']
 
+    def get_rules(self):
+        with self.lock:
+            snap = self.get_current_snapshot()
+            if snap is not None:
+                if 'rules' not in snap:
+                    snap['rules'] = []
+                return snap['rules']
+
     def clear_history(self):
         with self.lock:
             snap = self.get_current_snapshot()
