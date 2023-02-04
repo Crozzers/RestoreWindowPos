@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import win32gui
 import wx
+import wx.lib.scrolledpanel
 
 from common import local_path, size_from_rect
 
@@ -26,7 +27,7 @@ class RuleWindow(wx.Frame):
         self.root = root
         super().__init__(parent=None, title=f'Rule {self._count}')
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
-        self.panel = wx.Panel(self)
+        self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.window_name_label = wx.StaticText(
             self.panel, label='Window name (regex) (leave empty to ignore)')
         self.window_name = wx.TextCtrl(self.panel)
@@ -40,6 +41,11 @@ class RuleWindow(wx.Frame):
         self.cancel_btn = wx.Button(
             self.panel, label='Discard all unsaved changes')
         self.save_all_btn = wx.Button(self.panel, label='Save all')
+        self.explanation_box = wx.StaticText(self.panel, label=(
+            'Resize and reposition this window and then click save.'
+            ' Any window that is not currently part of a snapshot will be moved'
+            ' to the same size and position as this window'
+        ))
 
         # bind events
         self.reset_btn.Bind(wx.EVT_BUTTON, self.set_pos)
@@ -50,24 +56,27 @@ class RuleWindow(wx.Frame):
         self.save_all_btn.Bind(wx.EVT_BUTTON, self.save_all)
 
         # place everything
-        self.sizer = wx.GridSizer(wx.VERTICAL, 2, 5, 5)
-        self.sizer.Add(self.window_name_label, 0, wx.EXPAND)
-        self.sizer.Add(self.window_name, 0, wx.EXPAND)
-        self.sizer.Add(self.window_exe_label, 0, wx.EXPAND)
-        self.sizer.Add(self.window_exe, 0, wx.EXPAND)
-        self.sizer.Add(self.reset_btn, 0, wx.EXPAND)
-        self.sizer.Add(self.save_btn, 0, wx.EXPAND)
-        self.sizer.Add(self.delete_rule_btn, 0, wx.EXPAND)
-        self.sizer.Add(self.new_rule_btn, 0, wx.EXPAND)
-        self.sizer.Add(self.cancel_btn, 0, wx.EXPAND)
-        self.sizer.Add(self.save_all_btn, 0, wx.EXPAND)
-        self.panel.SetSizer(self.sizer)
+        self.sizer = wx.GridBagSizer(5, 5)
+        self.sizer.Add(self.window_name_label, pos=(0, 0), flag=wx.EXPAND)
+        self.sizer.Add(self.window_name, pos=(0, 1), flag=wx.EXPAND)
+        self.sizer.Add(self.window_exe_label, pos=(1, 0), flag=wx.EXPAND)
+        self.sizer.Add(self.window_exe, pos=(1, 1), flag=wx.EXPAND)
+        self.sizer.Add(self.reset_btn, pos=(2, 0), flag=wx.EXPAND)
+        self.sizer.Add(self.save_btn, pos=(2, 1), flag=wx.EXPAND)
+        self.sizer.Add(self.delete_rule_btn, pos=(3, 0), flag=wx.EXPAND)
+        self.sizer.Add(self.new_rule_btn, pos=(3, 1), flag=wx.EXPAND)
+        self.sizer.Add(self.cancel_btn, pos=(4, 0), flag=wx.EXPAND)
+        self.sizer.Add(self.save_all_btn, pos=(4, 1), flag=wx.EXPAND)
+        self.sizer.Add(self.explanation_box, pos=(5, 0), span=(1, 2), flag=wx.EXPAND)
+        self.panel.SetSizerAndFit(self.sizer, )
+        self.sizer.Fit(self.panel)
 
         # insert data
         self.window_name.Value = self.rule.get('name') or ''
         self.window_exe.Value = self.rule.get('executable') or ''
 
         # final steps
+        self.panel.SetupScrolling()
         self.set_pos()
         self.Show()
 
