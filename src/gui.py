@@ -111,15 +111,14 @@ class RuleWindow(wx.Frame):
             self.snapshot.get_current_snapshot()['rules'].remove(self.rule)
         except ValueError:
             pass
-        self.destroy(root=False)
+        self.destroy()
 
-    def destroy(self, *_, root=True):
-        if root:
-            for instance in self.__class__._instances:
-                if instance != self:
-                    instance.destroy(root=False)
-        self.Close()
-        self._instances.remove(self)
+    def destroy(self, *_):
+        try:
+            self.Close()
+            self.Destroy()
+        except RuntimeError:
+            pass
 
 
 def _new_rule():
@@ -168,3 +167,11 @@ def init_root(refresh=False):
         ROOT = wx.App()
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     return ROOT
+
+
+def exit_root():
+    for window in RuleWindow._instances:
+        window.destroy()
+    if ROOT is not None:
+        ROOT.Destroy()
+    wx.Exit()

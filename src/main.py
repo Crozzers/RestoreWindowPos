@@ -16,7 +16,7 @@ import win32gui
 from _version import __build__, __version__
 from common import JSONFile, local_path
 from device import DeviceChangeService
-from gui import spawn_rule_manager
+from gui import exit_root, spawn_rule_manager
 from snapshot import Snapshot
 from systray import SysTray, submenu_from_settings
 
@@ -140,6 +140,7 @@ if __name__ == '__main__':
             pass
 
     monitor_thread.stop()
+    exit_root()
 
     log.info('save snapshot before shutting down')
     snap.save()
