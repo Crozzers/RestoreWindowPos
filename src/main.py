@@ -19,6 +19,7 @@ from device import DeviceChangeService
 from gui import exit_root, spawn_rule_manager
 from snapshot import Snapshot
 from systray import SysTray, submenu_from_settings
+from window import restore_snapshot
 
 
 def about(_):
@@ -47,19 +48,29 @@ def pause_snapshots(systray):
     systray.update(menu_options=True)
 
 
-def update_restore_options(systray):
-    menu = []
+def update_systray_options(systray):
+    history_menu = []
     for config in snap.get_history():
         timestamp = config['time']
         label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
-        menu.append([label, None, lambda s, t=timestamp: snap.restore(t)])
+        history_menu.append(
+            [label, None, lambda s, t=timestamp: snap.restore(t)])
 
-    if menu:
-        menu.insert(0, ['Clear history', None,
-                    lambda s: clear_restore_options()])
+    if history_menu:
+        history_menu.insert(0, ['Clear history', None,
+                                lambda s: clear_restore_options()])
 
     global menu_options
-    menu_options[2][2][:-1] = menu
+    menu_options[2][2][:-1] = history_menu
+
+    rule_menu = []
+    for rule in snap.get_rules():
+        rule_menu.append([
+            rule.get('rule_name') or 'Unnamed Rule', None,
+            lambda s, r=rule: restore_snapshot([], [r])]
+        )
+    menu_options[3][2][:-1] = rule_menu
+
     systray.update(menu_options=menu_options)
 
 
@@ -95,6 +106,10 @@ if __name__ == '__main__':
         ['Restore Snapshot', None, [
             ['Most recent', None, lambda s: snap.restore(-1)]
         ]],
+        ['Apply rules', None, [
+            ['Apply all', None, lambda s: restore_snapshot(
+                [], snap.get_rules())]
+        ]],
         [
             "Snapshot frequency", None, submenu_from_settings(
                 SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])
@@ -112,7 +127,7 @@ if __name__ == '__main__':
         local_path('assets/icon32.ico', asset=True),
         'RestoreWindowPos',
         menu_options=menu_options,
-        on_click=update_restore_options,
+        on_click=update_systray_options,
         on_quit=lambda *_: EXIT.set()
     ) as systray:
         monitor_thread = DeviceChangeService(snap.restore, snap.lock)
