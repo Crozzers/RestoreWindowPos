@@ -28,6 +28,8 @@ class RuleWindow(wx.Frame):
         super().__init__(parent=None, title=f'Rule {self._count} (Beta)')
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
+        self.rule_name_label = wx.StaticText(self.panel, label='Rule name')
+        self.rule_name = wx.TextCtrl(self.panel)
         self.window_name_label = wx.StaticText(
             self.panel, label='Window name (regex) (leave empty to ignore)')
         self.window_name = wx.TextCtrl(self.panel)
@@ -56,22 +58,34 @@ class RuleWindow(wx.Frame):
         self.save_all_btn.Bind(wx.EVT_BUTTON, self.save_all)
 
         # place everything
+        def next_pos():
+            nonlocal pos
+            if pos[1] == 1:
+                pos = [pos[0] + 1, 0]
+            else:
+                pos[1] += 1
+            return tuple(pos)
+
+        pos = [-1, 1]
         self.sizer = wx.GridBagSizer(5, 5)
-        self.sizer.Add(self.window_name_label, pos=(0, 0), flag=wx.EXPAND)
-        self.sizer.Add(self.window_name, pos=(0, 1), flag=wx.EXPAND)
-        self.sizer.Add(self.window_exe_label, pos=(1, 0), flag=wx.EXPAND)
-        self.sizer.Add(self.window_exe, pos=(1, 1), flag=wx.EXPAND)
-        self.sizer.Add(self.reset_btn, pos=(2, 0), flag=wx.EXPAND)
-        self.sizer.Add(self.save_btn, pos=(2, 1), flag=wx.EXPAND)
-        self.sizer.Add(self.delete_rule_btn, pos=(3, 0), flag=wx.EXPAND)
-        self.sizer.Add(self.new_rule_btn, pos=(3, 1), flag=wx.EXPAND)
-        self.sizer.Add(self.cancel_btn, pos=(4, 0), flag=wx.EXPAND)
-        self.sizer.Add(self.save_all_btn, pos=(4, 1), flag=wx.EXPAND)
-        self.sizer.Add(self.explanation_box, pos=(5, 0), span=(1, 2), flag=wx.EXPAND)
-        self.panel.SetSizerAndFit(self.sizer, )
+        self.sizer.Add(self.rule_name_label, pos=next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.rule_name, pos=next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.window_name_label, pos=next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.window_name, pos=next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.window_exe_label, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.window_exe, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.reset_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.save_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.delete_rule_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.new_rule_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.cancel_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.save_all_btn, next_pos(), flag=wx.EXPAND)
+        self.sizer.Add(self.explanation_box, next_pos(), span=(1, 2), flag=wx.EXPAND)
+        self.panel.SetSizerAndFit(self.sizer)
         self.sizer.Fit(self.panel)
 
         # insert data
+        self.rule_name.Value = self.rule.get('rule_name') or ''
         self.window_name.Value = self.rule.get('name') or ''
         self.window_exe.Value = self.rule.get('executable') or ''
 
@@ -100,8 +114,9 @@ class RuleWindow(wx.Frame):
         self.set_placement()
 
     def save(self, *_):
-        self.rule['name'] = self.window_name.Value
-        self.rule['executable'] = self.window_exe.Value
+        self.rule['rule_name'] = self.rule_name.Value or None
+        self.rule['name'] = self.window_name.Value or None
+        self.rule['executable'] = self.window_exe.Value or None
         self.rule['rect'] = self.get_rect()
         self.rule['placement'] = self.get_placement()
 
