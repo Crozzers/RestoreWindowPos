@@ -88,7 +88,7 @@ def find_matching_rules(rules: list[dict], window: dict):
         if pattern == text:
             return True
         try:
-            return re.match(pattern, text)
+            return re.match(pattern, text, re.IGNORECASE)
         except re.error:
             log.exception(f'fail to compile pattern "{pattern}"')
             return False
