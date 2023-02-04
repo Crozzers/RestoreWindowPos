@@ -123,17 +123,23 @@ class Snapshot(JSONFile):
         def should_keep(window):
             if not win32gui.IsWindow(window['id']):
                 return False
-            return (
-                window['id'] in exe_by_id
-                and window['executable'] == exe_by_id[window['id']]
-            )
+            try:
+                return (
+                    window.get('id') in exe_by_id
+                    and window.get('executable') == exe_by_id[window['id']]
+                )
+            except Exception:
+                return False
 
         index = len(history) - 1
         exe_by_id = {}
         while index > 0:
             for window in history[index]['windows']:
                 if window['id'] not in exe_by_id:
-                    exe_by_id[window['id']] = window['executable']
+                    try:
+                        exe_by_id[window['id']] = window['executable']
+                    except KeyError:
+                        pass
 
             current = history[index]['windows'] = list(
                 filter(should_keep, history[index]['windows']))
