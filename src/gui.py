@@ -1,11 +1,11 @@
 import ctypes
 import threading
+from copy import deepcopy
 
 import win32gui
 import wx
-from copy import deepcopy
 
-from common import size_from_rect
+from common import local_path, size_from_rect
 
 RULE_MANAGER_THREAD: threading.Thread = None
 ROOT: wx.App = None
@@ -25,6 +25,7 @@ class RuleWindow(wx.Frame):
         # create widgets and such
         self.root = root
         super().__init__(parent=None, title=f'Rule {self._count}')
+        self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
         self.panel = wx.Panel(self)
         self.window_name_label = wx.StaticText(
             self.panel, label='Window name (regex) (leave empty to ignore)')
@@ -115,7 +116,8 @@ class RuleWindow(wx.Frame):
     def destroy(self, *_, root=True):
         if root:
             for instance in self.__class__._instances:
-                instance.destroy(root=False)
+                if instance != self:
+                    instance.destroy(root=False)
         self.Close()
         self._instances.remove(self)
 
