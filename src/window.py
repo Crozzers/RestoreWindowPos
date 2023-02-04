@@ -28,7 +28,10 @@ def is_window_valid(hwnd: int) -> bool:
         return False
     if not win32gui.IsWindowVisible(hwnd):
         return False
-    window = from_hwnd(hwnd)
+    try:
+        window = from_hwnd(hwnd)
+    except pywintypes.error:
+        return False
     if not window['name']:
         return False
     if window['rect'] == (0, 0, 0, 0):
