@@ -11,7 +11,7 @@ import win32gui
 import win32process
 import wmi
 
-from common import size_from_rect
+from common import Placement, Rect, Rule, Window, size_from_rect
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def is_window_valid(hwnd: int) -> bool:
     return not titlebar.rgState[0] & win32con.STATE_SYSTEM_INVISIBLE
 
 
-def from_hwnd(hwnd: int) -> dict:
+def from_hwnd(hwnd: int) -> Window:
     if threading.current_thread() != threading.main_thread():
         pythoncom.CoInitialize()
     w = wmi.WMI()
@@ -55,35 +55,27 @@ def from_hwnd(hwnd: int) -> dict:
     _, pid = win32process.GetWindowThreadProcessId(hwnd)
     exe = w.query(
         f'SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}')[0]
+    rect = win32gui.GetWindowRect(hwnd)
 
-    return {
-        'name': win32gui.GetWindowText(hwnd),
-        'rect': win32gui.GetWindowRect(hwnd),
-        'executable': exe.ExecutablePath
-    }
+    return Window(id=hwnd, name=win32gui.GetWindowText(hwnd),
+                  executable=exe.ExecutablePath,
+                  size=size_from_rect(rect),
+                  rect=rect,
+                  placement=win32gui.GetWindowPlacement(hwnd)
+                  )
 
 
-def capture_snapshot() -> list[dict]:
-    def callback(hwnd, extra):
+def capture_snapshot() -> list[Window]:
+    def callback(hwnd, *_):
         if is_window_valid(hwnd):
-            window = from_hwnd(hwnd)
-            snapshot.append(
-                {
-                    'id': hwnd,
-                    'name': window['name'],
-                    'executable': window['executable'],
-                    'size': size_from_rect(window['rect']),
-                    'rect': window['rect'],
-                    'placement': win32gui.GetWindowPlacement(hwnd)
-                }
-            )
+            snapshot.append(from_hwnd(hwnd))
 
     snapshot = []
     win32gui.EnumWindows(callback, None)
     return snapshot
 
 
-def find_matching_rules(rules: list[dict], window: dict):
+def find_matching_rules(rules: list[Rule], window: Window):
     def match(pattern, text):
         if pattern == text:
             return True
@@ -94,59 +86,54 @@ def find_matching_rules(rules: list[dict], window: dict):
             return False
 
     for rule in rules:
-        name_match = rule.get('name') is None or match(
-            rule.get('name'), window['name'])
-        exe_match = rule.get('executable') is None or match(
-            rule.get('executable'), window['executable'])
+        name_match = rule.name is None or match(rule.name, window.name)
+        exe_match = rule.executable is None or match(
+            rule.executable, window.executable)
         if name_match and exe_match:
             yield rule
 
 
-def apply_positioning(hwnd: int, rect: tuple, placement: list = None):
+def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
     try:
         if placement:
             win32gui.SetWindowPlacement(hwnd, placement)
-        win32gui.MoveWindow(
-            hwnd, *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+        w, h = size_from_rect(rect)
+        win32gui.MoveWindow(hwnd, *rect[:2], w, h, 0)
     except pywintypes.error as e:
         log.error('err moving window %s : %s' %
                   (win32gui.GetWindowText(hwnd), e))
-        pass
 
 
-def restore_snapshot(snap: list[dict], rules: list[dict] = None):
+def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
     def callback(hwnd, extra):
         if not is_window_valid(hwnd):
             return
 
         window = from_hwnd(hwnd)
         for item in snap:
-            rect = tuple(item['rect'])
-            if rect == (0, 0, 0, 0):
+            if item.rect == (0, 0, 0, 0):
                 return
 
-            if hwnd != item['id']:
+            if hwnd != item.id:
                 continue
 
-            if window['rect'] == rect:
+            if window.rect == item.rect:
                 return
 
             try:
-                placement = item['placement']
+                placement = item.placement
             except KeyError:
                 placement = None
 
             log.debug(
-                f'restore window "{window["name"]}" {window["rect"]} -> {rect}')
-            apply_positioning(hwnd, rect, placement)
+                f'restore window "{window["name"]}" {window["rect"]} -> {item.rect}')
+            apply_positioning(hwnd, item.rect, placement)
             return
         else:
             if not rules:
                 return
             for rule in find_matching_rules(rules, window):
-                log.debug(
-                    f'apply rule {rule.get("name") or rule.get("executable")} to "{window["name"]}"')
-                apply_positioning(hwnd, rule.get(
-                    'rect'), rule.get('placement'))
+                log.debug(f'apply rule "{rule.rule_name}" to "{window.name}"')
+                apply_positioning(hwnd, rule.rect, rule.placement)
 
     win32gui.EnumWindows(callback, None)

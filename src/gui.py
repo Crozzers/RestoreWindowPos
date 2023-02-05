@@ -5,8 +5,8 @@ from copy import deepcopy
 import win32gui
 import wx
 import wx.lib.scrolledpanel
-
-from common import local_path, size_from_rect
+from snapshot import SnapshotFile
+from common import local_path, size_from_rect, Rule
 
 RULE_MANAGER_THREAD: threading.Thread = None
 ROOT: wx.App = None
@@ -16,10 +16,9 @@ class RuleWindow(wx.Frame):
     _instances = []
     _count = 0
 
-    def __init__(self, root: wx.App, rule: dict, snapshot):
+    def __init__(self, root: wx.App, rule: Rule, snapshot: SnapshotFile):
         self.__class__._instances.append(self)
         self.__class__._count += 1
-        self._snapshot = snapshot
         self.rule = rule
         self.snapshot = snapshot
 
@@ -80,14 +79,15 @@ class RuleWindow(wx.Frame):
         self.sizer.Add(self.new_rule_btn, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.cancel_btn, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.save_all_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.explanation_box, next_pos(), span=(1, 2), flag=wx.EXPAND)
+        self.sizer.Add(self.explanation_box, next_pos(),
+                       span=(1, 2), flag=wx.EXPAND)
         self.panel.SetSizerAndFit(self.sizer)
         self.sizer.Fit(self.panel)
 
         # insert data
-        self.rule_name.Value = self.rule.get('rule_name') or ''
-        self.window_name.Value = self.rule.get('name') or ''
-        self.window_exe.Value = self.rule.get('executable') or ''
+        self.rule_name.Value = self.rule.rule_name or ''
+        self.window_name.Value = self.rule.name or ''
+        self.window_exe.Value = self.rule.executable or ''
 
         # final steps
         self.panel.SetupScrolling()
@@ -98,28 +98,29 @@ class RuleWindow(wx.Frame):
         return win32gui.GetWindowPlacement(self.GetHandle())
 
     def set_placement(self):
-        placement = self.rule.get('placement')
-        win32gui.SetWindowPlacement(self.GetHandle(), placement)
+        win32gui.SetWindowPlacement(self.GetHandle(), self.rule.placement)
 
     def get_rect(self):
         return win32gui.GetWindowRect(self.GetHandle())
 
     def set_rect(self):
-        rect = self.rule.get('rect')
-        win32gui.MoveWindow(self.GetHandle(),
-                            *rect[:2], rect[2] - rect[0], rect[3] - rect[1], 0)
+        rect = self.rule.rect
+        w, h = size_from_rect(rect)
+        win32gui.MoveWindow(self.GetHandle(), *rect[:2], w, h, 0)
 
     def set_pos(self, *_):
         self.set_placement()
         self.set_rect()
 
     def save(self, *_):
-        self.rule['rule_name'] = self.rule_name.Value or None
-        self.rule['name'] = self.window_name.Value or None
-        self.rule['executable'] = self.window_exe.Value or None
-        self.rule['rect'] = self.get_rect()
-        self.rule['size'] = size_from_rect(self.rule['rect'])
-        self.rule['placement'] = self.get_placement()
+        self.rule.rule_name = self.rule_name.Value or None
+        self.rule.name = self.window_name.Value or None
+        self.rule.executable = self.window_exe.Value or None
+        self.rule.rect = self.get_rect()
+        self.rule.size = size_from_rect(self.rule.rect)
+        self.rule.placement = self.get_placement()
+        if self.rule not in self.snapshot.get_rules():
+            self.snapshot.get_rules().append(self.rule)
         self.snapshot.save()
 
     def save_all(self, *_):
@@ -128,7 +129,7 @@ class RuleWindow(wx.Frame):
 
     def new_rule(self, *_):
         rule = deepcopy(self.rule)
-        self.snapshot.get_current_snapshot().get('rules').append(rule)
+        self.snapshot.get_rules().append(rule)
         RuleWindow(self.root, rule, self.snapshot)
 
     def delete(self, *_):
@@ -148,17 +149,15 @@ class RuleWindow(wx.Frame):
 
 def _new_rule():
     # should probably build some kind of rule manager tbh
-    rect = [0, 0, 1000, 500]
-    return {
-        'name': None,
-        'executable': None,
-        'size': size_from_rect(rect),
-        'rect': rect,
-        'placement': [0, 1, [-1, -1], [-1, -1], rect]
-    }
+    rect = (0, 0, 1000, 500)
+    return Rule(
+        size=size_from_rect(rect),
+        rect=rect,
+        placement=(0, 1, (-1, -1), (-1, -1), rect)
+    )
 
 
-def spawn_rule_manager(snap):
+def spawn_rule_manager(snap: SnapshotFile):
     root = init_root()
 
     try:

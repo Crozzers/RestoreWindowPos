@@ -2,18 +2,20 @@ import logging
 import re
 import threading
 import time
+from dataclasses import asdict
 
 import pywintypes
 import win32api
 import win32gui
 
-from common import JSONFile, local_path, size_from_rect
+from common import (Display, JSONFile, Snapshot, Window, WindowHistory,
+                    local_path, size_from_rect)
 from window import capture_snapshot, restore_snapshot
 
 log = logging.getLogger(__name__)
 
 
-def enum_display_devices():
+def enum_display_devices() -> list[Display]:
     result = []
     for monitor in win32api.EnumDisplayMonitors():
         try:
@@ -31,16 +33,14 @@ def enum_display_devices():
             except Exception:
                 pass
             else:
-                result.append({
-                    'uid': dev_uid,
-                    'name': dev_name,
-                    'resolution': size_from_rect(dev_rect),
-                    'rect': list(dev_rect)
-                })
+                result.append(Display(uid=dev_uid, name=dev_name,
+                              resolution=size_from_rect(dev_rect), rect=dev_rect))
     return result
 
 
-class Snapshot(JSONFile):
+class SnapshotFile(JSONFile):
+    data: list[Snapshot]
+
     def __init__(self):
         super().__init__(local_path('history.json'))
         self.load()
@@ -48,85 +48,82 @@ class Snapshot(JSONFile):
 
     def load(self):
         super().load(default=[])
-        for snapshot in self.data:
-            if 'history' in snapshot:
-                snapshot['history'].sort(key=lambda a: a.get('time'))
-            else:
-                if 'windows' in snapshot:
-                    snapshot['history'] = [{
-                        'time': time.time(),
-                        'windows': snapshot.pop('windows')
-                    }]
-                else:
-                    snapshot['history'] = []
+        for index in range(len(self.data)):
+            snapshot: Snapshot = Snapshot.from_json(
+                self.data[index]) or Snapshot()
+            self.data[index] = snapshot
+            snapshot.history.sort(key=lambda a: a.time)
 
-    def restore(self, timestamp=None):
+    def save(self):
+        return super().save([asdict(i) for i in self.data])
+
+    def restore(self, timestamp: float = None):
         with self.lock:
             snap = self.get_current_snapshot()
-            if snap is None or snap.get('history') is None:
+            if snap is None or not snap.history:
                 return
 
-            history = snap['history']
+            history = snap.history
 
-            def restore_ts(timestamp):
+            def restore_ts(timestamp: float):
                 for config in history:
-                    if config['time'] == timestamp:
-                        restore_snapshot(
-                            config['windows'], snap.get('rules'))
-                        snap['mru'] = timestamp
+                    if config.time == timestamp:
+                        restore_snapshot(config.windows, snap.rules)
+                        snap.mru = timestamp
                         return True
 
             self._log.info(f'restore snapshot, timestamp={timestamp}')
             if timestamp == -1:
                 restore_snapshot(
-                    history[-1]['windows'], snap.get('rules'))
+                    history[-1].windows, snap.rules)
             elif timestamp:
                 restore_ts(timestamp)
             else:
-                if not (snap.get('mru') and restore_ts(snap.get('mru'))):
-                    restore_snapshot(
-                        history[-1]['windows'], snap.get('rules'))
+                if not (snap.mru and restore_ts(snap.mru)):
+                    restore_snapshot(history[-1].windows, snap.rules)
 
     def capture(self):
         self._log.debug('capture snapshot')
         return time.time(), enum_display_devices(), capture_snapshot()
 
-    def get_current_snapshot(self):
+    def get_current_snapshot(self) -> Snapshot:
         displays = enum_display_devices()
 
-        with self.lock:
+        def find():
             for ss in self.data:
-                if ss['displays'] == displays:
+                if ss.displays == displays:
                     return ss
+
+        with self.lock:
+            snap = find()
+            if snap is None:
+                self.update()
+                snap = find()
+            return snap
 
     def get_history(self):
         with self.lock:
             snap = self.get_current_snapshot()
-            if snap is not None:
-                return snap['history']
+            return snap.history
 
     def get_rules(self):
         with self.lock:
             snap = self.get_current_snapshot()
-            if snap is not None:
-                if 'rules' not in snap:
-                    snap['rules'] = []
-                return snap['rules']
+            return snap.rules
 
     def clear_history(self):
         with self.lock:
             snap = self.get_current_snapshot()
-            if snap is not None:
-                snap['history'] = []
+            snap.history = []
 
-    def squash(self, history):
-        def should_keep(window):
-            if not win32gui.IsWindow(window['id']):
+    def squash(self, history: list[WindowHistory]):
+        def should_keep(window: Window):
+            if not win32gui.IsWindow(window.id):
                 return False
             try:
                 return (
-                    window.get('id') in exe_by_id
-                    and window.get('executable') == exe_by_id[window['id']]
+                    window.id in exe_by_id
+                    and window.executable == exe_by_id[window.id]
                 )
             except Exception:
                 return False
@@ -134,17 +131,17 @@ class Snapshot(JSONFile):
         index = len(history) - 1
         exe_by_id = {}
         while index > 0:
-            for window in history[index]['windows']:
-                if window['id'] not in exe_by_id:
+            for window in history[index].windows:
+                if window.id not in exe_by_id:
                     try:
-                        exe_by_id[window['id']] = window['executable']
+                        exe_by_id[window.id] = window.executable
                     except KeyError:
                         pass
 
-            current = history[index]['windows'] = list(
-                filter(should_keep, history[index]['windows']))
-            previous = history[index - 1]['windows'] = list(
-                filter(should_keep, history[index - 1]['windows']))
+            current = history[index].windows = list(
+                filter(should_keep, history[index].windows))
+            previous = history[index - 1].windows = list(
+                filter(should_keep, history[index - 1].windows))
 
             if len(current) > len(previous):
                 # if current is greater but contains all the items of previous
@@ -160,11 +157,12 @@ class Snapshot(JSONFile):
                     continue
 
                 for window_b in greater:
-                    # in future compare program of origin
-                    if window_a['id'] == window_b['id']:
-                        if window_a['rect'] == window_b['rect']:
-                            if window_a['placement'] == window_b['placement']:
-                                break
+                    if (
+                        window_a.id == window_b.id
+                        and window_a.rect == window_b.rect
+                        and window_a.placement == window_b.placement
+                    ):
+                        break
                 else:
                     break
             else:
@@ -177,10 +175,10 @@ class Snapshot(JSONFile):
     def prune_history(self):
         with self.lock:
             for snapshot in self.data:
-                self.squash(snapshot['history'])
+                self.squash(snapshot.history)
 
-                if len(snapshot['history']) > 10:
-                    snapshot['history'] = snapshot['history'][-10:]
+                if len(snapshot.history) > 10:
+                    snapshot.history = snapshot.history[-10:]
 
     def update(self):
         timestamp, displays, windows = self.capture()
@@ -189,22 +187,14 @@ class Snapshot(JSONFile):
             return
 
         with self.lock:
+            wh = WindowHistory(time=timestamp, windows=windows)
             for item in self.data:
-                if item['displays'] == displays:
+                if item.displays == displays:
                     # add current config to history
-                    item['history'].append({
-                        'time': timestamp,
-                        'windows': windows
-                    })
-                    item['mru'] = None
+                    item.history.append(wh)
+                    item.mru = None
                     break
             else:
-                self.data.append({
-                    'displays': displays,
-                    'history': [{
-                        'time': timestamp,
-                        'windows': windows
-                    }]
-                })
+                self.data.append(Snapshot(displays=displays, history=[wh]))
 
             self.prune_history()

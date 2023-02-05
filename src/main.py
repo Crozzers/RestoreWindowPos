@@ -17,7 +17,7 @@ from _version import __build__, __version__
 from common import JSONFile, local_path
 from device import DeviceChangeService
 from gui import exit_root, spawn_rule_manager
-from snapshot import Snapshot
+from snapshot import SnapshotFile
 from systray import SysTray, submenu_from_settings
 from window import restore_snapshot
 
@@ -51,7 +51,7 @@ def pause_snapshots(systray):
 def update_systray_options(systray):
     history_menu = []
     for config in snap.get_history():
-        timestamp = config['time']
+        timestamp = config.time
         label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
         history_menu.append(
             [label, None, lambda s, t=timestamp: snap.restore(t)])
@@ -66,7 +66,7 @@ def update_systray_options(systray):
     rule_menu = []
     for rule in snap.get_rules():
         rule_menu.append([
-            rule.get('rule_name') or 'Unnamed Rule', None,
+            rule.rule_name or 'Unnamed Rule', None,
             lambda s, r=rule: restore_snapshot([], [r])]
         )
     menu_options[3][2][:-1] = rule_menu
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     SETTINGS.set('pause_snapshots', False)  # reset this key
     EXIT = threading.Event()
 
-    snap = Snapshot()
+    snap = SnapshotFile()
 
     menu_options = [
         ['Capture Now', None, lambda s: snap.update()],
