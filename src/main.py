@@ -144,7 +144,8 @@ if __name__ == '__main__':
                     snap.save()
                     count = 0
 
-                for i in range(SETTINGS.get('snapshot_freq', 30)):
+                sleep_start = time.time()
+                while time.time() - sleep_start < SETTINGS.get('snapshot_freq', 30):
                     time.sleep(1)
                     if EXIT.is_set():
                         break
