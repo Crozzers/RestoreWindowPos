@@ -1,5 +1,7 @@
 import ctypes
+import logging
 
+import win32con
 from infi.systray import SysTrayIcon
 
 from common import format_unit, tuple_convert
@@ -7,6 +9,8 @@ from common import format_unit, tuple_convert
 
 class SysTray(SysTrayIcon):
     def __init__(self, *a, menu_options=None, on_click=None, **kw):
+        self.log = logging.getLogger(__name__).getChild(
+            self.__class__.__name__).getChild(str(id(self)))
         self.on_click = on_click
         self.menu_options_orig = menu_options
         super().__init__(*a, menu_options=list_to_tuple(menu_options), **kw)
@@ -32,6 +36,16 @@ class SysTray(SysTrayIcon):
             self._menu_actions_by_id = dict(self._menu_actions_by_id)
             ctypes.windll.user32.DestroyMenu(self._menu)
             self._menu = None
+
+    def _execute_menu_option(self, id):
+        try:
+            return super()._execute_menu_option(id)
+        except Exception as e:
+            self.log.exception(f'failed to execute menu command {id}')
+            caption = f'Failed to execute system tray menu command\n{type(e).__name__}: {e}'
+            ctypes.windll.user32.MessageBoxW(
+                0, caption, 'RestoreWindowPos', win32con.MB_ICONERROR)
+            raise
 
 
 def list_to_tuple(item):
