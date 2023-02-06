@@ -18,6 +18,10 @@ To update to the latest version, download the latest installer from the [release
 
 To shutdown RestoreWindowPos, simply right click the system tray icon and click "Quit". Wait a couple of seconds for the program to shut itself down properly then launch the latest installer.
 
+If the newly installed update throws an error on launch, try deleting your snapshot history file.
+Hit <kbd>Win</kbd> + <kbd>R</kbd> and enter `%appdata%\..\Local\Programs\RestoreWindowPos`. Delete the `history.json` file.
+If this does not resolve your issue, please [report the issue](https://github.com/Crozzers/RestoreWindowPos/issues).
+
 #### Compilation
 
 You will need to install NSIS and add it to your PATH in order to compile the installer for the program, but you can bundle the app
