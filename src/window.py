@@ -126,7 +126,7 @@ def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
                 placement = None
 
             log.debug(
-                f'restore window "{window["name"]}" {window["rect"]} -> {item.rect}')
+                f'restore window "{window.name}" {window.rect} -> {item.rect}')
             apply_positioning(hwnd, item.rect, placement)
             return
         else:
