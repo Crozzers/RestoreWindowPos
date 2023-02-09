@@ -5,7 +5,6 @@
 # Todo:
 # https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
 # https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
-import ctypes
 import logging
 import threading
 import time
@@ -13,26 +12,12 @@ import time
 import win32con
 import win32gui
 
-from _version import __build__, __version__
 from common import JSONFile, local_path
 from device import DeviceChangeService
-from gui import exit_root, spawn_rule_manager
+from gui import about_dialog, exit_root, spawn_rule_manager
 from snapshot import SnapshotFile
 from systray import SysTray, submenu_from_settings
 from window import restore_snapshot
-
-
-def about(_):
-    caption = '\n'.join((
-        f"Version: v{__version__}",
-        f"Build: {__build__}",
-        "URL: https://github.com/Crozzers/RestoreWindowPos",
-        "\nCreated by: Crozzers (https://github.com/Crozzers)",
-        "License: MIT License",
-        "\nInstall Dir: %s" % local_path('.')
-    ))
-    ctypes.windll.user32.MessageBoxW(
-        0, caption, 'RestoreWindowPos', win32con.MB_ICONINFORMATION)
 
 
 def pause_snapshots(systray):
@@ -120,7 +105,7 @@ if __name__ == '__main__':
         ],
         ['Configure Rules', None, lambda s: spawn_rule_manager(
             snap)],
-        ['About', None, about]
+        ['About', None, lambda s: about_dialog()]
     ]
 
     with SysTray(
