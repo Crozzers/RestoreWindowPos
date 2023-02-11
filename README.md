@@ -37,6 +37,8 @@ pip install -r requirements-dev.txt
 The install process will bundle the python script into an EXE and install it to your `AppData\Local\Programs` folder.
 It will also add itself as a startup task, which you can manage in the "start-up" tab of Task Manager.
 
+Currently, the project can only be bundled using Python 3.10, as it requires Python 3.10's type hint features and `wxPython`, which only has installation wheels up to Python 3.10.
+
 ## Features
 
 * Snapshots taken every minute (with options for various different intervals)
