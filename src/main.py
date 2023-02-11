@@ -15,7 +15,7 @@ import win32gui
 from common import JSONFile, local_path
 from device import DeviceChangeService
 from gui import about_dialog, exit_root, spawn_rule_manager
-from snapshot import SnapshotFile
+from snapshot import SnapshotFile, SnapshotService
 from systray import SysTray, submenu_from_settings
 from window import restore_snapshot
 
@@ -117,30 +117,17 @@ if __name__ == '__main__':
     ) as systray:
         monitor_thread = DeviceChangeService(snap.restore, snap.lock)
         monitor_thread.start()
+        snapshot_service = SnapshotService(None)
+        snapshot_service.start(args=(snap, SETTINGS))
 
         try:
-            count = 0
             while not EXIT.is_set():
-                if not SETTINGS.get('pause_snapshots', False):
-                    snap.update()
-                    count += 1
-
-                if count >= SETTINGS.get('save_freq', 1):
-                    snap.save()
-                    count = 0
-
-                sleep_start = time.time()
-                while time.time() - sleep_start < SETTINGS.get('snapshot_freq', 30):
-                    time.sleep(1)
-                    if EXIT.is_set():
-                        break
-                else:
-                    continue
-                break
+                time.sleep(1)
         except KeyboardInterrupt:
             pass
 
     monitor_thread.stop()
+    snapshot_service.stop()
     exit_root()
 
     log.info('save snapshot before shutting down')

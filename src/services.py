@@ -13,9 +13,11 @@ class Service(ABC):
         self._kill_signal = threading.Event()
         self._thread = None
 
-    def start(self):
+    def start(self, args=None):
+        args = args or ()
         if self._thread is None:
-            self._thread = threading.Thread(target=self._runner, daemon=True)
+            self._thread = threading.Thread(
+                target=self._runner, args=args, daemon=True)
 
         self._thread.start()
         self.log.info('started thread')
