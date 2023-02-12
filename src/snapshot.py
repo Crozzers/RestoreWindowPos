@@ -10,6 +10,7 @@ import win32gui
 
 from common import (Display, JSONFile, Snapshot, Window, WindowHistory,
                     local_path, size_from_rect)
+from services import Service
 from window import capture_snapshot, restore_snapshot
 
 log = logging.getLogger(__name__)
@@ -198,3 +199,22 @@ class SnapshotFile(JSONFile):
                 self.data.append(Snapshot(displays=displays, history=[wh]))
 
             self.prune_history()
+
+
+class SnapshotService(Service):
+    def _runner(self, snapshot: SnapshotFile, settings: JSONFile):
+        count = 0
+        while not self._kill_signal.is_set():
+            if not settings.get('pause_snapshots', False):
+                snapshot.update()
+                count += 1
+
+            if count >= settings.get('save_freq', 1):
+                snapshot.save()
+                count = 0
+
+            sleep_start = time.time()
+            while time.time() - sleep_start < settings.get('snapshot_freq', 30):
+                time.sleep(1)
+                if self._kill_signal.is_set():
+                    return

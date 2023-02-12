@@ -6,16 +6,11 @@ import wx
 import wx.adv
 import wx.lib.scrolledpanel
 
-from _version import __build__, __version__
 from common import Rule, local_path, size_from_rect
 from snapshot import SnapshotFile
 
 RULE_MANAGER_THREAD: threading.Thread = None
 ROOT: wx.App = None
-
-
-def get_wx_icon():
-    return wx.Icon(local_path('assets/icon32.ico', asset=True))
 
 
 class RuleWindow(wx.Frame):
@@ -30,7 +25,7 @@ class RuleWindow(wx.Frame):
 
         # create widgets and such
         super().__init__(parent=None, title=f'Rule {self._count} (Beta)')
-        self.SetIcon(get_wx_icon())
+        self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.rule_name_label = wx.StaticText(self.panel, label='Rule name')
         self.rule_name = wx.TextCtrl(self.panel)
@@ -168,49 +163,10 @@ def _new_rule():
 
 
 def spawn_rule_manager(snap: SnapshotFile):
-    with WxApp() as root:
-        rules = snap.get_rules()
-        if not rules:
-            rules.append(_new_rule())
-        for rule in rules:
-            RuleWindow(rule, snap)
+    rules = snap.get_rules()
+    if not rules:
+        rules.append(_new_rule())
+    for rule in rules:
+        RuleWindow(rule, snap)
 
-        root.MainLoop()
-        RuleWindow._count = 0
-
-
-def exit_root():
-    wx.Exit()
-
-
-class WxApp():
-    _app: wx.App = None
-    _count: int = 0
-
-    def __enter__(self):
-        if self._app is None:
-            self._app = wx.App()
-
-        self._count += 1
-        return self._app
-
-    def __exit__(self, *_):
-        self._count -= 1
-
-
-def about_dialog():
-    with WxApp():
-        about = wx.adv.AboutDialogInfo()
-        about.SetIcon(get_wx_icon())
-        about.SetName('RestoreWindowPos')
-        about.SetVersion(f'v{__version__}')
-        about.SetDescription('\n'.join((
-            f'Build: {__build__}',
-            'Install DIr: %s' % local_path('.')
-        )))
-        with open(local_path('./LICENSE', asset=True), encoding='utf8') as f:
-            about.SetLicence(f.read())
-        about.SetCopyright('© 2023')
-        about.SetWebSite(
-            'https://github.com/Crozzers/RestoreWindowPos', 'Open GitHub Page')
-        wx.adv.AboutBox(about)
+    RuleWindow._count = 0
