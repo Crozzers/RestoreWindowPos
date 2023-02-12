@@ -44,7 +44,7 @@ def pause_snapshots(systray):
         verb = 'Resume'
 
     global menu_options
-    menu_options[0][0] = f'{verb} snapshots'
+    menu_options[1][0] = f'{verb} snapshots'
     systray.update(menu_options=True)
 
 
