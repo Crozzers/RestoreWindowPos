@@ -37,22 +37,21 @@ def update_systray_options():
         timestamp = config.time
         label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
         history_menu.append(
-            [label, None, lambda *_, t=timestamp: snap.restore(t)])
+            [label, lambda *_, t=timestamp: snap.restore(t)])
 
     if history_menu:
-        history_menu.insert(0, ['Clear history', None,
-                                lambda *_: clear_restore_options()])
+        history_menu.insert(0, [TaskbarIcon.SEPERATOR, None])
+        history_menu.insert(
+            0, ['Clear history', lambda *_: clear_restore_options()])
 
     global menu_options
-    menu_options[2][2][:-1] = history_menu
+    menu_options[2][1][:-2] = history_menu
 
     rule_menu = []
     for rule in snap.get_rules():
-        rule_menu.append([
-            rule.rule_name or 'Unnamed Rule', None,
-            lambda *_, r=rule: restore_snapshot([], [r])]
-        )
-    menu_options[3][2][:-1] = rule_menu
+        rule_menu.append([rule.rule_name or 'Unnamed Rule',
+                         lambda *_, r=rule: restore_snapshot([], [r])])
+    menu_options[7][1][:-2] = rule_menu
 
 
 def clear_restore_options():
@@ -82,26 +81,28 @@ if __name__ == '__main__':
     app = WxApp()
 
     menu_options = [
-        ['Capture Now', None, snap.update],
-        ['Pause Snapshots', None, pause_snapshots],
-        ['Restore Snapshot', None, [
-            ['Most recent', None, lambda *_: snap.restore(-1)]
+        ['Capture Now', snap.update],
+        ['Pause Snapshots', pause_snapshots],
+        ['Restore Snapshot', [
+            [TaskbarIcon.SEPERATOR, None],
+            ['Most recent', lambda *_: snap.restore(-1)]
         ]],
-        ['Apply rules', None, [
-            ['Apply all', None, lambda *_: restore_snapshot(
-                [], snap.get_rules())]
-        ]],
+        [TaskbarIcon.SEPERATOR, None],
         [
-            "Snapshot frequency", None, submenu_from_settings(
+            "Snapshot frequency", submenu_from_settings(
                 SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])
         ], [
-            "Save frequency", None,
-            submenu_from_settings(
+            "Save frequency", submenu_from_settings(
                 SETTINGS, 'save_freq', 1, 'snapshot', [1, 2, 3, 4, 5])
         ],
-        ['Configure Rules', None, lambda *_: spawn_rule_manager(
-            snap)],
-        ['About', None, lambda *_: about_dialog()]
+        [TaskbarIcon.SEPERATOR, None],
+        ['Apply rules', [
+            [TaskbarIcon.SEPERATOR, None],
+            ['Apply all', lambda *_: restore_snapshot([], snap.get_rules())]
+        ]],
+        ['Configure Rules', lambda *_: spawn_rule_manager(snap)],
+        [TaskbarIcon.SEPERATOR, None],
+        ['About', lambda *_: about_dialog()]
     ]
 
     def shutdown():

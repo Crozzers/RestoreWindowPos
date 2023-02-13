@@ -8,6 +8,8 @@ from .wx_app import WxApp
 
 
 class TaskbarIcon(wx.adv.TaskBarIcon):
+    SEPERATOR = 10001
+
     def __init__(self, menu_options: list[list], on_click: Callable = None, on_exit: Callable = None):
         wx.adv.TaskBarIcon.__init__(self)
         self.SetIcon(
@@ -16,26 +18,28 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         self._on_click = on_click
         self._on_exit = on_exit
 
-    def create_menu_item(self, text: str, callback: Callable, menu: wx.Menu = None):
-        menu = menu or self.menu
+    def create_menu_item(self, menu: wx.Menu, text: str | int, callback: Callable):
+        if text == self.SEPERATOR:
+            menu.AppendSeparator()
+            return
         item = wx.MenuItem(menu, -1, text)
         menu.Bind(wx.EVT_MENU, lambda *_: callback(), id=item.GetId())
         menu.Append(item)
         return item
 
-    def create_sub_menu(self, text, items: tuple[str, Callable]):
+    def create_sub_menu(self, menu: wx.Menu, text, items: tuple[str, Callable]):
         submenu = wx.Menu()
         for item in items:
-            self.create_menu_item(item[0], item[2], submenu)
-        self.menu.Append(wx.ID_ANY, text, submenu)
+            self.create_menu_item(submenu, *item)
+        menu.Append(wx.ID_ANY, text, submenu)
 
-    def populate_from_list(self, menu_items):
+    def populate_from_list(self, menu, menu_items):
         for item in menu_items:
-            text, _, callback = item
-            if callable(callback):
-                self.create_menu_item(text, callback)
+            text, callback = item
+            if callable(callback) or text == self.SEPERATOR:
+                self.create_menu_item(menu, text, callback)
             else:
-                self.create_sub_menu(text, callback)
+                self.create_sub_menu(menu, text, callback)
 
     def set_menu_options(self, menu_options):
         self.menu_options = menu_options
@@ -46,9 +50,9 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         if self.menu_options is None:
             return False
         menu = wx.Menu()
-        self.menu = menu
-        self.populate_from_list(self.menu_options)
-        self.create_menu_item('Quit', lambda *_: self.exit())
+        self.populate_from_list(menu, self.menu_options)
+        self.create_menu_item(menu, self.SEPERATOR, None)
+        self.create_menu_item(menu, 'Quit', lambda *_: self.exit())
         return menu
 
     def exit(self):
@@ -82,5 +86,5 @@ def submenu_from_settings(settings, key, default, label_unit, allowed_values):
         label = format_unit(label_unit, val)
         if val == settings.get(key, default):
             label += ' [current]'
-        opts.append([label, None, lambda *_, i=index, v=val: cb(opts, i, v)])
+        opts.append([label, lambda *_, i=index, v=val: cb(opts, i, v)])
     return opts
