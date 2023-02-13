@@ -19,4 +19,6 @@ class WxApp(wx.App):
         return super().OnExit()
 
     def schedule_exit(self):
+        self._top_frame.DestroyChildren()
+        self._top_frame.Destroy()
         wx.CallAfter(self.Destroy)

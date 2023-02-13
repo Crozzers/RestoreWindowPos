@@ -8,12 +8,13 @@ from .wx_app import WxApp
 
 
 class TaskbarIcon(wx.adv.TaskBarIcon):
-    def __init__(self, menu_options: list[list], on_click: Callable = None):
+    def __init__(self, menu_options: list[list], on_click: Callable = None, on_exit: Callable = None):
         wx.adv.TaskBarIcon.__init__(self)
         self.SetIcon(
             wx.Icon(local_path('assets/icon32.ico', asset=True)), 'RestoreWindowPos')
         self.menu_options = menu_options
         self._on_click = on_click
+        self._on_exit = on_exit
 
     def create_menu_item(self, text: str, callback: Callable, menu: wx.Menu = None):
         menu = menu or self.menu
@@ -47,15 +48,20 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         menu = wx.Menu()
         self.menu = menu
         self.populate_from_list(self.menu_options)
-        self.create_menu_item('Quit', lambda *_: WxApp().schedule_exit)
+        self.create_menu_item('Quit', lambda *_: self.exit())
         return menu
+
+    def exit(self):
+        if callable(self._on_exit):
+            self._on_exit()
+        self.RemoveIcon()
+        WxApp().schedule_exit()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
-        self.RemoveIcon()
-        WxApp().schedule_exit()
+        self.exit()
 
 
 def list_to_tuple(item):

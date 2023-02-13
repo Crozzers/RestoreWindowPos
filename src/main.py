@@ -13,7 +13,7 @@ import win32gui
 
 from common import JSONFile, local_path
 from device import DeviceChangeService
-from gui import WxApp, about_dialog, exit_root, spawn_rule_manager
+from gui import WxApp, about_dialog, spawn_rule_manager
 from gui import TaskbarIcon, submenu_from_settings
 from snapshot import SnapshotFile, SnapshotService
 from window import restore_snapshot
@@ -104,7 +104,14 @@ if __name__ == '__main__':
         ['About', None, lambda *_: about_dialog()]
     ]
 
-    with TaskbarIcon(menu_options, on_click=update_systray_options):
+    def shutdown():
+        monitor_thread.stop()
+        snapshot_service.stop()
+        log.info('save snapshot before shutting down')
+        snap.save()
+        log.info('exit')
+
+    with TaskbarIcon(menu_options, on_click=update_systray_options, on_exit=shutdown):
         monitor_thread = DeviceChangeService(snap.restore, snap.lock)
         monitor_thread.start()
         snapshot_service = SnapshotService(None)
@@ -114,12 +121,3 @@ if __name__ == '__main__':
             app.MainLoop()
         except KeyboardInterrupt:
             pass
-
-    monitor_thread.stop()
-    snapshot_service.stop()
-    exit_root()
-
-    log.info('save snapshot before shutting down')
-    snap.save()
-
-    log.info('exit')

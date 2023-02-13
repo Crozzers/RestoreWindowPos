@@ -23,7 +23,3 @@ def about_dialog():
     about.SetWebSite(
         'https://github.com/Crozzers/RestoreWindowPos', 'Open GitHub Page')
     wx.adv.AboutBox(about)
-
-
-def exit_root():
-    wx.Exit()
