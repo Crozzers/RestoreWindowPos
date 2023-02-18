@@ -13,8 +13,8 @@ import win32gui
 
 from common import JSONFile, local_path
 from device import DeviceChangeService
-from gui import WxApp, about_dialog, spawn_rule_manager
-from gui import TaskbarIcon, submenu_from_settings
+from gui import (TaskbarIcon, WxApp, about_dialog, radio_menu,
+                 spawn_rule_manager)
 from snapshot import SnapshotFile, SnapshotService
 from window import restore_snapshot
 
@@ -89,11 +89,18 @@ if __name__ == '__main__':
         ]],
         TaskbarIcon.SEPARATOR,
         [
-            "Snapshot frequency", submenu_from_settings(
-                SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])
+            "Snapshot frequency", radio_menu(
+                {'5 seconds': 5, '10 seconds': 10, '30 seconds': 30, '1 minute': 60,
+                 '5 minutes': 300, '10 minutes': 600, '30 minutes': 1800, '1 hour': 3600},
+                lambda: SETTINGS.get('snapshot_freq', 60),
+                lambda v: SETTINGS.set('snapshot_freq', v)
+            )
         ], [
-            "Save frequency", submenu_from_settings(
-                SETTINGS, 'save_freq', 1, 'snapshot', [1, 2, 3, 4, 5])
+            "Save frequency", radio_menu(
+                {f'{v} snapshot': v for v in range(1, 6)},
+                lambda: SETTINGS.get('save_freq', 60),
+                lambda v: SETTINGS.set('save_freq', v)
+            )
         ],
         TaskbarIcon.SEPARATOR,
         ['Apply rules', [

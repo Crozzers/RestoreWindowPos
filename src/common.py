@@ -71,14 +71,6 @@ class JSONFile():
             return default
 
 
-def format_unit(unit: str, value) -> str:
-    if unit == 'second' and value % 60 == 0:
-        unit, value = 'minute', int(value / 60)
-    if value == 1:
-        return f'{value} {unit}'
-    return f'{value} {unit}s'
-
-
 def tuple_convert(item, to=tuple, from_=list):
     if isinstance(item, from_):
         item = to(tuple_convert(sub, to=to, from_=from_) for sub in item)
