@@ -40,7 +40,7 @@ def update_systray_options():
             [label, lambda *_, t=timestamp: snap.restore(t)])
 
     if history_menu:
-        history_menu.insert(0, [TaskbarIcon.SEPERATOR, None])
+        history_menu.insert(0, TaskbarIcon.SEPARATOR)
         history_menu.insert(
             0, ['Clear history', lambda *_: clear_restore_options()])
 
@@ -81,13 +81,13 @@ if __name__ == '__main__':
     app = WxApp()
 
     menu_options = [
-        ['Capture Now', snap.update],
-        ['Pause Snapshots', pause_snapshots],
+        ['Capture Now', lambda *_: snap.update()],
+        ['Pause Snapshots', lambda *_: pause_snapshots()],
         ['Restore Snapshot', [
-            [TaskbarIcon.SEPERATOR, None],
+            TaskbarIcon.SEPARATOR,
             ['Most recent', lambda *_: snap.restore(-1)]
         ]],
-        [TaskbarIcon.SEPERATOR, None],
+        TaskbarIcon.SEPARATOR,
         [
             "Snapshot frequency", submenu_from_settings(
                 SETTINGS, 'snapshot_freq', 60, 'second', [5, 10, 30, 60, 300, 600, 1800, 3600])
@@ -95,13 +95,13 @@ if __name__ == '__main__':
             "Save frequency", submenu_from_settings(
                 SETTINGS, 'save_freq', 1, 'snapshot', [1, 2, 3, 4, 5])
         ],
-        [TaskbarIcon.SEPERATOR, None],
+        TaskbarIcon.SEPARATOR,
         ['Apply rules', [
-            [TaskbarIcon.SEPERATOR, None],
+            TaskbarIcon.SEPARATOR,
             ['Apply all', lambda *_: restore_snapshot([], snap.get_rules())]
         ]],
         ['Configure Rules', lambda *_: spawn_rule_manager(snap)],
-        [TaskbarIcon.SEPERATOR, None],
+        TaskbarIcon.SEPARATOR,
         ['About', lambda *_: about_dialog()]
     ]
 

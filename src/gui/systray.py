@@ -2,13 +2,13 @@ from typing import Callable
 
 import wx
 
-from common import format_unit, local_path, tuple_convert
+from common import format_unit, local_path
 
 from .wx_app import WxApp
 
 
 class TaskbarIcon(wx.adv.TaskBarIcon):
-    SEPERATOR = 10001
+    SEPARATOR = wx.ITEM_SEPARATOR
 
     def __init__(self, menu_options: list[list], on_click: Callable = None, on_exit: Callable = None):
         wx.adv.TaskBarIcon.__init__(self)
@@ -17,29 +17,6 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         self.menu_options = menu_options
         self._on_click = on_click
         self._on_exit = on_exit
-
-    def create_menu_item(self, menu: wx.Menu, text: str | int, callback: Callable):
-        if text == self.SEPERATOR:
-            menu.AppendSeparator()
-            return
-        item = wx.MenuItem(menu, -1, text)
-        menu.Bind(wx.EVT_MENU, lambda *_: callback(), id=item.GetId())
-        menu.Append(item)
-        return item
-
-    def create_sub_menu(self, menu: wx.Menu, text, items: tuple[str, Callable]):
-        submenu = wx.Menu()
-        for item in items:
-            self.create_menu_item(submenu, *item)
-        menu.Append(wx.ID_ANY, text, submenu)
-
-    def populate_from_list(self, menu, menu_items):
-        for item in menu_items:
-            text, callback = item
-            if callable(callback) or text == self.SEPERATOR:
-                self.create_menu_item(menu, text, callback)
-            else:
-                self.create_sub_menu(menu, text, callback)
 
     def set_menu_options(self, menu_options):
         self.menu_options = menu_options
@@ -50,9 +27,8 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         if self.menu_options is None:
             return False
         menu = wx.Menu()
-        self.populate_from_list(menu, self.menu_options)
-        self.create_menu_item(menu, self.SEPERATOR, None)
-        self.create_menu_item(menu, 'Quit', lambda *_: self.exit())
+        menu_from_list(menu, self.menu_options +
+                       [self.SEPARATOR, ['Quit', lambda *_: self.exit()]])
         return menu
 
     def exit(self):
@@ -68,8 +44,19 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         self.exit()
 
 
-def list_to_tuple(item):
-    return tuple_convert(item, to=tuple, from_=list)
+def menu_from_list(menu: wx.Menu, menu_items: list) -> wx.Menu:
+    for index, item in enumerate(menu_items):
+        if item == wx.ITEM_SEPARATOR:
+            if index > 0 and menu_items[index - 1] != wx.ITEM_SEPARATOR:
+                menu.AppendSeparator()
+        elif not callable(item[1]):
+            sub_menu = wx.Menu()
+            menu_from_list(sub_menu, item[1])
+            menu.Append(wx.ID_ANY, item[0], sub_menu)
+        else:
+            menu_item = wx.MenuItem(menu, id=wx.ID_ANY, text=item[0])
+            menu.Bind(wx.EVT_MENU, item[1], id=menu_item.GetId())
+            menu.Append(menu_item)
 
 
 def submenu_from_settings(settings, key, default, label_unit, allowed_values):
