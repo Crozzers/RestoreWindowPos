@@ -86,7 +86,7 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
             menu_item = wx.MenuItem(
                 menu, id=wx.ID_ANY, text=item[0], kind=item_kind)
             menu.Bind(
-                wx.EVT_MENU, lambda *_: execute_menu_item(item[1], *_), id=menu_item.GetId())
+                wx.EVT_MENU, lambda *_, cb=item[1]: execute_menu_item(cb, *_), id=menu_item.GetId())
             menu.Append(menu_item)
 
             if item_kind == TaskbarIcon.RADIO:
