@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable, Optional
 
 import wx
@@ -5,6 +6,8 @@ import wx
 from common import local_path
 
 from .wx_app import WxApp
+
+log = logging.getLogger(__name__)
 
 MenuItem = tuple[str, Callable | 'MenuList', Optional[bool]]
 MenuList = list[MenuItem]
@@ -49,6 +52,18 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         self.exit()
 
 
+def execute_menu_item(callback, *args):
+    try:
+        callback(*args)
+    except Exception as e:
+        log.exception(f'failed to execute menu item {callback}, args: {args}')
+        wx.MessageBox(
+            f'Failed to execute system tray menu command\n{type(e).__name__}: {e}', 'RestoreWindowPos',
+            wx.OK | wx.ICON_ERROR
+        )
+        raise
+
+
 def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
     item_kind = TaskbarIcon.NORMAL
 
@@ -70,7 +85,8 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
         else:
             menu_item = wx.MenuItem(
                 menu, id=wx.ID_ANY, text=item[0], kind=item_kind)
-            menu.Bind(wx.EVT_MENU, item[1], id=menu_item.GetId())
+            menu.Bind(
+                wx.EVT_MENU, lambda *_: execute_menu_item(item[1], *_), id=menu_item.GetId())
             menu.Append(menu_item)
 
             if item_kind == TaskbarIcon.RADIO:
@@ -78,8 +94,7 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
                     menu_item.Check()
 
 
-def radio_menu(allowed_values: dict[str, Any], get_value: Callable, set_value: Callable):
-    # rename to radio_menu and get rid of the silliness
+def radio_menu(allowed_values: dict[str, Any], get_value: Callable, set_value: Callable) -> MenuList:
     def cb(k):
         set_value(allowed_values[k])
         for opt in opts:
