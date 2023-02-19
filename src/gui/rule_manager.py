@@ -149,42 +149,53 @@ class RuleManager(wx.Panel):
         rule.rule_name = 'Unnamed rule'
         self.rules.append(rule)
         self.append_rule(rule)
+        self.snapshot.save()
 
     def append_rule(self, rule: Rule):
         self.list_control.Append(
             (rule.rule_name or 'Unnamed rule', rule.name or '',
              rule.executable or '', str(rule.rect)))
 
+    def insert_rule(self, index: int, rule: Rule):
+        self.list_control.Insert(
+            index,
+            (rule.rule_name or 'Unnamed rule', rule.name or '',
+             rule.executable or '', str(rule.rect)))
+
     def edit_rule(self, *_):
         for item in self.list_control.GetAllSelected():
-            RuleWindow(self, self.rules[item], on_save=self.refresh_list).Show()
+            RuleWindow(self, self.rules[item],
+                       on_save=self.refresh_list).Show()
 
     def duplicate_rule(self, *_):
         for item in self.list_control.GetAllSelected():
             self.rules.append(deepcopy(self.rules[item]))
             self.append_rule(self.rules[-1])
+        self.snapshot.save()
 
     def delete_rule(self, *_):
         while (item := self.list_control.GetFirstSelected()) != -1:
             self.rules.pop(item)
             self.list_control.DeleteItem(item)
+        self.snapshot.save()
 
     def move_rule(self, btn_event: wx.Event):
         direction = -1 if btn_event.Id == 1 else 1
         selected = list(self.list_control.GetAllSelected())
-        new_positions: list[int] = []
-        to_insert: list[Rule] = []
+        items: list[tuple[int, Rule]] = []
 
         # get all items and their new positions
         for index in reversed(selected):
-            new_positions.insert(0, index + direction)
-            to_insert.insert(0, self.rules.pop(index))
+            self.list_control.DeleteItem(index)
+            items.insert(0, (index + direction, self.rules.pop(index)))
 
         # re-insert into list
-        for new_index, rule in zip(new_positions, to_insert):
+        for new_index, rule in items:
             self.rules.insert(new_index, rule)
+            self.insert_rule(new_index, rule)
+            self.list_control.Select(new_index)
 
-        self.refresh_list(selected=new_positions)
+        self.snapshot.save()
 
     def refresh_list(self, selected=None):
         selected = selected or []

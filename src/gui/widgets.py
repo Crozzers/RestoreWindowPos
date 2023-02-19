@@ -40,3 +40,8 @@ class ListCtrl(wx.ListCtrl):
         while (item := self.GetNextSelected(pos)) != -1:
             yield item
             pos = item
+
+    def Insert(self, index: int, entry):
+        pos = self.InsertItem(index, entry[0])
+        for i in range(1, len(entry)):
+            self.SetItem(pos, i, entry[i])
