@@ -3,7 +3,7 @@ import wx.adv
 
 
 class WxApp(wx.App):
-    __instance = None
+    __instance: 'WxApp' = None
 
     def __call__(cls, *args, **kwargs):
         if not isinstance(cls.__instance, cls):

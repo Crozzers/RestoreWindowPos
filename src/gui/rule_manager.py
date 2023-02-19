@@ -1,31 +1,23 @@
-import threading
 from copy import deepcopy
+from typing import Callable
 
 import win32gui
 import wx
 import wx.adv
 import wx.lib.scrolledpanel
 
-from common import Rule, local_path, size_from_rect
+from common import Rule, size_from_rect
+from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile
 
-RULE_MANAGER_THREAD: threading.Thread = None
-ROOT: wx.App = None
 
-
-class RuleWindow(wx.Frame):
-    _instances = []
-    _count = 0
-
-    def __init__(self, rule: Rule, snapshot: SnapshotFile):
-        self.__class__._instances.append(self)
-        self.__class__._count += 1
+class RuleWindow(Frame):
+    def __init__(self, parent, rule: Rule, on_save: Callable):
         self.rule = rule
-        self.snapshot = snapshot
+        self.on_save = on_save
 
         # create widgets and such
-        super().__init__(parent=None, title=f'Rule {self._count} (Beta)')
-        self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
+        super().__init__(parent, title=self.rule.rule_name)
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.rule_name_label = wx.StaticText(self.panel, label='Rule name')
         self.rule_name = wx.TextCtrl(self.panel)
@@ -37,11 +29,6 @@ class RuleWindow(wx.Frame):
         self.window_exe = wx.TextCtrl(self.panel)
         self.reset_btn = wx.Button(self.panel, label='Reset rule')
         self.save_btn = wx.Button(self.panel, label='Save')
-        self.delete_rule_btn = wx.Button(self.panel, label='Delete rule')
-        self.new_rule_btn = wx.Button(self.panel, label='New rule')
-        self.cancel_btn = wx.Button(
-            self.panel, label='Discard all unsaved changes')
-        self.save_all_btn = wx.Button(self.panel, label='Save all')
         self.explanation_box = wx.StaticText(self.panel, label=(
             'Resize and reposition this window and then click save.'
             ' Any window that is not currently part of a snapshot will be moved'
@@ -51,10 +38,6 @@ class RuleWindow(wx.Frame):
         # bind events
         self.reset_btn.Bind(wx.EVT_BUTTON, self.set_pos)
         self.save_btn.Bind(wx.EVT_BUTTON, self.save)
-        self.delete_rule_btn.Bind(wx.EVT_BUTTON, self.delete)
-        self.new_rule_btn.Bind(wx.EVT_BUTTON, self.new_rule)
-        self.cancel_btn.Bind(wx.EVT_BUTTON, self.destroy)
-        self.save_all_btn.Bind(wx.EVT_BUTTON, self.save_all)
 
         # place everything
         def next_pos():
@@ -75,10 +58,6 @@ class RuleWindow(wx.Frame):
         self.sizer.Add(self.window_exe, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.reset_btn, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.save_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.delete_rule_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.new_rule_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.cancel_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.save_all_btn, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.explanation_box, next_pos(),
                        span=(1, 2), flag=wx.EXPAND)
         self.panel.SetSizerAndFit(self.sizer)
@@ -92,7 +71,6 @@ class RuleWindow(wx.Frame):
         # final steps
         self.panel.SetupScrolling()
         self.set_pos()
-        self.Show()
 
     def get_placement(self):
         return win32gui.GetWindowPlacement(self.GetHandle())
@@ -119,41 +97,105 @@ class RuleWindow(wx.Frame):
         self.rule.rect = self.get_rect()
         self.rule.size = size_from_rect(self.rule.rect)
         self.rule.placement = self.get_placement()
-        if self.rule not in self.snapshot.get_rules():
-            self.snapshot.get_rules().append(self.rule)
+        self.on_save()
+
+
+class RuleManager(wx.Panel):
+    def __init__(self, parent: wx.Frame, snapshot: SnapshotFile):
+        wx.Panel.__init__(self, parent, id=wx.ID_ANY)
+        self.snapshot = snapshot
+        self.rules = snapshot.get_rules()
+
+        # create action buttons
+        action_panel = wx.Panel(self)
+        add_rule_btn = wx.Button(action_panel, label='Create')
+        edit_rule_btn = wx.Button(action_panel, label='Edit')
+        dup_rule_btn = wx.Button(action_panel, label='Duplicate')
+        del_rule_btn = wx.Button(action_panel, label='Delete')
+        mov_up_rule_btn = wx.Button(action_panel, id=1, label='Move Up')
+        mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
+        # bind events
+        add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
+        edit_rule_btn.Bind(wx.EVT_BUTTON, self.edit_rule)
+        dup_rule_btn.Bind(wx.EVT_BUTTON, self.duplicate_rule)
+        del_rule_btn.Bind(wx.EVT_BUTTON, self.delete_rule)
+        mov_up_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
+        mov_dn_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
+        # position buttons
+        action_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        for btn in (add_rule_btn, edit_rule_btn, dup_rule_btn, del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn):
+            action_sizer.Add(btn, 0, wx.ALL, 5)
+        action_panel.SetSizer(action_sizer)
+
+        # create list control
+        self.list_control = ListCtrl(self)
+        self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_rule)
+        for index, col in enumerate(('Rule Name', 'Window Title', 'Window Executable', 'Window Rect')):
+            self.list_control.AppendColumn(col)
+            self.list_control.SetColumnWidth(index, 200 if index < 3 else 150)
+
+        # add rules
+        for rule in self.rules:
+            self.append_rule(rule)
+
+        # position list control
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(action_panel, 0, wx.ALL, 5)
+        sizer.Add(self.list_control, 1, wx.ALL | wx.EXPAND, 5)
+        self.SetSizer(sizer)
+
+    def add_rule(self, *_):
+        rule = _new_rule()
+        rule.rule_name = 'Unnamed rule'
+        self.rules.append(rule)
+        self.append_rule(rule)
+
+    def append_rule(self, rule: Rule):
+        self.list_control.Append(
+            (rule.rule_name or 'Unnamed rule', rule.name or '',
+             rule.executable or '', str(rule.rect)))
+
+    def edit_rule(self, *_):
+        for item in self.list_control.GetAllSelected():
+            RuleWindow(self, self.rules[item], on_save=self.refresh_list).Show()
+
+    def duplicate_rule(self, *_):
+        for item in self.list_control.GetAllSelected():
+            self.rules.append(deepcopy(self.rules[item]))
+            self.append_rule(self.rules[-1])
+
+    def delete_rule(self, *_):
+        while (item := self.list_control.GetFirstSelected()) != -1:
+            self.rules.pop(item)
+            self.list_control.DeleteItem(item)
+
+    def move_rule(self, btn_event: wx.Event):
+        direction = -1 if btn_event.Id == 1 else 1
+        selected = list(self.list_control.GetAllSelected())
+        new_positions: list[int] = []
+        to_insert: list[Rule] = []
+
+        # get all items and their new positions
+        for index in reversed(selected):
+            new_positions.insert(0, index + direction)
+            to_insert.insert(0, self.rules.pop(index))
+
+        # re-insert into list
+        for new_index, rule in zip(new_positions, to_insert):
+            self.rules.insert(new_index, rule)
+
+        self.refresh_list(selected=new_positions)
+
+    def refresh_list(self, selected=None):
+        selected = selected or []
+        self.list_control.DeleteAllItems()
+        for index, rule in enumerate(self.rules):
+            self.append_rule(rule)
+            self.list_control.Select(index, on=index in selected)
         self.snapshot.save()
-
-    def save_all(self, *_):
-        for instance in self._instances:
-            instance.save()
-
-    def new_rule(self, *_):
-        rule = deepcopy(self.rule)
-        self.snapshot.get_rules().append(rule)
-        RuleWindow(self.root, rule, self.snapshot)
-
-    def delete(self, *_):
-        try:
-            self.snapshot.get_rules().remove(self.rule)
-        except ValueError:
-            pass
-        self.destroy()
-
-    def destroy(self, *_):
-        try:
-            self.Close()
-            self.Destroy()
-        except RuntimeError:
-            pass
-
-        try:
-            self._instances.remove(self)
-        except ValueError:
-            pass
 
 
 def _new_rule():
-    # should probably build some kind of rule manager tbh
     rect = (0, 0, 1000, 500)
     return Rule(
         size=size_from_rect(rect),
@@ -166,7 +208,8 @@ def spawn_rule_manager(snap: SnapshotFile):
     rules = snap.get_rules()
     if not rules:
         rules.append(_new_rule())
-    for rule in rules:
-        RuleWindow(rule, snap)
 
-    RuleWindow._count = 0
+    f = Frame(title='Manage Rules', size=wx.Size(600, 500))
+    RuleManager(f, snap)
+    f.SetIdealSize()
+    f.Show()
