@@ -1,3 +1,4 @@
+import os.path
 from copy import deepcopy
 from typing import Callable
 
@@ -6,9 +7,10 @@ import wx
 import wx.adv
 import wx.lib.scrolledpanel
 
-from common import Rule, size_from_rect
+from common import Rule, Window, size_from_rect
 from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile
+from window import capture_snapshot
 
 
 class RuleWindow(Frame):
@@ -100,6 +102,55 @@ class RuleWindow(Frame):
         self.on_save()
 
 
+class WindowClone(Frame):
+    def __init__(self, parent, on_clone: Callable[[list[Window]], None], **kwargs):
+        super().__init__(parent, 'Clone a Window', **kwargs)
+        self.on_clone = on_clone
+
+        # create action buttons
+        action_panel = wx.Panel(self)
+        clone_btn = wx.Button(action_panel, label='Clone')
+        deselect_all_btn = wx.Button(action_panel, label='Deselect All')
+        select_all_btn = wx.Button(action_panel, label='Select All')
+        # bind events
+        clone_btn.Bind(wx.EVT_BUTTON, self.clone)
+        deselect_all_btn.Bind(wx.EVT_BUTTON, self.deselect_all)
+        select_all_btn.Bind(wx.EVT_BUTTON, self.select_all)
+        # place
+        action_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        for btn in (clone_btn, deselect_all_btn, select_all_btn):
+            action_sizer.Add(btn, 0, wx.ALL, 5)
+        action_panel.SetSizer(action_sizer)
+
+        self.check_list = wx.CheckListBox(
+            self, id=wx.ID_ANY, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
+
+        self.windows = sorted(capture_snapshot(), key=lambda w: w.name)
+        self.check_list.AppendItems(tuple(i.name for i in self.windows))
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(action_panel, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(self.check_list, 1, wx.ALL | wx.EXPAND, 5)
+        self.SetSizerAndFit(sizer)
+
+    def clone(self, *_):
+        self.on_clone(self.windows[i]
+                      for i in self.check_list.GetCheckedItems())
+
+        try:
+            self.Close()
+            self.Destroy()
+        except RuntimeError:
+            pass
+
+    def deselect_all(self, *_):
+        self.select_all(check=False)
+
+    def select_all(self, *_, check=True):
+        for i in range(len(self.windows)):
+            self.check_list.Check(i, check=check)
+
+
 class RuleManager(wx.Panel):
     def __init__(self, parent: wx.Frame, snapshot: SnapshotFile):
         wx.Panel.__init__(self, parent, id=wx.ID_ANY)
@@ -109,6 +160,7 @@ class RuleManager(wx.Panel):
         # create action buttons
         action_panel = wx.Panel(self)
         add_rule_btn = wx.Button(action_panel, label='Create')
+        clone_window_btn = wx.Button(action_panel, label='Clone Window')
         edit_rule_btn = wx.Button(action_panel, label='Edit')
         dup_rule_btn = wx.Button(action_panel, label='Duplicate')
         del_rule_btn = wx.Button(action_panel, label='Delete')
@@ -116,6 +168,7 @@ class RuleManager(wx.Panel):
         mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
         # bind events
         add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
+        clone_window_btn.Bind(wx.EVT_BUTTON, self.clone_windows)
         edit_rule_btn.Bind(wx.EVT_BUTTON, self.edit_rule)
         dup_rule_btn.Bind(wx.EVT_BUTTON, self.duplicate_rule)
         del_rule_btn.Bind(wx.EVT_BUTTON, self.delete_rule)
@@ -123,7 +176,10 @@ class RuleManager(wx.Panel):
         mov_dn_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        for btn in (add_rule_btn, edit_rule_btn, dup_rule_btn, del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn):
+        for btn in (
+            add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
+            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn
+        ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
 
@@ -156,16 +212,32 @@ class RuleManager(wx.Panel):
             (rule.rule_name or 'Unnamed rule', rule.name or '',
              rule.executable or '', str(rule.rect)))
 
-    def insert_rule(self, index: int, rule: Rule):
-        self.list_control.Insert(
-            index,
-            (rule.rule_name or 'Unnamed rule', rule.name or '',
-             rule.executable or '', str(rule.rect)))
-
     def edit_rule(self, *_):
         for item in self.list_control.GetAllSelected():
             RuleWindow(self, self.rules[item],
                        on_save=self.refresh_list).Show()
+
+    def clone_windows(self, *_):
+        def on_clone(windows: list[Window]):
+            for window in windows:
+                rule = Rule(
+                    size=window.size,
+                    rect=window.rect,
+                    placement=window.placement,
+                    name=window.name,
+                    executable=window.executable,
+                    rule_name=os.path.basename(window.executable) + ' rule'
+                )
+                self.rules.append(rule)
+                self.append_rule(rule)
+
+        WindowClone(self, on_clone).Show()
+
+    def delete_rule(self, *_):
+        while (item := self.list_control.GetFirstSelected()) != -1:
+            self.rules.pop(item)
+            self.list_control.DeleteItem(item)
+        self.snapshot.save()
 
     def duplicate_rule(self, *_):
         for item in self.list_control.GetAllSelected():
@@ -173,11 +245,11 @@ class RuleManager(wx.Panel):
             self.append_rule(self.rules[-1])
         self.snapshot.save()
 
-    def delete_rule(self, *_):
-        while (item := self.list_control.GetFirstSelected()) != -1:
-            self.rules.pop(item)
-            self.list_control.DeleteItem(item)
-        self.snapshot.save()
+    def insert_rule(self, index: int, rule: Rule):
+        self.list_control.Insert(
+            index,
+            (rule.rule_name or 'Unnamed rule', rule.name or '',
+             rule.executable or '', str(rule.rect)))
 
     def move_rule(self, btn_event: wx.Event):
         direction = -1 if btn_event.Id == 1 else 1
