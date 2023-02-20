@@ -216,10 +216,6 @@ def _new_rule():
 
 
 def spawn_rule_manager(snap: SnapshotFile):
-    rules = snap.get_rules()
-    if not rules:
-        rules.append(_new_rule())
-
     f = Frame(title='Manage Rules', size=wx.Size(600, 500))
     RuleManager(f, snap)
     f.SetIdealSize()
