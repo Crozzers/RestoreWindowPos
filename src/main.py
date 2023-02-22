@@ -6,12 +6,13 @@
 # https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
 # https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
 import logging
+import signal
 import time
 
 import win32con
 import win32gui
 
-from common import JSONFile, local_path
+from common import JSONFile, local_path, single_call
 from device import DeviceChangeService
 from gui import (TaskbarIcon, WxApp, about_dialog, radio_menu,
                  spawn_rule_manager)
@@ -112,15 +113,22 @@ if __name__ == '__main__':
         ['About', lambda *_: about_dialog()]
     ]
 
-    def shutdown():
+    @single_call
+    def shutdown(*_):
+        log.info('begin shutdown process')
+        app.ExitMainLoop()
         monitor_thread.stop()
         snapshot_service.stop()
         log.info('save snapshot before shutting down')
         snap.save()
         log.info('exit')
 
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGABRT):
+        signal.signal(sig, shutdown)
+
     with TaskbarIcon(menu_options, on_click=update_systray_options, on_exit=shutdown):
-        monitor_thread = DeviceChangeService(snap.restore, snap.lock)
+        monitor_thread = DeviceChangeService(
+            snap.restore, snap.lock, on_shutdown=shutdown)
         monitor_thread.start()
         snapshot_service = SnapshotService(None)
         snapshot_service.start(args=(snap, SETTINGS))
@@ -129,3 +137,5 @@ if __name__ == '__main__':
             app.MainLoop()
         except KeyboardInterrupt:
             pass
+        finally:
+            shutdown()

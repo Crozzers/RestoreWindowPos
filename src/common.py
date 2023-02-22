@@ -25,6 +25,19 @@ def local_path(path, asset=False):
     return os.path.abspath(os.path.join(base, path))
 
 
+def single_call(func):
+    has_been_called = False
+
+    def inner_func(*a, **kw):
+        nonlocal has_been_called
+        if has_been_called:
+            return
+        has_been_called = True
+        return func(*a, **kw)
+
+    return inner_func
+
+
 def size_from_rect(rect: Rect) -> XandY:
     return (
         rect[2] - rect[0],

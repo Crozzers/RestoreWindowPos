@@ -5,11 +5,12 @@ from abc import ABC, abstractmethod
 
 
 class Service(ABC):
-    def __init__(self, callback, lock=None):
+    def __init__(self, callback, lock=None, on_shutdown=None):
         self.log = logging.getLogger(__name__).getChild(
             self.__class__.__name__).getChild(str(id(self)))
         self._callback = callback
         self._lock = lock or threading.RLock()
+        self._on_shutdown = on_shutdown
         self._kill_signal = threading.Event()
         self._thread = None
 
@@ -39,6 +40,14 @@ class Service(ABC):
         self.log.info('thread exited')
         return True
 
+    def shutdown(self):
+        def func():
+            self._kill_signal.set()
+            if callable(self._on_shutdown):
+                self._on_shutdown()
+
+        threading.Thread(target=func).start()
+
     @abstractmethod
     def _runner(self):
         pass
@@ -48,15 +57,16 @@ class Service(ABC):
 
     def callback(self, *args, **kwargs):
         with self._lock:
-            self.pre_callback(*args, **kwargs)
-            try:
-                self.log.debug('run callback')
-                self._callback()
-            except Exception:
-                self.log.exception('callback failed')
-                return False
+            if self.pre_callback(*args, **kwargs):
+                try:
+                    self.log.debug('run callback')
+                    self._callback()
+                except Exception:
+                    self.log.exception('callback failed')
+                    return False
             else:
-                self.post_callback(*args, **kwargs)
+                self.log.info('pre_callback returned False, skipping callback')
+            self.post_callback(*args, **kwargs)
 
         return True
 

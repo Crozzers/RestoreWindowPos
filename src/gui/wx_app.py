@@ -13,10 +13,16 @@ class WxApp(wx.App):
     def OnInit(self):
         self._top_frame = wx.Frame(None, -1)
         self.SetTopWindow(self._top_frame)
+        self.enable_sigterm()
         return True
 
-    def OnExit(self):
-        return super().OnExit()
+    def enable_sigterm(self):
+        self.timer = wx.Timer(self._top_frame)
+        self._top_frame.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        self.timer.Start(1000)
+
+    def OnTimer(self, *_):
+        return
 
     def schedule_exit(self):
         self._top_frame.DestroyChildren()
