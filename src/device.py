@@ -1,12 +1,19 @@
 import time
+from dataclasses import dataclass
+from typing import Callable
 
 import win32con
 import win32gui
 import win32gui_struct
 
-from services import Service
+from services import Service, ServiceCallback
 
 GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
+
+
+@dataclass(slots=True)
+class DeviceChangeCallback(ServiceCallback):
+    capture: Callable = None
 
 
 class DeviceChangeService(Service):
@@ -18,13 +25,29 @@ class DeviceChangeService(Service):
             return False
 
         if msg == win32con.WM_POWERBROADCAST:
-            self.log.debug('trigger WM_POWERBROADCAST')
-            if wp == win32con.PBT_APMRESUMEAUTOMATIC:
-                time.sleep(1)
+            if wp in (win32con.PBT_APMSTANDBY, win32con.PBT_APMSUSPEND):
+                self.log.info(
+                    'invoke capture due to PBT_APM[STANDBY|SUSPEND] signal')
+                return self._run_callback('capture', threaded=True)
+
+            if wp not in (win32con.PBT_APMRESUMEAUTOMATIC,
+                          win32con.PBT_APMRESUMECRITICAL,
+                          win32con.PBT_APMRESUMESTANDBY,
+                          win32con.PBT_APMRESUMESUSPEND
+                          ):
+                self.log.info(
+                    'skip WM_POWERBROADCAST event due to unknown signal')
+                return False
+
+            self.log.info(
+                'trigger PBT_APMRESUME[AUTOMATIC|CRITICAL|STANDBY|SUSPEND] signal')
+            time.sleep(1)
         elif msg == win32con.WM_DISPLAYCHANGE:
             self.log.debug('trigger WM_DISPLAYCHANGE')
         elif msg == win32con.WM_WINDOWPOSCHANGING:
             self.log.debug('trigger WM_WINDOWPOSCHANGING')
+        else:
+            self.log.debug(f'trigger {msg=:x} {wp=:x} {lp=:x}')
 
         return True
 

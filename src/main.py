@@ -13,7 +13,7 @@ import win32con
 import win32gui
 
 from common import JSONFile, local_path, single_call
-from device import DeviceChangeService
+from device import DeviceChangeCallback, DeviceChangeService
 from gui import (TaskbarIcon, WxApp, about_dialog, radio_menu,
                  spawn_rule_manager)
 from snapshot import SnapshotFile, SnapshotService
@@ -128,7 +128,9 @@ if __name__ == '__main__':
 
     with TaskbarIcon(menu_options, on_click=update_systray_options, on_exit=shutdown):
         monitor_thread = DeviceChangeService(
-            snap.restore, snap.lock, on_shutdown=shutdown)
+            DeviceChangeCallback(snap.restore, shutdown, snap.update),
+            snap.lock
+        )
         monitor_thread.start()
         snapshot_service = SnapshotService(None)
         snapshot_service.start(args=(snap, SETTINGS))

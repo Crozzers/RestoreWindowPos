@@ -2,15 +2,22 @@ import logging
 import threading
 import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Callable
+
+
+@dataclass(slots=True)
+class ServiceCallback():
+    default: Callable
+    shutdown: Callable = None
 
 
 class Service(ABC):
-    def __init__(self, callback, lock=None, on_shutdown=None):
+    def __init__(self, callback: ServiceCallback, lock=None):
         self.log = logging.getLogger(__name__).getChild(
             self.__class__.__name__).getChild(str(id(self)))
         self._callback = callback
         self._lock = lock or threading.RLock()
-        self._on_shutdown = on_shutdown
         self._kill_signal = threading.Event()
         self._thread = None
 
@@ -43,8 +50,7 @@ class Service(ABC):
     def shutdown(self):
         def func():
             self._kill_signal.set()
-            if callable(self._on_shutdown):
-                self._on_shutdown()
+            self._run_callback('shutdown')
 
         threading.Thread(target=func).start()
 
@@ -52,7 +58,7 @@ class Service(ABC):
     def _runner(self):
         pass
 
-    def pre_callback(self, *args, **kwargs):
+    def pre_callback(self, *args, **kwargs) -> bool:
         self.log.debug('run pre_callback')
 
     def callback(self, *args, **kwargs):
@@ -60,7 +66,7 @@ class Service(ABC):
             if self.pre_callback(*args, **kwargs):
                 try:
                     self.log.debug('run callback')
-                    self._callback()
+                    self._run_callback('default')
                 except Exception:
                     self.log.exception('callback failed')
                     return False
@@ -72,3 +78,16 @@ class Service(ABC):
 
     def post_callback(self, *args, **kwargs):
         self.log.debug('run post_callback')
+
+    def _run_callback(self, name, *args, threaded=False, **kwargs):
+        if self._callback is None:
+            return
+        func = getattr(self._callback, name, None)
+        if not callable(func):
+            return
+
+        if threaded:
+            threading.Thread(target=func, args=args,
+                             kwargs=kwargs, daemon=True).start()
+        else:
+            func(*args, **kwargs)
