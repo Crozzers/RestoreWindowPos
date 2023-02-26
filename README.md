@@ -52,8 +52,7 @@ Currently, the project can only be bundled using Python 3.10, as it requires Pyt
 ## TODO
 
 * Test on Windows 11
-* Ability to "Save as" with a particular layout.
-    * Ideally you would be able to save the current layout and give it a memorable name
-    * This will likely auto-create rules matching the current windows
-* Central rule manager GUI
-    * And also, probably as part of this central GUI, a settings panel to tweak the less useful settings, like "Save frequency"
+* Central GUI with settings and rule management on different pages
+* Create wiki with usage instructions
+* Ability to import rules from other display configurations
+    * Perhaps a way to mark a rule as "only for this display" or "global"
