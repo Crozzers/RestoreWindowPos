@@ -11,6 +11,7 @@ class Frame(wx.Frame):
             title = f'{title} - RestoreWindowPos'
         wx.Frame.__init__(self, parent=parent, id=wx.ID_ANY,
                           title=title, **kwargs)
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
 
     def GetIdealSize(self):
