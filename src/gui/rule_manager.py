@@ -122,6 +122,24 @@ class WindowClone(Frame):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
 
+        # create option checks
+        self._clone_opts = {'name': True, 'executable': True}
+        option_panel = wx.Panel(self)
+        window_name_opt = wx.CheckBox(
+            option_panel, id=1, label='Clone window names')
+        window_exe_opt = wx.CheckBox(
+            option_panel, id=2, label='Clone window executable paths')
+        # bind events and set states
+        window_name_opt.SetValue(wx.CHK_CHECKED)
+        window_name_opt.Bind(wx.EVT_CHECKBOX, self.on_check)
+        window_exe_opt.SetValue(wx.CHK_CHECKED)
+        window_exe_opt.Bind(wx.EVT_CHECKBOX, self.on_check)
+        # place
+        option_sizer = wx.GridSizer(cols=2, hgap=5, vgap=5)
+        option_sizer.Add(window_name_opt, 0, wx.ALIGN_CENTER)
+        option_sizer.Add(window_exe_opt, 0, wx.ALIGN_CENTER)
+        option_panel.SetSizer(option_sizer)
+
         self.check_list = wx.CheckListBox(
             self, id=wx.ID_ANY, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
 
@@ -130,12 +148,20 @@ class WindowClone(Frame):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(action_panel, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(option_panel, 0, wx.ALL | wx.EXPAND, 5)
         sizer.Add(self.check_list, 1, wx.ALL | wx.EXPAND, 5)
         self.SetSizerAndFit(sizer)
 
     def clone(self, *_):
-        self.on_clone(self.windows[i]
-                      for i in self.check_list.GetCheckedItems())
+        to_clone = []
+        for index in self.check_list.GetCheckedItems():
+            window = deepcopy(self.windows[index])
+            for prop, include in self._clone_opts.items():
+                if not include:
+                    setattr(window, prop, '')
+            to_clone.append(window)
+
+        self.on_clone(to_clone)
 
         try:
             self.Close()
@@ -145,6 +171,13 @@ class WindowClone(Frame):
 
     def deselect_all(self, *_):
         self.select_all(check=False)
+
+    def on_check(self, event: wx.Event):
+        check: wx.CheckBox = event.GetEventObject()
+        if event.Id == 1:
+            self._clone_opts['name'] = check.GetValue()
+        else:
+            self._clone_opts['executable'] = check.GetValue()
 
     def select_all(self, *_, check=True):
         for i in range(len(self.windows)):
@@ -220,13 +253,18 @@ class RuleManager(wx.Panel):
     def clone_windows(self, *_):
         def on_clone(windows: list[Window]):
             for window in windows:
+                if window.executable:
+                    rule_name = os.path.basename(window.executable) + ' rule'
+                else:
+                    rule_name = 'Unnamed rule'
+
                 rule = Rule(
                     size=window.size,
                     rect=window.rect,
                     placement=window.placement,
                     name=window.name,
                     executable=window.executable,
-                    rule_name=os.path.basename(window.executable) + ' rule'
+                    rule_name=rule_name
                 )
                 self.rules.append(rule)
                 self.append_rule(rule)
