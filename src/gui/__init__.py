@@ -3,7 +3,6 @@ import wx
 from _version import __build__, __version__
 from common import local_path
 
-from .rule_manager import spawn_rule_manager  # noqa: F401
 from .systray import TaskbarIcon, radio_menu  # noqa:F401
 from .wx_app import WxApp  # noqa:F401
 

@@ -1,5 +1,13 @@
+from typing import Literal
+
 import wx
 import wx.adv
+
+from common import JSONFile
+from gui.rule_manager import RuleManager
+from gui.settings import SettingsPanel
+from gui.widgets import Frame
+from snapshot import SnapshotFile
 
 
 class WxApp(wx.App):
@@ -28,3 +36,17 @@ class WxApp(wx.App):
         self._top_frame.DestroyChildren()
         self._top_frame.Destroy()
         wx.CallAfter(self.Destroy)
+
+
+def spawn_gui(snapshot: SnapshotFile, settings: JSONFile, start_page: Literal['rules', 'settings'] = 'rules'):
+    f = Frame(title='Manage Rules', size=wx.Size(600, 500))
+    nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
+    rule_panel = RuleManager(nb, snapshot)
+    settings_panel = SettingsPanel(nb, settings)
+    nb.AddPage(rule_panel, 'Rules')
+    nb.AddPage(settings_panel, 'Settings')
+    nb.SetPadding(wx.Size(5, 2))
+    if start_page == 'settings':
+        nb.ChangeSelection(1)
+    f.SetIdealSize()
+    f.Show()

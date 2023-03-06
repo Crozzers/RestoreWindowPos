@@ -14,25 +14,20 @@ import win32gui
 
 from common import JSONFile, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
-from gui import (TaskbarIcon, WxApp, about_dialog, radio_menu,
-                 spawn_rule_manager)
+from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
+from gui.wx_app import spawn_gui
 from snapshot import SnapshotFile, SnapshotService
 from window import restore_snapshot
 
 
-def pause_snapshots():
-    if SETTINGS.get('pause_snapshots', False):
-        SETTINGS.set('pause_snapshots', False)
-        verb = 'Pause'
-    else:
-        SETTINGS.set('pause_snapshots', True)
-        verb = 'Resume'
-
-    global menu_options
-    menu_options[1][0] = f'{verb} snapshots'
-
-
 def update_systray_options():
+    global menu_options
+
+    if SETTINGS.get('pause_snapshots', False):
+        menu_options[1][0] = 'Resume snapshots'
+    else:
+        menu_options[1][0] = 'Pause snapshots'
+
     history_menu = []
     for config in snap.get_history():
         timestamp = config.time
@@ -45,7 +40,6 @@ def update_systray_options():
         history_menu.insert(
             0, ['Clear history', lambda *_: clear_restore_options()])
 
-    global menu_options
     menu_options[2][1][:-2] = history_menu
 
     rule_menu = []
@@ -83,7 +77,8 @@ if __name__ == '__main__':
 
     menu_options = [
         ['Capture Now', lambda *_: snap.update()],
-        ['Pause Snapshots', lambda *_: pause_snapshots()],
+        ['Pause Snapshots', lambda *_: SETTINGS.set(
+            'pause_snapshots', not SETTINGS.get('pause_snapshots', False))],
         ['Restore Snapshot', [
             TaskbarIcon.SEPARATOR,
             ['Most recent', lambda *_: snap.restore(-1)]
@@ -108,7 +103,7 @@ if __name__ == '__main__':
             TaskbarIcon.SEPARATOR,
             ['Apply all', lambda *_: restore_snapshot([], snap.get_rules())]
         ]],
-        ['Configure Rules', lambda *_: spawn_rule_manager(snap)],
+        ['Configure Rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
         TaskbarIcon.SEPARATOR,
         ['About', lambda *_: about_dialog()]
     ]

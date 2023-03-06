@@ -323,10 +323,3 @@ def _new_rule():
         rect=rect,
         placement=(0, 1, (-1, -1), (-1, -1), rect)
     )
-
-
-def spawn_rule_manager(snap: SnapshotFile):
-    f = Frame(title='Manage Rules', size=wx.Size(600, 500))
-    RuleManager(f, snap)
-    f.SetIdealSize()
-    f.Show()
