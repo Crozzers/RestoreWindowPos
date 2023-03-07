@@ -46,7 +46,7 @@ def update_systray_options():
     for rule in snap.get_rules():
         rule_menu.append([rule.rule_name or 'Unnamed Rule',
                          lambda *_, r=rule: restore_snapshot([], [r])])
-    menu_options[7][1][:-2] = rule_menu
+    menu_options[6][1][:-2] = rule_menu
 
 
 def clear_restore_options():
@@ -91,12 +91,6 @@ if __name__ == '__main__':
                 lambda: SETTINGS.get('snapshot_freq', 60),
                 lambda v: SETTINGS.set('snapshot_freq', v)
             )
-        ], [
-            "Save frequency", radio_menu(
-                {f'{v} snapshot': v for v in range(1, 6)},
-                lambda: SETTINGS.get('save_freq', 60),
-                lambda v: SETTINGS.set('save_freq', v)
-            )
         ],
         TaskbarIcon.SEPARATOR,
         ['Apply rules', [
@@ -105,6 +99,7 @@ if __name__ == '__main__':
         ]],
         ['Configure Rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
         TaskbarIcon.SEPARATOR,
+        ['Settings', lambda *_: spawn_gui(snap, SETTINGS, 'settings')],
         ['About', lambda *_: about_dialog()]
     ]
 
