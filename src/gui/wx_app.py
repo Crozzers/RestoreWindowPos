@@ -13,12 +13,14 @@ from snapshot import SnapshotFile
 class WxApp(wx.App):
     __instance: 'WxApp' = None
 
-    def __call__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
         if not isinstance(cls.__instance, cls):
-            cls.__instance = cls(*args, **kwargs)
+            cls.__instance = wx.App.__new__(cls, *args, **kwargs)
         return cls.__instance
 
     def OnInit(self):
+        if isinstance(getattr(self, '_top_frame', None), wx.Frame):
+            return True
         self._top_frame = wx.Frame(None, -1)
         self.SetTopWindow(self._top_frame)
         self.enable_sigterm()
