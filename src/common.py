@@ -45,6 +45,10 @@ def size_from_rect(rect: Rect) -> XandY:
     )
 
 
+def reverse_dict_lookup(d: dict, value):
+    return list(d.keys())[list(d.values()).index(value)]
+
+
 class JSONFile():
     def __init__(self, file, *a, **kw):
         self._log = logging.getLogger(__name__).getChild(
