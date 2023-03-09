@@ -41,14 +41,25 @@ class WxApp(wx.App):
 
 
 def spawn_gui(snapshot: SnapshotFile, settings: JSONFile, start_page: Literal['rules', 'settings'] = 'rules'):
-    f = Frame(title='Manage Rules', size=wx.Size(600, 500))
-    nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
-    rule_panel = RuleManager(nb, snapshot)
-    settings_panel = SettingsPanel(nb, settings)
-    nb.AddPage(rule_panel, 'Rules')
-    nb.AddPage(settings_panel, 'Settings')
-    nb.SetPadding(wx.Size(5, 2))
-    if start_page == 'settings':
-        nb.ChangeSelection(1)
+    top = WxApp()._top_frame
+    for child in top.GetChildren():
+        if isinstance(child, Frame):
+            if child.GetName() == 'RWPGUI':
+                f = child
+                nb = f.nb
+                break
+    else:
+        f = Frame(parent=top, title='Manage Rules', size=wx.Size(600, 500), name='RWPGUI')
+        nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
+        f.nb = nb
+        rule_panel = RuleManager(nb, snapshot)
+        settings_panel = SettingsPanel(nb, settings)
+        nb.AddPage(rule_panel, 'Rules')
+        nb.AddPage(settings_panel, 'Settings')
+        nb.SetPadding(wx.Size(5, 2))
+
+    nb.ChangeSelection(1 if start_page == 'settings' else 0)
     f.SetIdealSize()
     f.Show()
+    f.Raise()
+    f.Iconize(False)
