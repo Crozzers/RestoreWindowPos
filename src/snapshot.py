@@ -92,6 +92,8 @@ class SnapshotFile(JSONFile):
 
         def find():
             for ss in self.data:
+                if ss.phony:
+                    continue
                 if ss.displays == displays:
                     return ss
 
@@ -176,6 +178,8 @@ class SnapshotFile(JSONFile):
     def prune_history(self):
         with self.lock:
             for snapshot in self.data:
+                if snapshot.phony:
+                    continue
                 self.squash(snapshot.history)
 
                 if len(snapshot.history) > 10:

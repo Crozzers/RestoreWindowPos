@@ -170,6 +170,7 @@ class Snapshot(JSONType):
     history: list[WindowHistory] = field(default_factory=list)
     mru: float | None = None
     rules: list[Rule] = field(default_factory=list)
+    phony: bool = False
 
     @classmethod
     def from_json(cls, data: dict):

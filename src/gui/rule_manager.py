@@ -7,7 +7,7 @@ import wx
 import wx.adv
 import wx.lib.scrolledpanel
 
-from common import Rule, Window, size_from_rect
+from common import Rule, Snapshot, Window, size_from_rect
 from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile
 from window import capture_snapshot
@@ -184,11 +184,11 @@ class WindowClone(Frame):
             self.check_list.Check(i, check=check)
 
 
-class RuleManager(wx.Panel):
-    def __init__(self, parent: wx.Frame, snapshot: SnapshotFile):
-        wx.Panel.__init__(self, parent, id=wx.ID_ANY)
+class RuleSubsetManager(wx.StaticBox):
+    def __init__(self, parent: 'RuleManager', snapshot: SnapshotFile, rules: list[Rule], label=None):
+        wx.StaticBox.__init__(self, parent, label=label or '')
         self.snapshot = snapshot
-        self.rules = snapshot.get_rules()
+        self.rules = rules
 
         # create action buttons
         action_panel = wx.Panel(self)
@@ -199,6 +199,7 @@ class RuleManager(wx.Panel):
         del_rule_btn = wx.Button(action_panel, label='Delete')
         mov_up_rule_btn = wx.Button(action_panel, id=1, label='Move Up')
         mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
+        scope_btn = wx.Button(action_panel, id=3, label='Swap Scope')
         # bind events
         add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
         clone_window_btn.Bind(wx.EVT_BUTTON, self.clone_windows)
@@ -207,11 +208,12 @@ class RuleManager(wx.Panel):
         del_rule_btn.Bind(wx.EVT_BUTTON, self.delete_rule)
         mov_up_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
         mov_dn_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
+        scope_btn.Bind(wx.EVT_BUTTON, self.scope_rule)
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
             add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
-            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn
+            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn, scope_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
@@ -229,6 +231,7 @@ class RuleManager(wx.Panel):
 
         # position list control
         sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.AddSpacer(15)
         sizer.Add(action_panel, 0, wx.ALL, 5)
         sizer.Add(self.list_control, 1, wx.ALL | wx.EXPAND, 5)
         self.SetSizer(sizer)
@@ -314,6 +317,54 @@ class RuleManager(wx.Panel):
         for index, rule in enumerate(self.rules):
             self.append_rule(rule)
             self.list_control.Select(index, on=index in selected)
+        self.snapshot.save()
+
+    def scope_rule(self, _: wx.Event):
+        to_swap = []
+        while (item := self.list_control.GetFirstSelected()) != -1:
+            to_swap.append(self.rules.pop(item))
+            self.list_control.DeleteItem(item)
+        parent: RuleManager = self.Parent
+        parent.port_rules(self, to_swap)
+        self.refresh_list()
+
+
+class RuleManager(wx.Panel):
+    def __init__(self, parent: wx.Frame, snapshot_file: SnapshotFile):
+        wx.Panel.__init__(self, parent, id=wx.ID_ANY)
+        self.snapshot = snapshot_file
+
+        self.current_manager = RuleSubsetManager(
+            self, snapshot_file, snapshot_file.get_rules(),
+            label='Current display configuration'
+        )
+        g_rules = []
+        for snapshot in snapshot_file.data:
+            if snapshot.phony:
+                g_rules = snapshot.rules
+                break
+        else:
+            snapshot_file.data.append(Snapshot(rules=g_rules, phony=True))
+        self.global_manager = RuleSubsetManager(
+            self, snapshot_file, g_rules,
+            label='All compatible display configurations'
+            )
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.current_manager, 0, wx.ALL, 0)
+        self.sizer.Add(self.global_manager, 0, wx.ALL, 0)
+        self.SetSizer(self.sizer)
+
+    def port_rules(self, source: RuleSubsetManager, rules: list[Rule]):
+        if source == self.current_manager:
+            dest = self.global_manager
+        else:
+            dest = self.current_manager
+
+        for rule in rules:
+            dest.rules.append(rule)
+            dest.append_rule(rule)
+        dest.refresh_list()
         self.snapshot.save()
 
 
