@@ -268,6 +268,7 @@ class RuleManager(wx.Panel):
                 )
                 self.rules.append(rule)
                 self.append_rule(rule)
+            self.snapshot.save()
 
         WindowClone(self, on_clone).Show()
 
