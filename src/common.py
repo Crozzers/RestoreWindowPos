@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+import threading
 import time
 import typing
 from dataclasses import dataclass, field, is_dataclass
@@ -56,36 +57,41 @@ class JSONFile():
             + '.' + str(id(self))
         )
         self.file = file
+        self.lock = threading.RLock()
 
     def load(self, default=None):
-        try:
-            with open(local_path(self.file), 'r') as f:
-                self.data = json.load(f)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            self.data = default if default is not None else {}
-        except Exception:
-            self._log.exception('failed to load file "%s"' % self.file)
-            raise
+        with self.lock:
+            try:
+                with open(local_path(self.file), 'r') as f:
+                    self.data = json.load(f)
+            except (FileNotFoundError, json.decoder.JSONDecodeError):
+                self.data = default if default is not None else {}
+            except Exception:
+                self._log.exception('failed to load file "%s"' % self.file)
+                raise
 
     def save(self, data=None):
-        if data is None:
-            data = self.data
-        try:
-            with open(local_path(self.file), 'w') as f:
-                json.dump(data, f)
-        except Exception:
-            self._log.exception('failed to save file "%s"' % self.file)
-            raise
+        with self.lock:
+            if data is None:
+                data = self.data
+            try:
+                with open(local_path(self.file), 'w') as f:
+                    json.dump(data, f)
+            except Exception:
+                self._log.exception('failed to save file "%s"' % self.file)
+                raise
 
     def set(self, key, value):
-        self.data[key] = value
-        self.save()
+        with self.lock:
+            self.data[key] = value
+            self.save()
 
     def get(self, key, default=None):
-        try:
-            return self.data[key]
-        except (IndexError, KeyError):
-            return default
+        with self.lock:
+            try:
+                return self.data[key]
+            except (IndexError, KeyError):
+                return default
 
 
 def tuple_convert(item, to=tuple, from_=list):

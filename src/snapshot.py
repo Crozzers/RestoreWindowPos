@@ -1,6 +1,5 @@
 import logging
 import re
-import threading
 import time
 from dataclasses import asdict
 
@@ -45,7 +44,6 @@ class SnapshotFile(JSONFile):
     def __init__(self):
         super().__init__(local_path('history.json'))
         self.load()
-        self.lock = threading.RLock()
 
     def load(self):
         super().load(default=[])
