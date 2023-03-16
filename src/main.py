@@ -42,8 +42,9 @@ def update_systray_options():
 
     menu_options[2][1][:-2] = history_menu
 
+    current_snapshot = snap.get_current_snapshot()
     rule_menu = []
-    for rule in snap.get_rules():
+    for rule in snap.get_rules(compatible_with=current_snapshot):
         rule_menu.append([rule.rule_name or 'Unnamed Rule',
                          lambda *_, r=rule: restore_snapshot([], [r])])
     menu_options[6][1][:-2] = rule_menu

@@ -131,14 +131,29 @@ class JSONType:
             return None
 
 
-@dataclass(slots=True)
-class Window(JSONType):
-    id: int
-    name: str
-    executable: str
+@dataclass
+class WindowType(JSONType):
     size: XandY
     rect: Rect
     placement: Placement
+
+    def fits_display(self, display: 'Display') -> bool:
+        return (
+            self.rect[0] >= display.rect[0]
+            and self.rect[1] >= display.rect[1]
+            and self.rect[2] <= display.rect[2]
+            and self.rect[3] <= display.rect[3]
+        )
+
+    def fits_display_config(self, displays: list['Display']) -> bool:
+        return any(self.fits_display(d) for d in displays)
+
+
+@dataclass(slots=True)
+class Window(WindowType):
+    id: int
+    name: str
+    executable: str
 
 
 @dataclass(slots=True)
@@ -156,7 +171,7 @@ class Display(JSONType):
 
 
 @dataclass(slots=True)
-class Rule(JSONType):
+class Rule(WindowType):
     size: XandY
     rect: Rect
     placement: Placement

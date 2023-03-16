@@ -61,25 +61,26 @@ class SnapshotFile(JSONFile):
             snap = self.get_current_snapshot()
             if snap is None or not snap.history:
                 return
+            rules = self.get_rules(compatible_with=snap)
 
             history = snap.history
 
             def restore_ts(timestamp: float):
                 for config in history:
                     if config.time == timestamp:
-                        restore_snapshot(config.windows, snap.rules)
+                        restore_snapshot(config.windows, rules)
                         snap.mru = timestamp
                         return True
 
             self._log.info(f'restore snapshot, timestamp={timestamp}')
             if timestamp == -1:
                 restore_snapshot(
-                    history[-1].windows, snap.rules)
+                    history[-1].windows, rules)
             elif timestamp:
                 restore_ts(timestamp)
             else:
                 if not (snap.mru and restore_ts(snap.mru)):
-                    restore_snapshot(history[-1].windows, snap.rules)
+                    restore_snapshot(history[-1].windows, rules)
 
     def capture(self):
         self._log.debug('capture snapshot')
@@ -107,10 +108,17 @@ class SnapshotFile(JSONFile):
             snap = self.get_current_snapshot()
             return snap.history
 
-    def get_rules(self):
+    def get_rules(self, compatible_with: Snapshot = None):
         with self.lock:
-            snap = self.get_current_snapshot()
-            return snap.rules
+            if not compatible_with:
+                return self.get_current_snapshot().rules
+
+            rules = compatible_with.rules.copy()
+            for snap in self.data:
+                if snap == compatible_with or not snap.phony:
+                    continue
+                rules.extend(r for r in snap.rules if r.fits_display_config(compatible_with.displays))
+            return rules
 
     def clear_history(self):
         with self.lock:
