@@ -108,6 +108,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${PRODUCT}.exe"
 
   ; Remove registry keys
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\${PRODUCT}"
   DeleteRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT}.exe"
   DeleteRegKey HKCU "SOFTWARE\Classes\${PRODUCT}"
   DeleteRegKey HKCU "SOFTWARE\Classes\Applications\${PRODUCT}.exe"
