@@ -21,12 +21,12 @@ class SettingsPanel(wx.Panel):
         pause_snap_opt = wx.CheckBox(
             snapshot_panel, id=1, label='Pause snapshots')
         snap_freq_txt = wx.StaticText(
-            snapshot_panel, label='Snapshot frequency:')
+            snapshot_panel, label='Snapshot frequency')
         self.__snap_freq_choices = {'5 seconds': 5, '10 seconds': 10, '30 seconds': 30, '1 minute': 60,
                                     '5 minutes': 300, '10 minutes': 600, '30 minutes': 1800, '1 hour': 3600}
         snap_freq_opt = wx.Choice(snapshot_panel, id=2, choices=list(
             self.__snap_freq_choices.keys()))
-        save_freq_txt = wx.StaticText(snapshot_panel, label='Save frequency:')
+        save_freq_txt = wx.StaticText(snapshot_panel, label='Save frequency')
         save_freq_opt = wx.SpinCtrl(snapshot_panel, id=3, min=1, max=10)
         # place
         snapshot_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -35,9 +35,9 @@ class SettingsPanel(wx.Panel):
             if isinstance(widget, wx.StaticLine):
                 flag |= wx.EXPAND
             elif isinstance(widget, tuple):
-                sz = wx.BoxSizer(wx.HORIZONTAL)
+                sz = wx.BoxSizer(wx.VERTICAL)
                 for w in widget:
-                    sz.Add(w, 0, wx.ALL, 5)
+                    sz.Add(w, 0, wx.ALL, 0)
                 widget = sz
 
             snapshot_sizer.Add(widget, 0, flag, 5)

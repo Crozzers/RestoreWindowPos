@@ -10,7 +10,7 @@ import wx.lib.scrolledpanel
 from common import Rule, Snapshot, Window, size_from_rect
 from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile
-from window import capture_snapshot
+from window import capture_snapshot, restore_snapshot
 
 
 class RuleWindow(Frame):
@@ -192,6 +192,7 @@ class RuleSubsetManager(wx.StaticBox):
 
         # create action buttons
         action_panel = wx.Panel(self)
+        apply_btn = wx.Button(action_panel, label='Apply')
         add_rule_btn = wx.Button(action_panel, label='Create')
         clone_window_btn = wx.Button(action_panel, label='Clone Window')
         edit_rule_btn = wx.Button(action_panel, label='Edit')
@@ -201,6 +202,7 @@ class RuleSubsetManager(wx.StaticBox):
         mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
         scope_btn = wx.Button(action_panel, id=3, label='Swap Scope')
         # bind events
+        apply_btn.Bind(wx.EVT_BUTTON, self.apply_rule)
         add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
         clone_window_btn.Bind(wx.EVT_BUTTON, self.clone_windows)
         edit_rule_btn.Bind(wx.EVT_BUTTON, self.edit_rule)
@@ -212,7 +214,7 @@ class RuleSubsetManager(wx.StaticBox):
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
-            add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
+            apply_btn, add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
             del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn, scope_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
@@ -232,7 +234,7 @@ class RuleSubsetManager(wx.StaticBox):
         # position list control
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.AddSpacer(15)
-        sizer.Add(action_panel, 0, wx.ALL, 5)
+        sizer.Add(action_panel, 0, wx.ALL | wx.EXPAND, 0)
         sizer.Add(self.list_control, 1, wx.ALL | wx.EXPAND, 5)
         self.SetSizer(sizer)
 
@@ -242,6 +244,12 @@ class RuleSubsetManager(wx.StaticBox):
         self.rules.append(rule)
         self.append_rule(rule)
         self.snapshot.save()
+
+    def apply_rule(self, *_):
+        rules = []
+        for index in self.list_control.GetAllSelected():
+            rules.append(self.rules[index])
+        restore_snapshot([], rules)
 
     def append_rule(self, rule: Rule):
         self.list_control.Append(
@@ -351,8 +359,8 @@ class RuleManager(wx.Panel):
             )
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.current_manager, 0, wx.ALL, 0)
-        self.sizer.Add(self.global_manager, 0, wx.ALL, 0)
+        self.sizer.Add(self.current_manager, 0, wx.ALL | wx.EXPAND, 0)
+        self.sizer.Add(self.global_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.SetSizer(self.sizer)
 
     def port_rules(self, source: RuleSubsetManager, rules: list[Rule]):

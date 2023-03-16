@@ -22,7 +22,7 @@ class Frame(wx.Frame):
                 vsize = child.GetBestVirtualSize()
                 x = max(x, vsize.x)
                 y = max(y, vsize.y)
-        return wx.Size(x, y)
+        return wx.Size(x + 10, y + 10)
 
     def SetIdealSize(self):
         self.SetSize(self.GetIdealSize())
