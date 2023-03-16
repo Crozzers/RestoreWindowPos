@@ -78,6 +78,11 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
         if item == TaskbarIcon.SEPARATOR:
             if index > 0 and menu_items[index - 1] != TaskbarIcon.SEPARATOR:
                 menu.AppendSeparator()
+        elif len(item) == 1:
+            item = wx.MenuItem(menu, id=wx.ID_ANY,
+                               text=item[0], kind=TaskbarIcon.NORMAL)
+            item.Enable(False)
+            menu.Append(item)
         elif not callable(item[1]):
             sub_menu = wx.Menu()
             menu_from_list(sub_menu, item[1])

@@ -108,12 +108,12 @@ class SnapshotFile(JSONFile):
             snap = self.get_current_snapshot()
             return snap.history
 
-    def get_rules(self, compatible_with: Snapshot = None):
+    def get_rules(self, compatible_with: Snapshot = None, exclusive=False):
         with self.lock:
             if not compatible_with:
                 return self.get_current_snapshot().rules
 
-            rules = compatible_with.rules.copy()
+            rules = [] if exclusive else compatible_with.rules.copy()
             for snap in self.data:
                 if snap == compatible_with or not snap.phony:
                     continue

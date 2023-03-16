@@ -44,9 +44,17 @@ def update_systray_options():
 
     current_snapshot = snap.get_current_snapshot()
     rule_menu = []
-    for rule in snap.get_rules(compatible_with=current_snapshot):
-        rule_menu.append([rule.rule_name or 'Unnamed Rule',
-                         lambda *_, r=rule: restore_snapshot([], [r])])
+    for header, ruleset in (
+        ('Current Snapshot', current_snapshot.rules),
+        ('All Compatible', snap.get_rules(
+            compatible_with=current_snapshot, exclusive=True))
+    ):
+        if not ruleset:
+            continue
+        rule_menu.extend([TaskbarIcon.SEPARATOR, [header]])
+        for rule in ruleset:
+            rule_menu.append([rule.rule_name or 'Unnamed Rule',
+                              lambda *_, r=rule: restore_snapshot([], [r])])
     menu_options[6][1][:-2] = rule_menu
 
 
