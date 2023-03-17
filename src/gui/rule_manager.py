@@ -309,7 +309,7 @@ class RuleSubsetManager(wx.StaticBox):
         # get all items and their new positions
         for index in reversed(selected):
             self.list_control.DeleteItem(index)
-            items.insert(0, (index + direction, self.rules.pop(index)))
+            items.insert(0, (max(0, index + direction), self.rules.pop(index)))
 
         # re-insert into list
         for new_index, rule in items:
