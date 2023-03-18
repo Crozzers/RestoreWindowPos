@@ -1,20 +1,20 @@
 ﻿$ErrorActionPreference = 'Stop'
 $toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$fileLocation = Join-Path $toolsDir '[[PackageName]]_install.[[InstallerType]]'
+$fileLocation = Join-Path $toolsDir 'RestoreWindowPos_install.exe'
 
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName
   unzipLocation = $toolsDir
-  fileType      = '[[InstallerType]]'
+  fileType      = 'exe'
   file         = $fileLocation
 
-  softwareName  = '[[PackageName]]*'
+  softwareName  = 'RestoreWindowPos*'
 
-  checksum      = '[[InstallerHash]]'
+  checksum      = '@@InstallerChecksum@@'
   checksumType  = 'sha256'
 
   validExitCodes= @(0)
-  silentArgs   = '[[SilentArgs]]'
+  silentArgs   = '/S'
 }
 
 Install-ChocolateyInstallPackage @packageArgs

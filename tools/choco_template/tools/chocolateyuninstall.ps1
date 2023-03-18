@@ -1,10 +1,10 @@
 ﻿$ErrorActionPreference = 'Stop'
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName
-  softwareName  = '[[PackageName]]*'
-  fileType      = '[[InstallerType]]'
+  softwareName  = 'RestoreWindowPos*'
+  fileType      = 'exe'
   validExitCodes= @(0)
-  silentArgs   = '[[SilentArgs]]'
+  silentArgs   = '/S'
 }
 
 [array]$key = Get-UninstallRegistryKey -SoftwareName $packageArgs['softwareName']
