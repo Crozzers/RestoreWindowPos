@@ -1,0 +1,24 @@
+﻿VERIFICATION
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+### Verifying the downloaded EXE
+
+You can use the checksum package from chocolatey, or something like Python to get the checksum.
+
+Using the checksum package:
+```
+choco install checksum
+checksum -t sha256 C:/path/to/file.exe
+```
+Using Python:
+```
+import hashlib
+print(hashlib.sha256(open('C:/path/to/file.exe', 'rb').read()).hexdigest())
+```
+
+### Verifying the software vendor
+
+This software is available through the official [GitHub page](https://github.com/Crozzers/RestoreWindowPos)
+and through this Chocolatey package. If you wish to verify the vendor of the software, send an email
+to [the author](mailto:captaincrozzers@gmail.com).

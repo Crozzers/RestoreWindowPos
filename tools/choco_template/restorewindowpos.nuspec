@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <!-- Static info -->
+    <authors>Crozzers</authors>
+    <copyright>2023 Crozzers</copyright>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <summary>Restore window positions when displays are connected and disconnected</summary>
+
+    <!-- Defined in choco_package.py -->
+    <id>[[PackageNameLower]]</id>
+    <version>[[PackageVersion]]</version>
+    <owners>[[MaintainerName]]</owners>
+    <title>[[PackageName]] (Install)</title>
+    <projectUrl>[[GithubPage]]</projectUrl>
+    <iconUrl>[[IconUrl]]</iconUrl>
+    <licenseUrl>[[LicenseUrl]]</licenseUrl>
+    <projectSourceUrl>[[GithubPage]]</projectSourceUrl>
+    <bugTrackerUrl>[[GithubPage]]/issues</bugTrackerUrl>
+    <tags>[[PackageNameLower]] system-tweak window-management</tags>
+    <description>
+      Whenever I connect/disconnect a monitor, all of my windows jump around, resize and teleport to places they are not meant to be in.
+
+      This project aims to fix this behaviour by taking regular snapshots of window positions. Once it detects a display being connected/disconnected, it will restore windows to their last known positions on that display.
+
+      You can also define rules for windows with specific titles and/or created by specific programs. Rules will be automatically applied to matching windows that are not part of your current snapshot (eg: windows that have been created since a snapshot was last taken). You can also give these rules memorable names, and apply any and/or all of them at any time
+    </description>
+    <releaseNotes>[[GithubPage]]/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
