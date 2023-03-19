@@ -12,10 +12,10 @@
     <owners>Crozzers</owners>
     <title>RestoreWindowPos (Install)</title>
     <projectUrl>https://github.com/Crozzers/RestoreWindowPos</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/Crozzers/RestoreWindowPos/main/assets/icon256.ico</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/Crozzers/RestoreWindowPos/main/assets/icon256.png</iconUrl>
     <licenseUrl>https://raw.githubusercontent.com/Crozzers/RestoreWindowPos/main/LICENSE</licenseUrl>
-    <projectSourceUrl>https://github.com/Crozzers/RestoreWindowPos</projectSourceUrl>
     <bugTrackerUrl>https://github.com/Crozzers/RestoreWindowPos/issues</bugTrackerUrl>
+    <packageSourceUrl>https://github.com/Crozzers/RestoreWindowPos/tree/main/tools/choco_template</packageSourceUrl>
     <tags>restorewindowpos system-tweak window-management</tags>
     <description>
       Whenever I connect/disconnect a monitor, all of my windows jump around, resize and teleport to places they are not meant to be in.
