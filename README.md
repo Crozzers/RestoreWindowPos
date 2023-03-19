@@ -9,10 +9,30 @@ You can also give these rules memorable names, and apply any and/or all of them 
 
 ## Installation
 
+### Chocolatey
+
+As of v0.10.0, we now have a [Chocolatey package](https://community.chocolatey.org/packages/restorewindowpos/) available. You can install it with:
+```
+choco install restorewindowpos
+```
+Chocolatey packages are generated upon a new release using [GitHub actions](https://github.com/Crozzers/RestoreWindowPos/actions). The packages are then submitted to Chocolatey for review and to be published. This process does take time, so the Chocolatey version of the package may lag behind the latest GitHub release.
+
+### Manual install
+
 Head over to the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) to grab the latest installer
 for the program.
 
-#### Updating
+## Updating
+
+### Chocolatey
+
+If you used Chocolatey to install, it should be as simple as running:
+```
+choco upgrade restorewindowpos
+```
+This should handle exiting any currently running instances and installing the new version.
+
+### Manual
 
 To update to the latest version, download the latest installer from the [releases page](https://github.com/Crozzers/RestoreWindowPos/releases) and run it. Make sure to shutdown any running instances of RestoreWindowPos beforehand, otherwise the installer won't be able to overwrite your previous install.
 
@@ -22,22 +42,9 @@ If the newly installed update throws an error on launch, try deleting your snaps
 Hit <kbd>Win</kbd> + <kbd>R</kbd> and enter `%appdata%\..\Local\Programs\RestoreWindowPos`. Delete the `history.json` file.
 If this does not resolve your issue, please [report the issue](https://github.com/Crozzers/RestoreWindowPos/issues).
 
-#### Compilation
+## Contributing
 
-You will need to install NSIS and add it to your PATH in order to compile the installer for the program, but you can bundle the app
-itself with the following commands alone:
-
-```
-git clone https://github.com/Crozzers/RestoreWindowPos.git
-cd RestoreWindowPos
-pip install -r requirements-dev.txt
-.\tools\compile
-```
-
-The install process will bundle the python script into an EXE and install it to your `AppData\Local\Programs` folder.
-It will also add itself as a startup task, which you can manage in the "start-up" tab of Task Manager.
-
-Currently, the project can only be bundled using Python 3.10, as it requires Python 3.10's type hint features and `wxPython`, which only has installation wheels up to Python 3.10.
+Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how contribute to the project, and instructions on how to compile the program.
 
 ## Features
 
