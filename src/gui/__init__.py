@@ -14,7 +14,7 @@ def about_dialog():
     about.SetVersion(f'v{__version__}')
     about.SetDescription('\n'.join((
         f'Build: {__build__}',
-        'Install DIr: %s' % local_path('.')
+        'Install Dir: %s' % local_path('.')
     )))
     with open(local_path('./LICENSE', asset=True), encoding='utf8') as f:
         about.SetLicence(f.read())

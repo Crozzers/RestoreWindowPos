@@ -1,3 +1,5 @@
+import os
+
 import wx
 
 from common import JSONFile, reverse_dict_lookup
@@ -9,28 +11,36 @@ class SettingsPanel(wx.Panel):
         self.settings = settings
 
         def header(text: str):
-            txt = wx.StaticText(snapshot_panel, label=text)
+            txt = wx.StaticText(panel, label=text)
             txt.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT,
                                 wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-            div = wx.StaticLine(snapshot_panel, size=wx.DefaultSize)
+            div = wx.StaticLine(panel, size=wx.DefaultSize)
             return (txt, div)
 
         # widgets
-        snapshot_panel = wx.Panel(self)
+        panel = wx.Panel(self)
         header1 = header('Snapshot settings')
         pause_snap_opt = wx.CheckBox(
-            snapshot_panel, id=1, label='Pause snapshots')
+            panel, id=1, label='Pause snapshots')
         snap_freq_txt = wx.StaticText(
-            snapshot_panel, label='Snapshot frequency')
+            panel, label='Snapshot frequency')
         self.__snap_freq_choices = {'5 seconds': 5, '10 seconds': 10, '30 seconds': 30, '1 minute': 60,
                                     '5 minutes': 300, '10 minutes': 600, '30 minutes': 1800, '1 hour': 3600}
-        snap_freq_opt = wx.Choice(snapshot_panel, id=2, choices=list(
+        snap_freq_opt = wx.Choice(panel, id=2, choices=list(
             self.__snap_freq_choices.keys()))
-        save_freq_txt = wx.StaticText(snapshot_panel, label='Save frequency')
-        save_freq_opt = wx.SpinCtrl(snapshot_panel, id=3, min=1, max=10)
+        save_freq_txt = wx.StaticText(panel, label='Save frequency')
+        save_freq_opt = wx.SpinCtrl(panel, id=3, min=1, max=10)
+
+        header2 = header('Misc')
+        open_install_btn = wx.Button(panel, label='Open install directory')
+        open_github_btn = wx.Button(panel, label='Open GitHub page')
         # place
         snapshot_sizer = wx.BoxSizer(wx.VERTICAL)
-        for widget in (*header1, pause_snap_opt, (snap_freq_txt, snap_freq_opt), (save_freq_txt, save_freq_opt)):
+        for widget in (
+            *header1, pause_snap_opt, (snap_freq_txt,
+                                       snap_freq_opt), (save_freq_txt, save_freq_opt),
+            *header2, open_install_btn, open_github_btn
+        ):
             flag = wx.ALL
             if isinstance(widget, wx.StaticLine):
                 flag |= wx.EXPAND
@@ -41,8 +51,8 @@ class SettingsPanel(wx.Panel):
                 widget = sz
 
             snapshot_sizer.Add(widget, 0, flag, 5)
-        snapshot_panel.SetSizerAndFit(snapshot_sizer)
-        snapshot_panel.Layout()
+        panel.SetSizerAndFit(snapshot_sizer)
+        panel.Layout()
 
         # set widget states
         pause_snap_opt.SetValue(wx.CHK_CHECKED if settings.get(
@@ -55,10 +65,14 @@ class SettingsPanel(wx.Panel):
         pause_snap_opt.Bind(wx.EVT_CHECKBOX, self.on_setting)
         snap_freq_opt.Bind(wx.EVT_CHOICE, self.on_setting)
         save_freq_opt.Bind(wx.EVT_SPINCTRL, self.on_setting)
+        open_install_btn.Bind(
+            wx.EVT_BUTTON, lambda *_: os.startfile(os.path.dirname(__file__)))
+        open_github_btn.Bind(
+            wx.EVT_BUTTON, lambda *_: os.startfile('https://github.com/Crozzers/RestoreWindowPos'))
 
         # place
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(snapshot_panel, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(panel, 0, wx.ALL | wx.EXPAND, 5)
         self.SetSizerAndFit(sizer)
 
     def on_setting(self, event: wx.Event):
