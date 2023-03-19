@@ -48,11 +48,11 @@ Currently, the project can only be bundled using Python 3.10, as it requires Pyt
 * Easy to use installer that registers the program as a startup task
 * Can pause and resume taking snapshots
 * Create and apply rules for specific windows
+* Create and apply rules for specific display configurations, or all compatible display configurations
 
 ## TODO
 
 * Test on Windows 11
 * Central GUI with settings and rule management on different pages
 * Create wiki with usage instructions
-* Ability to import rules from other display configurations
-    * Perhaps a way to mark a rule as "only for this display" or "global"
+* Ability apply global rules to display configs matching a certain pattern
