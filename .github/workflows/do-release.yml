@@ -27,6 +27,7 @@ jobs:
             version="$GITHUB_REF_NAME"
           fi
           echo "pkgVersion=$version" >> $GITHUB_OUTPUT
+          echo "Version: $version"
   publish:
     runs-on: windows-latest
     needs: getversion
