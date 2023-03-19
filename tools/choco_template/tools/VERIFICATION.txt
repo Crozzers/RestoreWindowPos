@@ -17,6 +17,9 @@ import hashlib
 print(hashlib.sha256(open('C:/path/to/file.exe', 'rb').read()).hexdigest())
 ```
 
+The executable is generated using Pyinstaller and the chocolatey package is built through GitHub Actions.
+You can view the build pipelines [here](https://github.com/Crozzers/RestoreWindowPos/actions).
+
 ### Verifying the software vendor
 
 This software is available through the official [GitHub page](https://github.com/Crozzers/RestoreWindowPos)
