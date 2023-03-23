@@ -7,6 +7,8 @@ import time
 import typing
 from dataclasses import dataclass, field, is_dataclass
 
+import win32con
+
 # some basic types
 XandY = tuple[int, int]
 Rect = tuple[int, int, int, int]
@@ -138,11 +140,15 @@ class WindowType(JSONType):
     placement: Placement
 
     def fits_display(self, display: 'Display') -> bool:
+        if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
+            offset = 8
+        else:
+            offset = 0
         return (
-            self.rect[0] >= display.rect[0]
-            and self.rect[1] >= display.rect[1]
-            and self.rect[2] <= display.rect[2]
-            and self.rect[3] <= display.rect[3]
+            self.rect[0] >= display.rect[0] - offset
+            and self.rect[1] >= display.rect[1] - offset
+            and self.rect[2] <= display.rect[2] + offset
+            and self.rect[3] <= display.rect[3] + offset
         )
 
     def fits_display_config(self, displays: list['Display']) -> bool:
