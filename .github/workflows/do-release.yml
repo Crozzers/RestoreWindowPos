@@ -46,10 +46,22 @@ jobs:
           python -m pip install -r requirements-dev.txt
       - name: Choco install build tools
         run: |
-          choco install nsis upx -y
+          choco install nsis upx checksum -y
       - name: Build package
         run: |
           tools\compile.bat
+      - name: Get installer checksum
+        id: get_installer_checksum
+        run: |
+          echo "pkgChecksum=$(checksum -t sha256 dist/RestoreWindowPos_install.exe)" >> $env:GITHUB_OUTPUT
+      - name: Draft GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: "RestoreWindowPos_install.exe SHA256 Checksum: ${{steps.get_installer_checksum.outputs.pkgChecksum}}"
+          draft: true
+          files: "dist/RestoreWindowPos_install.exe"
+          name: "RestoreWindowPos v${{needs.getversion.outputs.version}}"
+          tag_name: ${{needs.getversion.outputs.version}}
       - name: Push to chocolatey
         env:
           PKGVERSION: ${{needs.getversion.outputs.version}}
