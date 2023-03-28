@@ -239,7 +239,7 @@ class Snapshot(JSONType):
     history: list[WindowHistory] = field(default_factory=list)
     mru: float | None = None
     rules: list[Rule] = field(default_factory=list)
-    phony: bool = False
+    phony: str = ''
 
     @classmethod
     def from_json(cls, data: dict):
@@ -249,6 +249,12 @@ class Snapshot(JSONType):
                     'time': time.time(),
                     'windows': data.pop('windows')
                 }]
+        if 'phony' in data:
+            if data['phony'] is False:
+                data['phony'] = ''
+            elif data['phony'] is True:
+                data['phony'] = 'Unnamed Layout'
+
         return super(cls, cls).from_json(data)
 
 
