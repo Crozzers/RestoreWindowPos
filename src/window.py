@@ -1,7 +1,6 @@
 import ctypes
 import ctypes.wintypes
 import logging
-import re
 import threading
 
 import pythoncom
@@ -11,7 +10,7 @@ import win32gui
 import win32process
 import wmi
 
-from common import Placement, Rect, Rule, Window, size_from_rect
+from common import Placement, Rect, Rule, Window, match, size_from_rect
 
 log = logging.getLogger(__name__)
 
@@ -76,21 +75,19 @@ def capture_snapshot() -> list[Window]:
 
 
 def find_matching_rules(rules: list[Rule], window: Window):
-    def match(pattern, text):
-        if pattern == text:
-            return True
-        try:
-            return re.match(pattern, text, re.IGNORECASE)
-        except re.error:
-            log.exception(f'fail to compile pattern "{pattern}"')
-            return False
-
+    matching = {}
     for rule in rules:
-        name_match = rule.name is None or match(rule.name, window.name)
-        exe_match = rule.executable is None or match(
-            rule.executable, window.executable)
-        if name_match and exe_match:
-            yield rule
+        points = 0
+        for attr in ('name', 'executable'):
+            rv = getattr(rule, attr)
+            wv = getattr(window, attr)
+            if not match(rv, wv):
+                break
+            if rv is not None:
+                points += 1
+        else:
+            matching[rule] = points
+    return sorted(matching, reverse=True, key=lambda r: matching[r])
 
 
 def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):

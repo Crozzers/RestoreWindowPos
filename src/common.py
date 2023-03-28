@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -8,6 +9,8 @@ import typing
 from dataclasses import dataclass, field, is_dataclass
 
 import win32con
+
+log = logging.getLogger(__name__)
 
 # some basic types
 XandY = tuple[int, int]
@@ -50,6 +53,24 @@ def size_from_rect(rect: Rect) -> XandY:
 
 def reverse_dict_lookup(d: dict, value):
     return list(d.keys())[list(d.values()).index(value)]
+
+
+def match(a, b) -> bool:
+    if a is None or b is None:
+        return True
+
+    if isinstance(a, str):
+        if a == b:
+            return True
+        try:
+            return re.match(a, b, re.IGNORECASE) is not None
+        except re.error:
+            log.exception(f'fail to compile pattern "{a}"')
+            return False
+    # otherwise do magic integer match
+    if b < 0:
+        return a <= abs(b)
+    return a >= b
 
 
 class JSONFile():
@@ -175,6 +196,21 @@ class Display(JSONType):
     resolution: XandY
     rect: Rect
 
+    def matches(self, display: 'Display'):
+        # check UIDs
+        if display.uid and not match(self.uid, display.uid):
+            return False
+        # check names
+        if display.name and not match(self.name, display.name):
+            return False
+        # check resolution
+        if not any(0 in metric or match(*metric) for metric in zip(self.resolution, display.resolution)):
+            return False
+        return True
+
+    def matches_config(self, config: list['Display']):
+        return any(self.matches(d) for d in config)
+
 
 @dataclass(slots=True)
 class Rule(WindowType):
@@ -208,3 +244,15 @@ class Snapshot(JSONType):
                     'windows': data.pop('windows')
                 }]
         return super(cls, cls).from_json(data)
+
+
+def display_configs_match(current: list[Display], displays: list[Display]):
+    for d2 in displays:
+        # all of the displays in the config must match at least once to the
+        # current config. If there are no matches, break
+        if not d2.matches_config(current):
+            break
+    else:
+        # all displays match at least once to the current config
+        # so return True
+        return True

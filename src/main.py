@@ -47,7 +47,7 @@ def update_systray_options():
     for header, ruleset in (
         ('Current Snapshot', current_snapshot.rules),
         ('All Compatible', snap.get_rules(
-            compatible_with=current_snapshot, exclusive=True))
+            compatible_with=True, exclusive=True))
     ):
         if not ruleset:
             continue
