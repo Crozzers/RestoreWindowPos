@@ -55,22 +55,28 @@ def reverse_dict_lookup(d: dict, value):
     return list(d.keys())[list(d.values()).index(value)]
 
 
-def match(a, b) -> bool:
+def match(a, b) -> int:
     if a is None or b is None:
-        return True
+        return 1
+    if a == b:
+        return 2
 
     if isinstance(a, str):
-        if a == b:
-            return True
         try:
-            return re.match(a, b, re.IGNORECASE) is not None
+            return 0 if re.match(a, b, re.IGNORECASE) is None else 1
         except re.error:
             log.exception(f'fail to compile pattern "{a}"')
-            return False
+            return 0
     # otherwise do magic integer match
+    # default "match" is if a is greater or equal to b.
+    # if b is negative, we check if a is less than or equal to b
+    if abs(a) == abs(b):
+        return 2
     if b < 0:
-        return a <= abs(b)
-    return a >= b
+        b = abs(b)
+        # flip numbers to make the comparison work as LE
+        a, b = b, a
+    return 1 if a >= b else 0
 
 
 class JSONFile():

@@ -81,10 +81,11 @@ def find_matching_rules(rules: list[Rule], window: Window):
         for attr in ('name', 'executable'):
             rv = getattr(rule, attr)
             wv = getattr(window, attr)
-            if not match(rv, wv):
+            p = match(rv, wv)
+            if not p:
                 break
-            if rv is not None:
-                points += 1
+            if rv:
+                points += p
         else:
             matching[rule] = points
     return sorted(matching, reverse=True, key=lambda r: matching[r])
