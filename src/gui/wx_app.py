@@ -4,6 +4,7 @@ import wx
 import wx.adv
 
 from common import JSONFile
+from gui.layout_manager import LayoutPage
 from gui.rule_manager import RuleManager
 from gui.settings import SettingsPanel
 from gui.widgets import Frame
@@ -40,7 +41,10 @@ class WxApp(wx.App):
         wx.CallAfter(self.Destroy)
 
 
-def spawn_gui(snapshot: SnapshotFile, settings: JSONFile, start_page: Literal['rules', 'settings'] = 'rules'):
+def spawn_gui(
+    snapshot: SnapshotFile,
+    settings: JSONFile, start_page: Literal['layouts', 'rules', 'settings'] = 'rules'
+):
     top = WxApp()._top_frame
     for child in top.GetChildren():
         if isinstance(child, Frame):
@@ -49,16 +53,19 @@ def spawn_gui(snapshot: SnapshotFile, settings: JSONFile, start_page: Literal['r
                 nb = f.nb
                 break
     else:
-        f = Frame(parent=top, title='Manage Rules', size=wx.Size(600, 500), name='RWPGUI')
+        f = Frame(parent=top, title='Manage Rules',
+                  size=wx.Size(600, 500), name='RWPGUI')
         nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
         f.nb = nb
+        layout_panel = LayoutPage(nb, snapshot)
         rule_panel = RuleManager(nb, snapshot)
         settings_panel = SettingsPanel(nb, settings)
+        nb.AddPage(layout_panel, 'Layouts')
         nb.AddPage(rule_panel, 'Rules')
         nb.AddPage(settings_panel, 'Settings')
         nb.SetPadding(wx.Size(5, 2))
 
-    nb.ChangeSelection(1 if start_page == 'settings' else 0)
+    nb.ChangeSelection(2 if start_page == 'settings' else 1)
     f.SetIdealSize()
     f.Show()
     f.Raise()

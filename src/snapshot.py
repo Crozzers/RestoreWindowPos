@@ -55,7 +55,8 @@ class SnapshotFile(JSONFile):
             snapshot.history.sort(key=lambda a: a.time)
 
     def save(self):
-        return super().save([asdict(i) for i in self.data])
+        with self.lock:
+            return super().save([asdict(i) for i in self.data])
 
     def restore(self, timestamp: float = None):
         with self.lock:
