@@ -252,16 +252,13 @@ class LayoutManager(wx.StaticBox):
             for layout in self.snapshot_file.data:
                 if not layout.phony:
                     continue
-                if layout not in self.layouts:
-                    to_remove.append(layout)
+                to_remove.append(layout)
 
             for layout in to_remove:
                 while layout in self.snapshot_file.data:
                     self.snapshot_file.data.remove(layout)
 
-            for layout in self.layouts:
-                if layout not in self.snapshot_file.data:
-                    self.snapshot_file.data.append(layout)
+            self.snapshot_file.data.extend(self.layouts)
 
             self.snapshot_file.save()
 
