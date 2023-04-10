@@ -53,8 +53,7 @@ def spawn_gui(
                 nb = f.nb
                 break
     else:
-        f = Frame(parent=top, title='Manage Rules',
-                  size=wx.Size(600, 500), name='RWPGUI')
+        f = Frame(parent=top, size=wx.Size(600, 500), name='RWPGUI')
         nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
         f.nb = nb
         layout_panel = LayoutPage(nb, snapshot)
