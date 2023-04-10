@@ -1,10 +1,11 @@
 from copy import deepcopy
 from typing import Callable
+
 import wx
-from common import Display, Snapshot
-from gui.widgets import Frame, ListCtrl
 import wx.lib.scrolledpanel
 
+from common import Display, Snapshot
+from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile, enum_display_devices
 
 
@@ -181,6 +182,7 @@ class LayoutManager(wx.StaticBox):
         del_layout_btn = wx.Button(action_panel, label='Delete')
         mov_up_btn = wx.Button(action_panel, id=1, label='Move Up')
         mov_dn_btn = wx.Button(action_panel, id=2, label='Move Down')
+        rename_btn = wx.Button(action_panel, id=3, label='Rename')
 
         def btn_evt(func):
             return lambda *_: [func(*_), self.update_snapshot_file()]
@@ -193,12 +195,13 @@ class LayoutManager(wx.StaticBox):
         del_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.delete_layout))
         mov_up_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout))
         mov_dn_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout))
+        rename_btn.Bind(wx.EVT_BUTTON, self.rename_layout)  # not btn_evt since no data changes yet
 
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
             add_layout_btn, clone_layout_btn, edit_layout_btn, dup_layout_btn,
-            del_layout_btn, mov_up_btn, mov_dn_btn
+            del_layout_btn, mov_up_btn, mov_dn_btn, rename_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
@@ -206,6 +209,7 @@ class LayoutManager(wx.StaticBox):
         # create list control
         self.list_control = ListCtrl(self, style=wx.LC_REPORT | wx.LC_EDIT_LABELS)
         self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_layout)
+        self.list_control.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.rename_layout)
         for index, col in enumerate(('Layout Name',)):
             self.list_control.AppendColumn(col)
             self.list_control.SetColumnWidth(index, 600 if index < 3 else 150)
@@ -271,6 +275,14 @@ class LayoutManager(wx.StaticBox):
             self.layouts.insert(new_index, rule)
             self.insert_layout(new_index, rule)
             self.list_control.Select(new_index)
+
+    def rename_layout(self, evt: wx.Event):
+        if evt.Id == 3:
+            self.list_control.EditLabel(self.list_control.GetFirstSelected())
+        else:
+            for index, layout in enumerate(self.layouts):
+                layout.phony = self.list_control.GetItemText(index)
+            self.update_snapshot_file()
 
     def update_snapshot_file(self):
         with self.snapshot_file.lock:
