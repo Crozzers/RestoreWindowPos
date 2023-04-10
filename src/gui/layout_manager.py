@@ -184,17 +184,20 @@ class LayoutManager(wx.StaticBox):
         mov_dn_btn = wx.Button(action_panel, id=2, label='Move Down')
         rename_btn = wx.Button(action_panel, id=3, label='Rename')
 
-        def btn_evt(func):
-            return lambda *_: [func(*_), self.update_snapshot_file()]
+        def btn_evt(func, swap=True):
+            wrapped = lambda *_: [func(*_), self.update_snapshot_file()]  # noqa: E731
+            if swap:
+                return lambda *_: [wrapped(*_), self.edit_layout()]
+            return wrapped
 
         # bind events
         add_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.add_layout))
         clone_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.clone_layout))
-        edit_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.edit_layout))
+        edit_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.edit_layout, False))
         dup_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.duplicate_layout))
         del_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.delete_layout))
-        mov_up_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout))
-        mov_dn_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout))
+        mov_up_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout, False))
+        mov_dn_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout, False))
         rename_btn.Bind(wx.EVT_BUTTON, self.rename_layout)  # not btn_evt since no data changes yet
 
         # position buttons
@@ -226,8 +229,8 @@ class LayoutManager(wx.StaticBox):
         self.SetSizer(sizer)
 
     def add_layout(self, *_):
-        self.append_layout(
-            Snapshot(displays=enum_display_devices(), phony='Unnamed Layout'))
+        layout = Snapshot(displays=enum_display_devices(), phony='Unnamed Layout')
+        self.append_layout(layout)
 
     def append_layout(self, layout: Snapshot, new=True):
         self.list_control.Append((layout.phony or 'Unnamed Layout',))
@@ -254,7 +257,11 @@ class LayoutManager(wx.StaticBox):
 
     def edit_layout(self, *_):
         item = self.list_control.GetFirstSelected()
-        self.Parent.swap_layout(self.layouts[item])
+        try:
+            layout = self.layouts[item]
+        except IndexError:
+            layout = None
+        self.Parent.swap_layout(layout)
 
     def insert_layout(self, index: int, layout: Snapshot):
         self.list_control.Insert(index, (layout.phony or 'Unnamed Layout',))
@@ -277,12 +284,17 @@ class LayoutManager(wx.StaticBox):
             self.list_control.Select(new_index)
 
     def rename_layout(self, evt: wx.Event):
-        if evt.Id == 3:
-            self.list_control.EditLabel(self.list_control.GetFirstSelected())
-        else:
+        def update():
             for index, layout in enumerate(self.layouts):
                 layout.phony = self.list_control.GetItemText(index)
             self.update_snapshot_file()
+            self.edit_layout()
+
+        if evt.Id == 3:
+            self.list_control.EditLabel(self.list_control.GetFirstSelected())
+        else:
+            # use CallAfter to allow ListCtrl to update the value before we read it
+            wx.CallAfter(update)
 
     def update_snapshot_file(self):
         with self.snapshot_file.lock:
@@ -311,17 +323,26 @@ class LayoutPage(wx.Panel):
         self.snapshot = snapshot_file
 
         self.layout_manager = LayoutManager(self, snapshot_file)
-        self.display_manager = DisplayManager(
-            self, next(i for i in snapshot_file.data if i.phony))
+        self.display_manager = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.layout_manager, 0, wx.ALL | wx.EXPAND, 0)
-        self.sizer.Add(self.display_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.SetSizer(self.sizer)
 
-    def swap_layout(self, layout: Snapshot):
-        self.sizer.Remove(1)
-        self.display_manager.Destroy()
+        self.swap_layout()
+
+    def swap_layout(self, layout: Snapshot = None):
+        if self.sizer.GetItemCount() > 1:
+            self.sizer.Remove(1)
+            self.display_manager.Destroy()
+
+        if layout is None:
+            try:
+                with self.snapshot.lock:
+                    layout = next(i for i in reversed(self.snapshot.data) if i.phony)
+            except StopIteration:
+                return
+
         self.display_manager = DisplayManager(self, layout)
         self.sizer.Add(self.display_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.sizer.Layout()
