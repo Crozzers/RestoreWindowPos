@@ -49,7 +49,7 @@ def spawn_gui(snapshot: SnapshotFile, settings: JSONFile, start_page: Literal['r
                 nb = f.nb
                 break
     else:
-        f = Frame(parent=top, title='Manage Rules', size=wx.Size(600, 500), name='RWPGUI')
+        f = Frame(parent=top, size=wx.Size(600, 500), name='RWPGUI')
         nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
         f.nb = nb
         rule_panel = RuleManager(nb, snapshot)
