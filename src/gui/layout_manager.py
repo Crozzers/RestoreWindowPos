@@ -1,88 +1,17 @@
 from copy import deepcopy
-from typing import Callable
 
 import wx
 import wx.lib.scrolledpanel
 
 from common import Display, Snapshot
-from gui.widgets import Frame, ListCtrl
+from gui.widgets import EditableListCtrl, ListCtrl
 from snapshot import SnapshotFile, enum_display_devices
-
-
-class EditDisplay(Frame):
-    def __init__(self, parent, display: Display, on_save: Callable):
-        self.display = display
-        self.on_save = on_save
-
-        super().__init__(
-            parent, title=f'Edit Display - {display.uid}/{display.name}')
-
-        # create widgets
-        self.panel = wx.Panel(self)
-        self.display_uid_label = wx.StaticText(
-            self.panel, label='Display UID (regex) (leave empty to ignore)')
-        self.display_uid = wx.TextCtrl(self.panel)
-        self.display_name_label = wx.StaticText(
-            self.panel, label='Display Name (regex) (leave empty to ignore)')
-        self.display_name = wx.TextCtrl(self.panel)
-        self.display_res_x_label = wx.StaticText(
-            self.panel, label='X Resolution (regex) (leave empty to ignore)')
-        self.display_res_x = wx.TextCtrl(self.panel)
-        self.display_res_y_label = wx.StaticText(
-            self.panel, label='Y Resolution (regex) (leave empty to ignore)')
-        self.display_res_y = wx.TextCtrl(self.panel)
-        self.save_btn = wx.Button(self.panel, label='Save')
-
-        # bind events
-        self.save_btn.Bind(wx.EVT_BUTTON, self.save)
-
-        # place widgets
-        def next_pos():
-            nonlocal pos
-            if pos[1] == 1:
-                pos = [pos[0] + 1, 0]
-            else:
-                pos[1] += 1
-            return tuple(pos)
-
-        pos = [-1, 1]
-        self.sizer = wx.GridBagSizer(5, 5)
-        for widget in (
-            self.display_uid_label, self.display_uid, self.display_name_label,
-            self.display_name, self.display_res_x_label, self.display_res_x,
-            self.display_res_y_label, self.display_res_y, self.save_btn
-        ):
-            self.sizer.Add(widget, pos=next_pos(), flag=wx.EXPAND)
-        self.panel.SetSizer(self.sizer)
-
-        # insert data
-        self.display_uid.Value = display.uid
-        self.display_name.Value = display.name
-        self.display_res_x.Value = str(display.resolution[0])
-        self.display_res_y.Value = str(display.resolution[1])
-
-    def save(self, *_):
-        self.display.uid = self.display_uid.Value
-        self.display.name = self.display_name.Value
-        try:
-            self.display.resolution = (
-                int(self.display_res_x.Value) or 0,
-                int(self.display_res_y.Value) or 0
-            )
-        except ValueError:
-            wx.MessageDialog(
-                self,
-                'Invalid value for display resolution. Please enter a number',
-                'Error',
-                style=wx.OK
-            ).ShowModal()
-        else:
-            self.on_save()
 
 
 class DisplayManager(wx.StaticBox):
     def __init__(self, parent: wx.Frame, layout: Snapshot):
-        wx.StaticBox.__init__(self, parent, label=f'Displays for {layout.phony}')
+        wx.StaticBox.__init__(
+            self, parent, label=f'Displays for {layout.phony}')
         self.layout = layout
         self.displays = layout.displays
 
@@ -90,31 +19,30 @@ class DisplayManager(wx.StaticBox):
         action_panel = wx.Panel(self)
         add_display_btn = wx.Button(action_panel, label='Add')
         clone_display_btn = wx.Button(action_panel, label='Clone')
-        edit_display_btn = wx.Button(action_panel, label='Edit')
         dup_display_btn = wx.Button(action_panel, label='Duplicate')
         del_display_btn = wx.Button(action_panel, label='Delete')
 
         # bind events
         add_display_btn.Bind(wx.EVT_BUTTON, self.add_display)
         clone_display_btn.Bind(wx.EVT_BUTTON, self.clone_display)
-        edit_display_btn.Bind(wx.EVT_BUTTON, self.edit_display)
         dup_display_btn.Bind(wx.EVT_BUTTON, self.duplicate_display)
         del_display_btn.Bind(wx.EVT_BUTTON, self.delete_display)
 
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
-            add_display_btn, clone_display_btn, edit_display_btn,
+            add_display_btn, clone_display_btn,
             dup_display_btn, del_display_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
 
         # create list control
-        self.list_control = ListCtrl(self, style=wx.LC_REPORT)
-        # see https://stackoverflow.com/a/2413105/21226016
-        self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_display)
-        for index, col in enumerate(('Display UID', 'Display Name', 'X Resolution', 'Y Resolution')):
+        self.list_control = EditableListCtrl(self)
+        self.list_control.Bind(wx.EVT_TEXT_ENTER, self.edit_display)
+        for index, col in enumerate(
+            ('Display UID (regex)', 'Display Name (regex)', 'X Resolution', 'Y Resolution')
+        ):
             self.list_control.AppendColumn(col)
             self.list_control.SetColumnWidth(index, 300 if index < 2 else 150)
 
@@ -156,10 +84,28 @@ class DisplayManager(wx.StaticBox):
         for item in self.list_control.GetAllSelected():
             self.append_display(deepcopy(self.displays[item]))
 
-    def edit_display(self, *_):
-        for item in self.list_control.GetAllSelected():
-            EditDisplay(self, self.displays[item],
-                        on_save=self.refresh_list).Show()
+    def edit_display(self, evt: wx.Event):
+        def update():
+            for index, display in enumerate(self.displays):
+                try:
+                    display.resolution = (
+                        int(self.list_control.GetItemText(index, 2)),
+                        int(self.list_control.GetItemText(index, 3))
+                    )
+                    display.uid = self.list_control.GetItemText(index, 0)
+                    display.name = self.list_control.GetItemText(index, 1)
+                except ValueError:
+                    wx.MessageDialog(
+                        self,
+                        'Invalid value for display resolution. Please enter a valid integer',
+                        'Error',
+                        style=wx.OK
+                    ).ShowModal()
+                else:
+                    wx.CallAfter(self.refresh_list)
+
+        evt.Skip()
+        wx.CallAfter(update)
 
     def refresh_list(self):
         self.list_control.DeleteAllItems()
@@ -198,7 +144,8 @@ class LayoutManager(wx.StaticBox):
         del_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.delete_layout))
         mov_up_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout, False))
         mov_dn_btn.Bind(wx.EVT_BUTTON, btn_evt(self.move_layout, False))
-        rename_btn.Bind(wx.EVT_BUTTON, self.rename_layout)  # not btn_evt since no data changes yet
+        # not btn_evt since no data changes yet
+        rename_btn.Bind(wx.EVT_BUTTON, self.rename_layout)
 
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -210,7 +157,8 @@ class LayoutManager(wx.StaticBox):
         action_panel.SetSizer(action_sizer)
 
         # create list control
-        self.list_control = ListCtrl(self, style=wx.LC_REPORT | wx.LC_EDIT_LABELS)
+        self.list_control = ListCtrl(
+            self, style=wx.LC_REPORT | wx.LC_EDIT_LABELS)
         self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_layout)
         self.list_control.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.rename_layout)
         for index, col in enumerate(('Layout Name',)):
@@ -229,7 +177,8 @@ class LayoutManager(wx.StaticBox):
         self.SetSizer(sizer)
 
     def add_layout(self, *_):
-        layout = Snapshot(displays=enum_display_devices(), phony='Unnamed Layout')
+        layout = Snapshot(displays=enum_display_devices(),
+                          phony='Unnamed Layout')
         self.append_layout(layout)
 
     def append_layout(self, layout: Snapshot, new=True):
@@ -339,7 +288,8 @@ class LayoutPage(wx.Panel):
         if layout is None:
             try:
                 with self.snapshot.lock:
-                    layout = next(i for i in reversed(self.snapshot.data) if i.phony)
+                    layout = next(i for i in reversed(
+                        self.snapshot.data) if i.phony)
             except StopIteration:
                 return
 
