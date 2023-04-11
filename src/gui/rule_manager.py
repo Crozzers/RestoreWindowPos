@@ -203,7 +203,7 @@ class RuleSubsetManager(wx.StaticBox):
         del_rule_btn = wx.Button(action_panel, label='Delete')
         mov_up_rule_btn = wx.Button(action_panel, id=1, label='Move Up')
         mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
-        move_to_btn = wx.Button(action_panel, id=3, label='Move To')
+        # move_to_btn = wx.Button(action_panel, id=3, label='Move To')
         # bind events
         apply_btn.Bind(wx.EVT_BUTTON, self.apply_rule)
         add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
@@ -213,7 +213,7 @@ class RuleSubsetManager(wx.StaticBox):
         del_rule_btn.Bind(wx.EVT_BUTTON, self.delete_rule)
         mov_up_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
         mov_dn_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
-        move_to_btn.Bind(wx.EVT_BUTTON, self.move_to)
+        # move_to_btn.Bind(wx.EVT_BUTTON, self.move_to)
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (

@@ -10,9 +10,8 @@ from snapshot import SnapshotFile, enum_display_devices
 
 
 class DisplayManager(wx.StaticBox):
-    def __init__(self, parent: wx.Frame, layout: Snapshot):
-        wx.StaticBox.__init__(
-            self, parent, label=f'Displays for {layout.phony}')
+    def __init__(self, parent: wx.Frame, layout: Snapshot, **kwargs):
+        wx.StaticBox.__init__(self, parent, **kwargs)
         self.layout = layout
         self.displays = layout.displays
 
@@ -119,7 +118,8 @@ class LayoutManager(wx.StaticBox):
     def __init__(self, parent: 'LayoutPage', snapshot_file: SnapshotFile):
         wx.StaticBox.__init__(self, parent, label='Layouts')
         self.snapshot_file = snapshot_file
-        self.layouts = [i for i in self.snapshot_file.data if i.phony]
+        self.layouts = [snapshot_file.get_current_snapshot()]
+        self.layouts.extend(i for i in self.snapshot_file.data if i.phony)
 
         # create action buttons
         action_panel = wx.Panel(self)
@@ -131,6 +131,9 @@ class LayoutManager(wx.StaticBox):
         mov_up_btn = wx.Button(action_panel, id=1, label='Move Up')
         mov_dn_btn = wx.Button(action_panel, id=2, label='Move Down')
         rename_btn = wx.Button(action_panel, id=3, label='Rename')
+
+        self._disallow_current = (
+            edit_layout_btn, del_layout_btn, mov_up_btn, mov_dn_btn, rename_btn)
 
         def btn_evt(func, swap=True):
             wrapped = lambda *_: [func(*_), self.update_snapshot_file()]  # noqa: E731
@@ -163,11 +166,13 @@ class LayoutManager(wx.StaticBox):
             self, style=wx.LC_REPORT | wx.LC_EDIT_LABELS)
         self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_layout)
         self.list_control.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.rename_layout)
+        self.list_control.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_select)
+        self.list_control.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_select)
         for index, col in enumerate(('Layout Name',)):
             self.list_control.AppendColumn(col)
             self.list_control.SetColumnWidth(index, 600 if index < 3 else 150)
 
-        # add rules
+        # add layouts
         for layout in self.layouts:
             self.append_layout(layout, False)
 
@@ -184,7 +189,11 @@ class LayoutManager(wx.StaticBox):
         self.append_layout(layout)
 
     def append_layout(self, layout: Snapshot, new=True):
-        self.list_control.Append((layout.phony,))
+        if layout == self.layouts[0]:
+            name = 'Current Snapshot'
+        else:
+            name = layout.phony
+        self.list_control.Append((name,))
         if not new:
             return
         self.layouts.append(layout)
@@ -225,7 +234,7 @@ class LayoutManager(wx.StaticBox):
         # get all items and their new positions
         for index in reversed(selected):
             self.list_control.DeleteItem(index)
-            items.insert(0, (max(0, index + direction),
+            items.insert(0, (max(1, index + direction),
                          self.layouts.pop(index)))
 
         # re-insert into list
@@ -234,10 +243,22 @@ class LayoutManager(wx.StaticBox):
             self.insert_layout(new_index, rule)
             self.list_control.Select(new_index)
 
+    def on_select(self, evt: wx.Event):
+        if 0 in self.list_control.GetAllSelected():
+            func = wx.Button.Disable
+        else:
+            func = wx.Button.Enable
+        for widget in self._disallow_current:
+            func(widget)
+
     def rename_layout(self, evt: wx.Event):
         def update():
-            for index, layout in enumerate(self.layouts):
+            self.list_control.SetItemText(0, 'Current Snapshot')
+            for index, layout in enumerate(self.layouts[1:], start=1):
                 layout.phony = self.list_control.GetItemText(index)
+                if not layout.phony:
+                    layout.phony = 'Unnamed Layout'
+                    self.list_control.SetItemText(index, 'Unnamed Layout')
             self.update_snapshot_file()
             self.edit_layout()
 
@@ -260,7 +281,7 @@ class LayoutManager(wx.StaticBox):
                 while layout in self.snapshot_file.data:
                     self.snapshot_file.data.remove(layout)
 
-            self.snapshot_file.data.extend(self.layouts)
+            self.snapshot_file.data.extend(self.layouts[1:])
 
             self.snapshot_file.save()
 
@@ -295,9 +316,20 @@ class LayoutPage(wx.Panel):
             except StopIteration:
                 return
 
-        self.display_manager = DisplayManager(self, layout)
+        current = self.snapshot.get_current_snapshot()
+        if layout == current:
+            name = 'Current Snapshot'
+        else:
+            name = layout.phony
+
+        self.display_manager = DisplayManager(
+            self, layout, label=f'Displays for {name}')
+
+        if layout == current:
+            self.display_manager.Disable()
+
         self.rule_manager = RuleSubsetManager(
-            self, self.snapshot, layout.rules, f'Rules for {layout.phony}')
+            self, self.snapshot, layout.rules, f'Rules for {name}')
         self.sizer.Add(self.display_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.sizer.Add(self.rule_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.sizer.Layout()
