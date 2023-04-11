@@ -2,6 +2,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import threading
+from typing import Iterator
 
 import pythoncom
 import pywintypes
@@ -74,8 +75,8 @@ def capture_snapshot() -> list[Window]:
     return snapshot
 
 
-def find_matching_rules(rules: list[Rule], window: Window):
-    matching = {}
+def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
+    matching: list[tuple[int, Rule]] = []
     for rule in rules:
         points = 0
         for attr in ('name', 'executable'):
@@ -87,8 +88,8 @@ def find_matching_rules(rules: list[Rule], window: Window):
             if rv:
                 points += p
         else:
-            matching[rule] = points
-    return sorted(matching, reverse=True, key=lambda r: matching[r])
+            matching.append((points, rule))
+    return (i[1] for i in sorted(matching, reverse=True))
 
 
 def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
