@@ -4,6 +4,7 @@ import wx
 import wx.lib.scrolledpanel
 
 from common import Display, Snapshot
+from gui.rule_manager import RuleSubsetManager
 from gui.widgets import EditableListCtrl, ListCtrl
 from snapshot import SnapshotFile, enum_display_devices
 
@@ -41,7 +42,8 @@ class DisplayManager(wx.StaticBox):
         self.list_control = EditableListCtrl(self)
         self.list_control.Bind(wx.EVT_TEXT_ENTER, self.edit_display)
         for index, col in enumerate(
-            ('Display UID (regex)', 'Display Name (regex)', 'X Resolution', 'Y Resolution')
+            ('Display UID (regex)', 'Display Name (regex)',
+             'X Resolution', 'Y Resolution')
         ):
             self.list_control.AppendColumn(col)
             self.list_control.SetColumnWidth(index, 300 if index < 2 else 150)
@@ -182,7 +184,7 @@ class LayoutManager(wx.StaticBox):
         self.append_layout(layout)
 
     def append_layout(self, layout: Snapshot, new=True):
-        self.list_control.Append((layout.phony or 'Unnamed Layout',))
+        self.list_control.Append((layout.phony,))
         if not new:
             return
         self.layouts.append(layout)
@@ -213,7 +215,7 @@ class LayoutManager(wx.StaticBox):
         self.Parent.swap_layout(layout)
 
     def insert_layout(self, index: int, layout: Snapshot):
-        self.list_control.Insert(index, (layout.phony or 'Unnamed Layout',))
+        self.list_control.Insert(index, (layout.phony,))
 
     def move_layout(self, btn_evt: wx.Event):
         direction = -1 if btn_evt.Id == 1 else 1
@@ -270,6 +272,7 @@ class LayoutPage(wx.Panel):
 
         self.layout_manager = LayoutManager(self, snapshot_file)
         self.display_manager = None
+        self.rule_manager = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.layout_manager, 0, wx.ALL | wx.EXPAND, 0)
@@ -279,8 +282,10 @@ class LayoutPage(wx.Panel):
 
     def swap_layout(self, layout: Snapshot = None):
         if self.sizer.GetItemCount() > 1:
+            self.sizer.Remove(2)
             self.sizer.Remove(1)
             self.display_manager.Destroy()
+            self.rule_manager.Destroy()
 
         if layout is None:
             try:
@@ -291,5 +296,8 @@ class LayoutPage(wx.Panel):
                 return
 
         self.display_manager = DisplayManager(self, layout)
+        self.rule_manager = RuleSubsetManager(
+            self, self.snapshot, layout.rules, f'Rules for {layout.phony}')
         self.sizer.Add(self.display_manager, 0, wx.ALL | wx.EXPAND, 0)
+        self.sizer.Add(self.rule_manager, 0, wx.ALL | wx.EXPAND, 0)
         self.sizer.Layout()
