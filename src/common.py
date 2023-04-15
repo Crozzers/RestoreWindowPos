@@ -246,7 +246,10 @@ class Snapshot(JSONType):
             if data['phony'] is False:
                 data['phony'] = ''
             elif data['phony'] is True:
-                data['phony'] = 'Unnamed Layout'
+                if data['displays'] == []:
+                    data['phony'] = 'Global'
+                else:
+                    data['phony'] = 'Unnamed Layout'
 
         return super(cls, cls).from_json(data)
 

@@ -119,7 +119,13 @@ class LayoutManager(wx.StaticBox):
         wx.StaticBox.__init__(self, parent, label='Layouts')
         self.snapshot_file = snapshot_file
         self.layouts = [snapshot_file.get_current_snapshot()]
-        self.layouts.extend(i for i in self.snapshot_file.data if i.phony)
+        for layout in self.snapshot_file.data:
+            if not layout.phony:
+                continue
+            if layout.phony == 'Global' and layout.displays == []:
+                self.layouts.insert(1, layout)
+            else:
+                self.layouts.append(layout)
 
         # create action buttons
         action_panel = wx.Panel(self)
@@ -234,7 +240,7 @@ class LayoutManager(wx.StaticBox):
         # get all items and their new positions
         for index in reversed(selected):
             self.list_control.DeleteItem(index)
-            items.insert(0, (max(1, index + direction),
+            items.insert(0, (max(2, index + direction),
                          self.layouts.pop(index)))
 
         # re-insert into list
@@ -244,7 +250,8 @@ class LayoutManager(wx.StaticBox):
             self.list_control.Select(new_index)
 
     def on_select(self, evt: wx.Event):
-        if 0 in self.list_control.GetAllSelected():
+        selected = tuple(self.list_control.GetAllSelected())
+        if 0 in selected or 1 in selected:
             func = wx.Button.Disable
         else:
             func = wx.Button.Enable
@@ -325,7 +332,7 @@ class LayoutPage(wx.Panel):
         self.display_manager = DisplayManager(
             self, layout, label=f'Displays for {name}')
 
-        if layout == current:
+        if layout == current or (layout.phony == 'Global' and layout.displays == []):
             self.display_manager.Disable()
 
         self.rule_manager = RuleSubsetManager(

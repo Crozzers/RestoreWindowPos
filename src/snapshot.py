@@ -48,11 +48,18 @@ class SnapshotFile(JSONFile):
 
     def load(self):
         super().load(default=[])
+        g_phony_found = False
         for index in range(len(self.data)):
             snapshot: Snapshot = Snapshot.from_json(
                 self.data[index]) or Snapshot()
             self.data[index] = snapshot
             snapshot.history.sort(key=lambda a: a.time)
+
+            if snapshot.phony == 'Global' and snapshot.displays == []:
+                g_phony_found = True
+
+        if not g_phony_found:
+            self.data.append(Snapshot(phony='Global'))
 
     def save(self):
         with self.lock:
