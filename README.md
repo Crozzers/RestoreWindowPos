@@ -63,3 +63,4 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 * Central GUI with settings and rule management on different pages
 * Create wiki with usage instructions
 * Ability apply global rules to display configs matching a certain pattern
+* Better auto-generated layout and rule names
