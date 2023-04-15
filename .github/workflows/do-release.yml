@@ -57,7 +57,7 @@ jobs:
       - name: Draft GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          body: "RestoreWindowPos_install.exe SHA256 Checksum: ${{steps.get_installer_checksum.outputs.pkgChecksum}}"
+          body: "RestoreWindowPos_install.exe SHA256 Checksum: `${{steps.get_installer_checksum.outputs.pkgChecksum}}`"
           draft: true
           files: "dist/RestoreWindowPos_install.exe"
           name: "RestoreWindowPos v${{needs.getversion.outputs.version}}"
