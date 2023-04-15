@@ -2,14 +2,14 @@ import logging
 import re
 import time
 from dataclasses import asdict
-from typing import Literal
+from typing import Iterator, Literal
 
 import pywintypes
 import win32api
 import win32gui
 
-from common import (Display, JSONFile, Snapshot, Window, WindowHistory, display_configs_match,
-                    local_path, size_from_rect)
+from common import (Display, JSONFile, Snapshot, Window, WindowHistory,
+                    display_configs_match, local_path, size_from_rect)
 from services import Service
 from window import capture_snapshot, restore_snapshot
 
@@ -105,6 +105,18 @@ class SnapshotFile(JSONFile):
                 snap = find()
             return snap
 
+    def get_compatible_snapshots(self, compatible_with: Snapshot = None) -> Iterator[Snapshot]:
+        with self.lock:
+            if compatible_with is None:
+                compatible_with = self.get_current_snapshot()
+
+            for snap in self.data:
+                if snap == compatible_with or not snap.phony:
+                    continue
+                if not display_configs_match(compatible_with.displays, snap.displays):
+                    continue
+                yield snap
+
     def get_history(self):
         with self.lock:
             snap = self.get_current_snapshot()
@@ -120,11 +132,7 @@ class SnapshotFile(JSONFile):
                 compatible_with: Snapshot = current
 
             rules = [] if exclusive else compatible_with.rules.copy()
-            for snap in self.data:
-                if snap == compatible_with or not snap.phony:
-                    continue
-                if not display_configs_match(compatible_with.displays, snap.displays):
-                    continue
+            for snap in self.get_compatible_snapshots(compatible_with):
                 rules.extend(r for r in snap.rules if r.fits_display_config(compatible_with.displays))
             return rules
 

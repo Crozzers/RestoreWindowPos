@@ -1,13 +1,13 @@
 import os.path
 from copy import deepcopy
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import win32gui
 import wx
 import wx.adv
 import wx.lib.scrolledpanel
 
-from common import Rule, Window, size_from_rect
+from common import Rule, Snapshot, Window, size_from_rect
 from gui.widgets import Frame, ListCtrl
 from snapshot import SnapshotFile
 from window import capture_snapshot, restore_snapshot
@@ -105,66 +105,60 @@ class RuleWindow(Frame):
         self.on_save()
 
 
-class WindowClone(Frame):
-    def __init__(self, parent, on_clone: Callable[[list[Window]], None], **kwargs):
-        super().__init__(parent, 'Clone a Window', **kwargs)
-        self.on_clone = on_clone
+class SelectionWindow(Frame):
+    # remove windowclone and replace with this
+    # also to copy to with this
+    def __init__(
+        self, parent, select_from: list,
+        callback: Callable[[list[int], dict[str, bool]], None],
+        options: dict[str, str] = None, **kwargs
+    ):
+        super().__init__(parent, **kwargs)
+        self.select_from = select_from
+        self.callback = callback
+        self.options = options or {}
 
         # create action buttons
         action_panel = wx.Panel(self)
-        clone_btn = wx.Button(action_panel, label='Clone')
+        done_btn = wx.Button(action_panel, label='Done')
         deselect_all_btn = wx.Button(action_panel, label='Deselect All')
         select_all_btn = wx.Button(action_panel, label='Select All')
         # bind events
-        clone_btn.Bind(wx.EVT_BUTTON, self.clone)
+        done_btn.Bind(wx.EVT_BUTTON, self.done)
         deselect_all_btn.Bind(wx.EVT_BUTTON, self.deselect_all)
         select_all_btn.Bind(wx.EVT_BUTTON, self.select_all)
         # place
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        for btn in (clone_btn, deselect_all_btn, select_all_btn):
-            action_sizer.Add(btn, 0, wx.ALL, 5)
+        for check in (done_btn, deselect_all_btn, select_all_btn):
+            action_sizer.Add(check, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
 
-        # create option checks
-        self._clone_opts = {'name': True, 'executable': True}
+        # create option buttons
+        def toggle_option(key):
+            self.options[key] = not self.options[key]
+
         option_panel = wx.Panel(self)
-        window_name_opt = wx.CheckBox(
-            option_panel, id=1, label='Clone window names')
-        window_exe_opt = wx.CheckBox(
-            option_panel, id=2, label='Clone window executable paths')
-        # bind events and set states
-        window_name_opt.SetValue(wx.CHK_CHECKED)
-        window_name_opt.Bind(wx.EVT_CHECKBOX, self.on_check)
-        window_exe_opt.SetValue(wx.CHK_CHECKED)
-        window_exe_opt.Bind(wx.EVT_CHECKBOX, self.on_check)
-        # place
-        option_sizer = wx.GridSizer(cols=2, hgap=5, vgap=5)
-        option_sizer.Add(window_name_opt, 0, wx.ALIGN_CENTER)
-        option_sizer.Add(window_exe_opt, 0, wx.ALIGN_CENTER)
+        option_sizer = wx.GridSizer(cols=len(options), hgap=5, vgap=5)
+        for key, value in options.items():
+            check = wx.CheckBox(option_panel, label=key)
+            if value:
+                check.SetValue(wx.CHK_CHECKED)
+            check.Bind(wx.EVT_CHECKBOX, lambda *_, k=key: toggle_option(k))
+            option_sizer.Add(check, 0, wx.ALIGN_CENTER)
         option_panel.SetSizer(option_sizer)
 
         self.check_list = wx.CheckListBox(
-            self, id=wx.ID_ANY, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
-
-        self.windows = sorted(capture_snapshot(), key=lambda w: w.name)
-        self.check_list.AppendItems(tuple(i.name for i in self.windows))
+            self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
+        self.check_list.AppendItems(select_from)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(action_panel, 0, wx.ALL | wx.EXPAND, 5)
         sizer.Add(option_panel, 0, wx.ALL | wx.EXPAND, 5)
-        sizer.Add(self.check_list, 1, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(self.check_list, 0, wx.ALL | wx.EXPAND, 5)
         self.SetSizerAndFit(sizer)
 
-    def clone(self, *_):
-        to_clone = []
-        for index in self.check_list.GetCheckedItems():
-            window = deepcopy(self.windows[index])
-            for prop, include in self._clone_opts.items():
-                if not include:
-                    setattr(window, prop, '')
-            to_clone.append(window)
-
-        self.on_clone(to_clone)
+    def done(self, *_):
+        selected = self.check_list.GetCheckedItems()
 
         try:
             self.Close()
@@ -172,18 +166,13 @@ class WindowClone(Frame):
         except RuntimeError:
             pass
 
+        self.callback(selected, self.options)
+
     def deselect_all(self, *_):
         self.select_all(check=False)
 
-    def on_check(self, event: wx.Event):
-        check: wx.CheckBox = event.GetEventObject()
-        if event.Id == 1:
-            self._clone_opts['name'] = check.GetValue()
-        else:
-            self._clone_opts['executable'] = check.GetValue()
-
     def select_all(self, *_, check=True):
-        for i in range(len(self.windows)):
+        for i in range(len(self.select_from)):
             self.check_list.Check(i, check=check)
 
 
@@ -192,6 +181,7 @@ class RuleSubsetManager(wx.StaticBox):
         wx.StaticBox.__init__(self, parent, label=label or '')
         self.snapshot = snapshot
         self.rules = rules
+        self.parent = parent
 
         # create action buttons
         action_panel = wx.Panel(self)
@@ -203,7 +193,7 @@ class RuleSubsetManager(wx.StaticBox):
         del_rule_btn = wx.Button(action_panel, label='Delete')
         mov_up_rule_btn = wx.Button(action_panel, id=1, label='Move Up')
         mov_dn_rule_btn = wx.Button(action_panel, id=2, label='Move Down')
-        # move_to_btn = wx.Button(action_panel, id=3, label='Move To')
+        move_to_btn = wx.Button(action_panel, id=3, label='Move To')
         # bind events
         apply_btn.Bind(wx.EVT_BUTTON, self.apply_rule)
         add_rule_btn.Bind(wx.EVT_BUTTON, self.add_rule)
@@ -213,13 +203,12 @@ class RuleSubsetManager(wx.StaticBox):
         del_rule_btn.Bind(wx.EVT_BUTTON, self.delete_rule)
         mov_up_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
         mov_dn_rule_btn.Bind(wx.EVT_BUTTON, self.move_rule)
-        # move_to_btn.Bind(wx.EVT_BUTTON, self.move_to)
+        move_to_btn.Bind(wx.EVT_BUTTON, self.move_to)
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
             apply_btn, add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
-            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn,
-            # move_to_btn
+            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn, move_to_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
@@ -266,8 +255,9 @@ class RuleSubsetManager(wx.StaticBox):
                        on_save=self.refresh_list).Show()
 
     def clone_windows(self, *_):
-        def on_clone(windows: list[Window]):
-            for window in windows:
+        def on_clone(indexes: list[int], options: dict[str, bool]):
+            selected = [windows[i] for i in indexes]
+            for window in selected:
                 if window.executable:
                     rule_name = os.path.basename(window.executable) + ' rule'
                 else:
@@ -277,15 +267,22 @@ class RuleSubsetManager(wx.StaticBox):
                     size=window.size,
                     rect=window.rect,
                     placement=window.placement,
-                    name=window.name,
-                    executable=window.executable,
+                    name=window.name if options['Clone window names'] else '',
+                    executable=window.executable if options['Clone window executable paths'] else '',
                     rule_name=rule_name
                 )
                 self.rules.append(rule)
                 self.append_rule(rule)
             self.snapshot.save()
 
-        WindowClone(self, on_clone).Show()
+        windows: list[Window] = sorted(
+            capture_snapshot(), key=lambda w: w.name)
+        options = {
+            'Clone window names': True,
+            'Clone window executable paths': True
+        }
+        SelectionWindow(self, [i.name for i in windows],
+                        on_clone, options, title='Clone Windows').Show()
 
     def delete_rule(self, *_):
         while (item := self.list_control.GetFirstSelected()) != -1:
@@ -324,7 +321,33 @@ class RuleSubsetManager(wx.StaticBox):
         self.snapshot.save()
 
     def move_to(self, btn_event: wx.Event):
-        pass
+        options = {'Create a copy': False}
+        layouts: list[Snapshot] = [self.snapshot.get_current_snapshot()]
+        l_names = ['Current Snapshot'] + [i.phony for i in layouts[1:]]
+        for layout in self.snapshot.data:
+            if not layout.phony:
+                continue
+            layouts.append(layout)
+            l_names.append(layout.phony)
+
+        def on_select(selection, options):
+            rules_to_move = list(self.list_control.GetAllSelected())
+            rules = [self.rules[i] for i in rules_to_move]
+
+            # remove from current
+            if not options['Create a copy']:
+                for index in reversed(rules_to_move):
+                    self.rules.pop(index)
+
+            # copy to others
+            for index in selection:
+                layouts[index].rules.extend(deepcopy(rules))
+
+            # refresh
+            self.refresh_list()
+
+        SelectionWindow(self, l_names, on_select, options,
+                        title='Move Rules Between Layouts').Show()
 
     def refresh_list(self, selected=None):
         selected = selected or []
