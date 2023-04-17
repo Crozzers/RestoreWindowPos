@@ -5,7 +5,7 @@ import wx.lib.scrolledpanel
 
 from common import Display, Snapshot
 from gui.rule_manager import RuleSubsetManager
-from gui.widgets import EditableListCtrl, ListCtrl
+from gui.widgets import EditableListCtrl, ListCtrl, SelectionWindow
 from snapshot import SnapshotFile, enum_display_devices
 
 
@@ -74,7 +74,21 @@ class DisplayManager(wx.StaticBox):
         self.displays.append(display)
 
     def clone_display(self, *_):
-        pass
+        displays = enum_display_devices()
+        d_names = [i.name for i in displays]
+        options = {'Clone UIDs': True, 'Clone Names': True}
+
+        def on_select(selection, options):
+            for index in selection:
+                display: Display = deepcopy(displays[index])
+                if not options['Clone UIDs']:
+                    display.uid = None
+                if not options['Clone Names']:
+                    display.name = None
+                self.displays.append(display)
+            self.refresh_list()
+
+        SelectionWindow(self, d_names, on_select, options, title='Clone Displays').Show()
 
     def delete_display(self, *_):
         while (item := self.list_control.GetFirstSelected()) != -1:

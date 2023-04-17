@@ -8,7 +8,7 @@ import wx.adv
 import wx.lib.scrolledpanel
 
 from common import Rule, Snapshot, Window, size_from_rect
-from gui.widgets import Frame, ListCtrl
+from gui.widgets import Frame, ListCtrl, SelectionWindow
 from snapshot import SnapshotFile
 from window import capture_snapshot, restore_snapshot
 
@@ -103,77 +103,6 @@ class RuleWindow(Frame):
         self.rule.size = size_from_rect(self.rule.rect)
         self.rule.placement = self.get_placement()
         self.on_save()
-
-
-class SelectionWindow(Frame):
-    # remove windowclone and replace with this
-    # also to copy to with this
-    def __init__(
-        self, parent, select_from: list,
-        callback: Callable[[list[int], dict[str, bool]], None],
-        options: dict[str, str] = None, **kwargs
-    ):
-        super().__init__(parent, **kwargs)
-        self.select_from = select_from
-        self.callback = callback
-        self.options = options or {}
-
-        # create action buttons
-        action_panel = wx.Panel(self)
-        done_btn = wx.Button(action_panel, label='Done')
-        deselect_all_btn = wx.Button(action_panel, label='Deselect All')
-        select_all_btn = wx.Button(action_panel, label='Select All')
-        # bind events
-        done_btn.Bind(wx.EVT_BUTTON, self.done)
-        deselect_all_btn.Bind(wx.EVT_BUTTON, self.deselect_all)
-        select_all_btn.Bind(wx.EVT_BUTTON, self.select_all)
-        # place
-        action_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        for check in (done_btn, deselect_all_btn, select_all_btn):
-            action_sizer.Add(check, 0, wx.ALL, 5)
-        action_panel.SetSizer(action_sizer)
-
-        # create option buttons
-        def toggle_option(key):
-            self.options[key] = not self.options[key]
-
-        option_panel = wx.Panel(self)
-        option_sizer = wx.GridSizer(cols=len(options), hgap=5, vgap=5)
-        for key, value in options.items():
-            check = wx.CheckBox(option_panel, label=key)
-            if value:
-                check.SetValue(wx.CHK_CHECKED)
-            check.Bind(wx.EVT_CHECKBOX, lambda *_, k=key: toggle_option(k))
-            option_sizer.Add(check, 0, wx.ALIGN_CENTER)
-        option_panel.SetSizer(option_sizer)
-
-        self.check_list = wx.CheckListBox(
-            self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
-        self.check_list.AppendItems(select_from)
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(action_panel, 0, wx.ALL | wx.EXPAND, 5)
-        sizer.Add(option_panel, 0, wx.ALL | wx.EXPAND, 5)
-        sizer.Add(self.check_list, 0, wx.ALL | wx.EXPAND, 5)
-        self.SetSizerAndFit(sizer)
-
-    def done(self, *_):
-        selected = self.check_list.GetCheckedItems()
-
-        try:
-            self.Close()
-            self.Destroy()
-        except RuntimeError:
-            pass
-
-        self.callback(selected, self.options)
-
-    def deselect_all(self, *_):
-        self.select_all(check=False)
-
-    def select_all(self, *_, check=True):
-        for i in range(len(self.select_from)):
-            self.check_list.Check(i, check=check)
 
 
 class RuleSubsetManager(wx.StaticBox):
