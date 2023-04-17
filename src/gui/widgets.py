@@ -94,6 +94,7 @@ class SelectionWindow(Frame):
         options: dict[str, str] = None, **kwargs
     ):
         super().__init__(parent, **kwargs)
+        self.CenterOnParent()
         self.select_from = select_from
         self.callback = callback
         self.options = options or {}
