@@ -163,7 +163,14 @@ class WindowType(JSONType):
         if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
             offset = 8
         else:
-            offset = 0
+            # check if a window might be snapped and give it a bit more room
+            if (
+                abs(self.size[0] - (display.resolution[0] // 2)) <= 10
+                or abs(self.size[1] - (display.resolution[1] // 2)) <= 10
+            ):
+                offset = 5
+            else:
+                offset = 0
         return (
             self.rect[0] >= display.rect[0] - offset
             and self.rect[1] >= display.rect[1] - offset
