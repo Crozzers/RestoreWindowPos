@@ -145,7 +145,7 @@ class RuleSubsetManager(wx.StaticBox):
         # create list control
         self.list_control = ListCtrl(self)
         self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_rule)
-        for index, col in enumerate(('Rule Name', 'Window Title', 'Window Executable', 'Window Rect')):
+        for index, col in enumerate(('Rule Name', 'Window Title', 'Window Executable', 'Window Rect', 'Window Size')):
             self.list_control.AppendColumn(col)
             self.list_control.SetColumnWidth(index, 200 if index < 3 else 150)
 
@@ -176,7 +176,7 @@ class RuleSubsetManager(wx.StaticBox):
     def append_rule(self, rule: Rule):
         self.list_control.Append(
             (rule.rule_name or 'Unnamed rule', rule.name or '',
-             rule.executable or '', str(rule.rect)))
+             rule.executable or '', str(rule.rect), str(rule.size)))
 
     def edit_rule(self, *_):
         for item in self.list_control.GetAllSelected():
@@ -229,7 +229,7 @@ class RuleSubsetManager(wx.StaticBox):
         self.list_control.Insert(
             index,
             (rule.rule_name or 'Unnamed rule', rule.name or '',
-             rule.executable or '', str(rule.rect)))
+             rule.executable or '', str(rule.rect), str(rule.size)))
 
     def move_rule(self, btn_event: wx.Event):
         direction = -1 if btn_event.Id == 1 else 1
