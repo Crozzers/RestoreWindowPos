@@ -22,6 +22,5 @@ When publishing a release, the dev must do the following:
 * Bump version number in `src/_version.py`
 * Create a git tag for the release
 * `git push` and `git push --tags`
-* Deploy chocolatey pipeline
-* Run `tools\compile` to generate EXE file
-* Create release on github releases page
+* Approve chocolatey pipeline deployment
+* Update release drafted by github actions

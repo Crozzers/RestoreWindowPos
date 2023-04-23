@@ -60,7 +60,6 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 ## TODO
 
 * Test on Windows 11
-* Central GUI with settings and rule management on different pages
 * Create wiki with usage instructions
-* Ability apply global rules to display configs matching a certain pattern
+* Ability to match layouts with resolutions greater or lesser than a certain value
 * Better auto-generated layout and rule names
