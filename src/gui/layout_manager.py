@@ -38,14 +38,14 @@ class DisplayManager(wx.StaticBox):
         action_panel.SetSizer(action_sizer)
 
         # create list control
-        self.list_control = EditableListCtrl(self)
+        self.list_control = EditableListCtrl(self, edit_cols=list(range(0, 4)))
         self.list_control.Bind(wx.EVT_TEXT_ENTER, self.edit_display)
         for index, col in enumerate(
             ('Display UID (regex)', 'Display Name (regex)',
-             'X Resolution', 'Y Resolution')
+             'X Resolution', 'Y Resolution', 'Rect')
         ):
             self.list_control.AppendColumn(col)
-            self.list_control.SetColumnWidth(index, 300 if index < 2 else 150)
+            self.list_control.SetColumnWidth(index, 250 if index < 2 else 125)
 
         # add rules
         for display in self.displays:
@@ -67,7 +67,8 @@ class DisplayManager(wx.StaticBox):
             display.name or '',
             *(
                 display.resolution or (1920, 1080)
-            )
+            ),
+            str(display.rect)
         ))
         if not new:
             return

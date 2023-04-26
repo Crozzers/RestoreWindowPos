@@ -64,7 +64,7 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
 
     def OpenEditor(self, col, row):
         if self.edit_cols is not None:
-            if col - 1 not in self.edit_cols:
+            if col not in self.edit_cols:
                 return
 
         super().OpenEditor(col, row)
