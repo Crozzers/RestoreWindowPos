@@ -58,7 +58,7 @@ Function checkLaunchParam
   ClearErrors
   ${GetOptions} $0 "/StartAfterInstall" $1
   ${IfNot} ${Errors}
-      ExecShell "" "$INSTDIR\${PRODUCT}.exe"
+      Exec "$INSTDIR\${PRODUCT}.exe"
   ${EndIf}
 FunctionEnd
 

@@ -50,20 +50,23 @@ jobs:
       - name: Build package
         run: |
           tools\compile.bat
+      - name: Test Installer
+        run: |
+          tools\test-installer.ps1 -confirm y
       - name: Get installer checksum
         id: get_installer_checksum
         run: |
           echo "pkgChecksum=$(checksum -t sha256 dist/RestoreWindowPos_install.exe)" >> $env:GITHUB_OUTPUT
-      - name: Draft GitHub release
-        uses: softprops/action-gh-release@v1
-        with:
-          body: "RestoreWindowPos_install.exe SHA256 Checksum: `${{steps.get_installer_checksum.outputs.pkgChecksum}}`"
-          draft: true
-          files: "dist/RestoreWindowPos_install.exe"
-          name: "RestoreWindowPos v${{needs.getversion.outputs.version}}"
-          tag_name: ${{needs.getversion.outputs.version}}
-      - name: Push to chocolatey
-        env:
-          PKGVERSION: ${{needs.getversion.outputs.version}}
-        run: |
-          choco push "dist/restorewindowpos.$env:PKGVERSION.nupkg" --source "https://push.chocolatey.org/" -k "${{secrets.CHOCO_API_KEY}}"
+      # - name: Draft GitHub release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     body: "RestoreWindowPos_install.exe SHA256 Checksum: `${{steps.get_installer_checksum.outputs.pkgChecksum}}`"
+      #     draft: true
+      #     files: "dist/RestoreWindowPos_install.exe"
+      #     name: "RestoreWindowPos v${{needs.getversion.outputs.version}}"
+      #     tag_name: ${{needs.getversion.outputs.version}}
+      # - name: Push to chocolatey
+      #   env:
+      #     PKGVERSION: ${{needs.getversion.outputs.version}}
+      #   run: |
+      #     choco push "dist/restorewindowpos.$env:PKGVERSION.nupkg" --source "https://push.chocolatey.org/" -k "${{secrets.CHOCO_API_KEY}}"
