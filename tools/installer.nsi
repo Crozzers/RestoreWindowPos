@@ -4,6 +4,8 @@ Unicode true
 ; UTF-8 BOM!
 
 !include "MUI2.nsh"
+!include "FileFunc.nsh"
+!include "LogicLib.nsh"
 
 RequestExecutionLevel user
 ShowInstDetails show
@@ -49,6 +51,17 @@ InstallDirRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\${PRO
 ; Uninstaller pages
 UninstPage uninstConfirm
 UninstPage instfiles
+
+
+Function checkLaunchParam
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/StartAfterInstall" $1
+  ${IfNot} ${Errors}
+      ExecShell "" "$INSTDIR\${PRODUCT}.exe"
+  ${EndIf}
+FunctionEnd
+
 
 Section "Installer"
   SetAutoClose false
@@ -98,6 +111,11 @@ Section "Installer"
   ; Estimated installation size
   SectionGetSize 0 $0
   WriteRegDWORD HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "EstimatedSize" $0
+
+  ; Only autostart program if in silent mode because GUI has option to launch it anyway
+  ${If} ${Silent}
+    Call checkLaunchParam
+  ${EndIf}
 SectionEnd
 
 ;--------------------------------
