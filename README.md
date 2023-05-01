@@ -15,6 +15,10 @@ As of v0.10.0, we now have a [Chocolatey package](https://community.chocolatey.o
 ```
 choco install restorewindowpos
 ```
+If you want to immediately start the program after install:
+```
+choco install restorewindowpos --params '"/StartAfterInstall"'
+```
 Chocolatey packages are generated upon a new release using [GitHub actions](https://github.com/Crozzers/RestoreWindowPos/actions). The packages are then submitted to Chocolatey for review and to be published. This process does take time, so the Chocolatey version of the package may lag behind the latest GitHub release.
 
 ### Manual install
@@ -29,6 +33,10 @@ for the program.
 If you used Chocolatey to install, it should be as simple as running:
 ```
 choco upgrade restorewindowpos
+```
+And if you want to immediately restart the program after upgrading:
+```
+choco upgrade restorewindowpos --params '"/StartAfterInstall"'
 ```
 This should handle exiting any currently running instances and installing the new version.
 
