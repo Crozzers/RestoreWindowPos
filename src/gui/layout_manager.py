@@ -1,12 +1,68 @@
 from copy import deepcopy
+from typing import Callable
 
 import wx
 import wx.lib.scrolledpanel
 
 from common import Display, Snapshot
 from gui.rule_manager import RuleSubsetManager
-from gui.widgets import EditableListCtrl, ListCtrl, SelectionWindow
+from gui.widgets import EditableListCtrl, Frame, ListCtrl, SelectionWindow
 from snapshot import SnapshotFile, enum_display_devices
+
+
+class EditNumberWindow(Frame):
+    def __init__(self, parent, number: int, mode: str, callback: Callable[[int, str], None]):
+        super().__init__(parent)
+        self.callback = callback
+
+        max_res = 10 ** 4
+        widgets = []
+        widgets.append(wx.StaticText(
+            self, label='Number (set to 0 to ignore):'))
+        self.res_ctrl = wx.SpinCtrl(
+            self, value=str(number), min=-max_res, max=max_res)
+        widgets.append(self.res_ctrl)
+
+        self.operations = {
+            'gt': 'Greater than (>)',
+            'ge': 'Greater than or equal (>=)',
+            'eq': 'Equal to (==)',
+            'le': 'Less than or equal to (<=)',
+            'lt': 'Less than'
+        }
+        self.selected_op = 'eq'
+
+        for index, (op_name, op_desc) in enumerate(self.operations.items()):
+            widgets.append(wx.RadioButton(self, label=op_desc, id=index + 1))
+            if mode == op_name:
+                self.selected_op = op_name
+                widgets[-1].SetValue(True)
+
+            widgets[-1].Bind(wx.EVT_RADIOBUTTON, self.select_op)
+
+        widgets.append(wx.Button(self, label='Save'))
+        widgets[-1].Bind(wx.EVT_BUTTON, self.save)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        for widget in widgets:
+            sizer.Add(widget, 0, wx.ALL, 5)
+        self.SetSizerAndFit(sizer)
+
+    def save(self, *_):
+        res = self.res_ctrl.Value
+
+        try:
+            res = int(res)
+        except ValueError:
+            wx.MessageDialog(
+                self, 'Invalid value. Please enter a whole number', 'Invalid Value')
+            return
+
+        self.callback(res, self.selected_op)
+        self.Close()
+
+    def select_op(self, evt: wx.Event):
+        self.selected_op = tuple(self.operations.keys())[evt.Id - 1]
 
 
 class DisplayManager(wx.StaticBox):
@@ -38,7 +94,8 @@ class DisplayManager(wx.StaticBox):
         action_panel.SetSizer(action_sizer)
 
         # create list control
-        self.list_control = EditableListCtrl(self, edit_cols=list(range(0, 4)))
+        self.list_control = EditableListCtrl(
+            self, edit_cols=list(range(0, 4)), edit_callback=self.on_edit)
         self.list_control.Bind(wx.EVT_TEXT_ENTER, self.edit_display)
         for index, col in enumerate(
             ('Display UID (regex)', 'Display Name (regex)',
@@ -121,7 +178,27 @@ class DisplayManager(wx.StaticBox):
                     wx.CallAfter(self.refresh_list)
 
         evt.Skip()
-        wx.CallAfter(update)
+        update()
+
+    def on_edit(self, col, row) -> bool:
+        if col < 2:
+            return True
+        if col > 4:
+            return False
+
+        def callback(new_res: int, op_name: str):
+            display.set_res(index, new_res)
+            display.comparison_params.setdefault('resolution', [None, None])
+            display.comparison_params['resolution'][index] = op_name
+            self.refresh_list()
+
+        index = 0 if col == 2 else 1
+        display: Display = self.displays[row]
+        number = display.resolution[index]
+        mode = 'eq'
+        if (comp := display.comparison_params.get('resolution', None)):
+            mode = comp[index]
+        EditNumberWindow(self, number, mode, callback=callback).Show()
 
     def refresh_list(self):
         self.list_control.DeleteAllItems()

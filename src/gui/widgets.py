@@ -56,13 +56,25 @@ class ListCtrl(wx.ListCtrl):
 
 
 class EditableListCtrl(ListCtrl, TextEditMixin):
-    def __init__(self, parent, *args, edit_cols: list[int] = None, **kwargs):
+    def __init__(
+        self,
+        parent,
+        *args,
+        edit_cols: list[int] = None,
+        edit_callback: Callable[[int, int], bool] = None,
+        **kwargs
+    ):
         kwargs.setdefault('style', wx.LC_REPORT | wx.LC_EDIT_LABELS)
         ListCtrl.__init__(self, parent, *args, **kwargs)
         TextEditMixin.__init__(self)
         self.edit_cols = edit_cols
+        self.edit_callback = edit_callback
 
     def OpenEditor(self, col, row):
+        if self.edit_callback is not None:
+            if not self.edit_callback(col, row):
+                return
+
         if self.edit_cols is not None:
             if col not in self.edit_cols:
                 return
