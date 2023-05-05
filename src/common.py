@@ -1,5 +1,6 @@
 import json
 import logging
+import operator
 import os
 import re
 import sys
@@ -201,6 +202,11 @@ class Display(JSONType):
     name: str
     resolution: XandY
     rect: Rect
+    comparison_params: dict[str, str | list[str]] = field(default_factory=dict)
+    '''
+    Optional member detailing how comparisons should be made between members of
+    this class and members of another class
+    '''
 
     def matches(self, display: 'Display'):
         # check UIDs
@@ -210,12 +216,22 @@ class Display(JSONType):
         if display.name and not match(self.name, display.name):
             return False
         # check resolution
-        if not any(0 in metric or match(*metric) for metric in zip(self.resolution, display.resolution)):
-            return False
-        return True
+        for index, metric in enumerate(zip(self.resolution, display.resolution)):
+            if 0 in metric:
+                continue
+            op = self.comparison_params.get('resolution', ('eq', 'eq'))[index]
+            if not getattr(operator, op.lower(), operator.eq)(*metric):
+                return False
+        else:
+            return True
 
     def matches_config(self, config: list['Display']):
         return any(self.matches(d) for d in config)
+
+    def set_res(self, index, value):
+        self.resolution = list(self.resolution)
+        self.resolution[index] = value
+        self.resolution = tuple(self.resolution)
 
 
 @dataclass(slots=True)
