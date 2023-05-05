@@ -103,6 +103,7 @@ class RuleWindow(Frame):
         self.rule.size = size_from_rect(self.rule.rect)
         self.rule.placement = self.get_placement()
         self.on_save()
+        self.Close()
 
 
 class RuleSubsetManager(wx.StaticBox):
