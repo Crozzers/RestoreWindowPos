@@ -10,18 +10,29 @@ from gui.widgets import EditableListCtrl, Frame, ListCtrl, SelectionWindow
 from snapshot import SnapshotFile, enum_display_devices
 
 
-class EditNumberWindow(Frame):
-    def __init__(self, parent, number: int, mode: str, callback: Callable[[int, str], None]):
-        super().__init__(parent)
+class EditResolutionWindow(Frame):
+    def __init__(self, parent, display: Display, callback: Callable):
+        super().__init__(parent, title='Edit Resolution')
+        self.display = display
         self.callback = callback
 
+        display.comparison_params.setdefault('resolution', ['eq', 'eq'])
+        self.selected_ops = display.comparison_params['resolution'].copy()
+
+        sizer = wx.GridBagSizer(5, 5)
+
+        sizer.Add(wx.StaticText(self, label='X Resolution'), (0, 1))
+        sizer.Add(wx.StaticText(self, label='Y Resolution'), (0, 2))
+        sizer.Add(wx.StaticText(
+            self, label='Value (set to 0 to ignore):'), (1, 0))
+
         max_res = 10 ** 4
-        widgets = []
-        widgets.append(wx.StaticText(
-            self, label='Number (set to 0 to ignore):'))
-        self.res_ctrl = wx.SpinCtrl(
-            self, value=str(number), min=-max_res, max=max_res)
-        widgets.append(self.res_ctrl)
+        self.x_res_ctrl = wx.SpinCtrlDouble(
+            self, value=str(display.resolution[0]), min=-max_res, max=max_res)
+        sizer.Add(self.x_res_ctrl, (1, 1))
+        self.y_res_ctrl = wx.SpinCtrlDouble(
+            self, value=str(display.resolution[1]), min=-max_res, max=max_res)
+        sizer.Add(self.y_res_ctrl, (1, 2))
 
         self.operations = {
             'gt': 'Greater than (>)',
@@ -30,39 +41,44 @@ class EditNumberWindow(Frame):
             'le': 'Less than or equal to (<=)',
             'lt': 'Less than'
         }
-        self.selected_op = 'eq'
+        sizer.Add(wx.StaticText(self, label='Match when:'),
+                  (round(len(self.operations) / 2) + 2, 0))
 
-        for index, (op_name, op_desc) in enumerate(self.operations.items()):
-            widgets.append(wx.RadioButton(self, label=op_desc, id=index + 1))
-            if mode == op_name:
-                self.selected_op = op_name
-                widgets[-1].SetValue(True)
+        count = 1
+        for index in range(len(display.resolution)):
+            row = 2
+            kw = {'style': wx.RB_GROUP}
+            for op_name, op_desc in self.operations.items():
+                w = wx.RadioButton(self, label=op_desc, id=count, **kw)
+                sizer.Add(w, (row, index + 1))
+                w.Bind(wx.EVT_RADIOBUTTON, self.select_op)
+                if display.comparison_params['resolution'][index] == op_name:
+                    w.SetValue(True)
 
-            widgets[-1].Bind(wx.EVT_RADIOBUTTON, self.select_op)
+                count += 1
+                row += 1
+                kw = {}
 
-        widgets.append(wx.Button(self, label='Save'))
-        widgets[-1].Bind(wx.EVT_BUTTON, self.save)
+        save = wx.Button(self, label='Save')
+        sizer.Add(save, (row, 0))
+        save.Bind(wx.EVT_BUTTON, self.save)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        for widget in widgets:
-            sizer.Add(widget, 0, wx.ALL, 5)
         self.SetSizerAndFit(sizer)
 
     def save(self, *_):
-        res = self.res_ctrl.Value
+        self.display.resolution = (
+            int(self.x_res_ctrl.Value), int(self.y_res_ctrl.Value))
+        self.display.comparison_params['resolution'] = self.selected_ops
 
-        try:
-            res = int(res)
-        except ValueError:
-            wx.MessageDialog(
-                self, 'Invalid value. Please enter a whole number', 'Invalid Value')
-            return
-
-        self.callback(res, self.selected_op)
+        self.callback()
         self.Close()
 
     def select_op(self, evt: wx.Event):
-        self.selected_op = tuple(self.operations.keys())[evt.Id - 1]
+        plane = evt.Id // len(self.operations)
+        index = evt.Id - 1
+        if plane:
+            index -= len(self.operations)
+        self.selected_ops[plane] = tuple(self.operations.keys())[index]
 
 
 class DisplayManager(wx.StaticBox):
@@ -146,7 +162,8 @@ class DisplayManager(wx.StaticBox):
                 self.displays.append(display)
             self.refresh_list()
 
-        SelectionWindow(self, d_names, on_select, options, title='Clone Displays').Show()
+        SelectionWindow(self, d_names, on_select, options,
+                        title='Clone Displays').Show()
 
     def delete_display(self, *_):
         while (item := self.list_control.GetFirstSelected()) != -1:
@@ -186,19 +203,8 @@ class DisplayManager(wx.StaticBox):
         if col > 4:
             return False
 
-        def callback(new_res: int, op_name: str):
-            display.set_res(index, new_res)
-            display.comparison_params.setdefault('resolution', ['eq', 'eq'])
-            display.comparison_params['resolution'][index] = op_name
-            self.refresh_list()
-
-        index = 0 if col == 2 else 1
         display: Display = self.displays[row]
-        number = display.resolution[index]
-        mode = 'eq'
-        if (comp := display.comparison_params.get('resolution', None)):
-            mode = comp[index]
-        EditNumberWindow(self, number, mode, callback=callback).Show()
+        EditResolutionWindow(self, display, callback=self.refresh_list).Show()
 
     def refresh_list(self):
         self.list_control.DeleteAllItems()
