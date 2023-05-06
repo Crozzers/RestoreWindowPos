@@ -11,8 +11,8 @@ from snapshot import SnapshotFile, enum_display_devices
 
 
 class EditResolutionWindow(Frame):
-    def __init__(self, parent, display: Display, callback: Callable):
-        super().__init__(parent, title='Edit Resolution')
+    def __init__(self, parent, display: Display, callback: Callable, **kw):
+        super().__init__(parent, title='Edit Resolution', **kw)
         self.display = display
         self.callback = callback
 
@@ -204,7 +204,13 @@ class DisplayManager(wx.StaticBox):
             return False
 
         display: Display = self.displays[row]
-        EditResolutionWindow(self, display, callback=self.refresh_list).Show()
+        w_name = f'editdisplay-{id(display)}'
+        for child in self.GetChildren():
+            if not isinstance(child, Frame):
+                continue
+            if child.GetName() == w_name:
+                return child.Raise()
+        EditResolutionWindow(self, display, callback=self.refresh_list, name=w_name).Show()
 
     def refresh_list(self):
         self.list_control.DeleteAllItems()
