@@ -17,12 +17,12 @@ if TYPE_CHECKING:
 
 
 class RuleWindow(Frame):
-    def __init__(self, parent, rule: Rule, on_save: Callable):
+    def __init__(self, parent, rule: Rule, on_save: Callable, **kw):
         self.rule = rule
         self.on_save = on_save
 
         # create widgets and such
-        super().__init__(parent, title=self.rule.rule_name)
+        super().__init__(parent, title=self.rule.rule_name, **kw)
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.rule_name_label = wx.StaticText(self.panel, label='Rule name')
         self.rule_name = wx.TextCtrl(self.panel)
@@ -180,9 +180,16 @@ class RuleSubsetManager(wx.StaticBox):
              rule.executable or '', str(rule.rect), str(rule.size)))
 
     def edit_rule(self, *_):
+        alive_windows = {i.GetName(): i for i in self.GetChildren()
+                         if isinstance(i, Frame)}
         for item in self.list_control.GetAllSelected():
-            RuleWindow(self, self.rules[item],
-                       on_save=self.refresh_list).Show()
+            rule = self.rules[item]
+            r_name = f'editrule-{id(rule)}'
+            if r_name in alive_windows:
+                alive_windows[r_name].Raise()
+            else:
+                RuleWindow(self, rule,
+                           on_save=self.refresh_list, name=r_name).Show()
 
     def clone_windows(self, *_):
         def on_clone(indexes: list[int], options: dict[str, bool]):
