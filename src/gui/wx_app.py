@@ -46,14 +46,21 @@ def spawn_gui(
 ):
     top = WxApp()._top_frame
 
-    f = Frame(parent=top, size=wx.Size(600, 500), name='RWPGUI')
-    nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
-    f.nb = nb
-    layout_panel = LayoutPage(nb, snapshot)
-    settings_panel = SettingsPanel(nb, settings)
-    nb.AddPage(layout_panel, 'Layouts and Rules')
-    nb.AddPage(settings_panel, 'Settings')
-    nb.SetPadding(wx.Size(5, 2))
+    for child in top.GetChildren():
+        if isinstance(child, Frame):
+            if child.GetName() == 'RWPGUI':
+                f = child
+                nb = f.nb
+                break
+    else:
+        f = Frame(parent=top, size=wx.Size(600, 500), name='RWPGUI')
+        nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
+        f.nb = nb
+        layout_panel = LayoutPage(nb, snapshot)
+        settings_panel = SettingsPanel(nb, settings)
+        nb.AddPage(layout_panel, 'Layouts and Rules')
+        nb.AddPage(settings_panel, 'Settings')
+        nb.SetPadding(wx.Size(5, 2))
 
     nb.ChangeSelection(1 if start_page == 'settings' else 0)
     f.SetIdealSize()
