@@ -188,7 +188,7 @@ class DisplayManager(wx.StaticBox):
 
         def callback(new_res: int, op_name: str):
             display.set_res(index, new_res)
-            display.comparison_params.setdefault('resolution', [None, None])
+            display.comparison_params.setdefault('resolution', ['eq', 'eq'])
             display.comparison_params['resolution'][index] = op_name
             self.refresh_list()
 

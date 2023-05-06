@@ -216,7 +216,7 @@ class Display(JSONType):
         if display.name and not match(self.name, display.name):
             return False
         # check resolution
-        for index, metric in enumerate(zip(self.resolution, display.resolution)):
+        for index, metric in enumerate(zip(display.resolution, self.resolution)):
             if 0 in metric:
                 continue
             op = self.comparison_params.get('resolution', ('eq', 'eq'))[index]
