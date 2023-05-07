@@ -2,3 +2,4 @@
 pyinstaller
 pyinstaller-versionfile
 packaging
+pytest
