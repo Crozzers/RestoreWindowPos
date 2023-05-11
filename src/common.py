@@ -141,6 +141,14 @@ class JSONType:
             elif sub_types:
                 value = tuple_convert(
                     data[field_name], to=field_type, from_=tuple | list)
+                if isinstance(value, tuple):
+                    # only convert sub items in tuple because tuple
+                    # types are positional
+                    try:
+                        value = field_type(sub_types[i](
+                            value[i]) for i in range(len(value)))
+                    except ValueError:
+                        pass
             else:
                 try:
                     value = field_type(data[field_name])
