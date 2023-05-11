@@ -1,9 +1,11 @@
 import re
 import sys
+import typing
+from dataclasses import dataclass
 from pathlib import Path
 
-from pytest import MonkeyPatch
 import pytest
+from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 from src import common  # noqa:E402
@@ -41,15 +43,15 @@ def test_single_call():
     assert var == 1, 'should not increment counter after first call'
 
 
-def test_size_from_rect():
-    for rect in (
-        (0, 0, 1920, 1080),
-        (-1920, 1080, 2160, 1440)
-    ):
-        size = common.size_from_rect(rect)
-        assert isinstance(size, tuple)
-        assert size[0] == rect[2] - rect[0]
-        assert size[1] == rect[3] - rect[1]
+@pytest.mark.parametrize('rect', (
+    (0, 0, 1920, 1080),
+    (-1920, 1080, 2160, 1440)
+))
+def test_size_from_rect(rect: tuple[int]):
+    size = common.size_from_rect(rect)
+    assert isinstance(size, tuple)
+    assert size[0] == rect[2] - rect[0]
+    assert size[1] == rect[3] - rect[1]
 
 
 def test_reverse_dict_lookup():
@@ -87,15 +89,38 @@ def test_match():
     assert match(regex, 'abc') == 0, 'returns 0 on regex error'
 
 
-def test_tuple_convert():
+@pytest.mark.parametrize('input,expected', (
+    ([1, 2, 3], (1, 2, 3)),
+    ([1, [2, 3]], (1, (2, 3))),
+    ([1, [2, [3, [4, 5], 6]]], (1, (2, (3, (4, 5), 6))))
+))
+def test_tuple_convert(input, expected: tuple):
     from src.common import tuple_convert
 
-    pairs = (
-        ([1, 2, 3], (1, 2, 3)),
-        ([1, [2, 3]], (1, (2, 3))),
-        ([1, [2, [3, [4, 5], 6]]], (1, (2, (3, (4, 5), 6))))
-    )
+    assert tuple_convert(input) == expected
+    assert tuple_convert(expected, from_=tuple, to=list) == input
 
-    for my_list, my_tuple in pairs:
-        assert tuple_convert(my_list) == my_tuple
-        assert tuple_convert(my_tuple, from_=tuple, to=list) == my_list
+
+class TestJSONType:
+    @dataclass
+    class Sample(common.JSONType):
+        a: int
+        b: str
+        c: tuple[int, str, bool]
+
+    @pytest.mark.parametrize(
+        'json_sample', [
+            {'a': 5, 'b': '6', 'c': [7, '8', True]},
+            {'a': '5', 'b': 6, 'c': [7, '8', True]},
+            {'a': '5', 'b': 6, 'c': ('7', 8, 0)}
+        ], ids=['standard', 'compliant-types', 'tuple-sub-types']
+    )
+    def test_from_json(self, json_sample: dict):
+        dc = self.Sample.from_json(json_sample)
+        hints = typing.get_type_hints(self.Sample)
+
+        assert isinstance(dc.a, int)
+        assert isinstance(dc.b, str)
+        assert isinstance(dc.c, tuple)
+        for index, item in enumerate(dc.c):
+            assert isinstance(item, typing.get_args(hints['c'])[index])
