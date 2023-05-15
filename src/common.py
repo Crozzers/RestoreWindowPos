@@ -150,10 +150,13 @@ class JSONType:
                     except ValueError:
                         pass
             else:
-                try:
-                    value = field_type(data[field_name])
-                except TypeError:
-                    value = data[field_name]
+                if issubclass(field_type, JSONType):
+                    value = field_type.from_json(data[field_name])
+                else:
+                    try:
+                        value = field_type(data[field_name])
+                    except TypeError:
+                        value = data[field_name]
             init_data[field_name] = value
 
         try:
