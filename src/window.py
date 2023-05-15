@@ -94,9 +94,21 @@ def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
 
 def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
     try:
+        w_long = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+        resizeable = w_long & win32con.WS_THICKFRAME
+        if resizeable:
+            w, h = size_from_rect(rect)
+        else:
+            # if the window is not resizeable, make sure we don't resize it.
+            # includes 95 era system dialogs and the Outlook reminder window
+            w, h = size_from_rect(win32gui.GetWindowRect(hwnd))
+            placement = list(placement)
+            placement[-1] = (*rect[:2], rect[2] + w, rect[3] + h)
+            placement = tuple(placement)
+
         if placement:
             win32gui.SetWindowPlacement(hwnd, placement)
-        w, h = size_from_rect(rect)
+
         win32gui.MoveWindow(hwnd, *rect[:2], w, h, 0)
     except pywintypes.error as e:
         log.error('err moving window %s : %s' %
