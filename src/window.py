@@ -89,7 +89,7 @@ def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
                 points += p
         else:
             matching.append((points, rule))
-    return (i[1] for i in sorted(matching, reverse=True))
+    return (i[1] for i in sorted(matching, reverse=True, key=lambda m: m[0]))
 
 
 def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
