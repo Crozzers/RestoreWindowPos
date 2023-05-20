@@ -6,6 +6,7 @@ from dataclasses import dataclass, is_dataclass
 from pathlib import Path
 
 import pytest
+from conftest import WINDOWS  # noqa: E402
 from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
@@ -177,17 +178,12 @@ class TestWindowType(TestJSONType):
         return common.WindowType
 
     class TestFromJson(TestJSONType.TestFromJson):
-        @pytest.mark.parametrize(
-            'json_sample',
-            [
-                {
-                    'size': [0, 0],
-                    'rect': [0, 0, 0, 0],
-                    'placement': [0, 0, [0, 0], [0, 0], [0, 0, 0, 0]],
-                }
-            ],
-            ids=['standard'],  # , 'compliant-types', 'tuple-sub-types'],
-        )
-        def test_basic(self, klass: common.WindowType, json_sample):
+        @pytest.mark.parametrize('window', WINDOWS)
+        def test_basic(self, klass: common.WindowType, window):
             assert issubclass(klass, common.WindowType)
-            super().test_basic(klass, json_sample)
+            super().test_basic(klass, window)
+
+    @pytest.mark.parametrize('window', WINDOWS)
+    def test_fits_display_config(self, klass: common.WindowType, window, displays):
+        instance = klass.from_json(window)
+        assert instance.fits_display_config(displays) is True
