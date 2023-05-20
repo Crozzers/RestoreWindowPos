@@ -172,6 +172,9 @@ class WindowType(JSONType):
     placement: Placement
 
     def fits_display(self, display: 'Display') -> bool:
+        rect = self.rect
+        if self.placement[1] == win32con.SW_SHOWMINIMIZED:
+            rect = self.placement[4]
         if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
             offset = 8
         else:
@@ -184,10 +187,10 @@ class WindowType(JSONType):
             else:
                 offset = 0
         return (
-            self.rect[0] >= display.rect[0] - offset
-            and self.rect[1] >= display.rect[1] - offset
-            and self.rect[2] <= display.rect[2] + offset
-            and self.rect[3] <= display.rect[3] + offset
+            rect[0] >= display.rect[0] - offset
+            and rect[1] >= display.rect[1] - offset
+            and rect[2] <= display.rect[2] + offset
+            and rect[3] <= display.rect[3] + offset
         )
 
     def fits_display_config(self, displays: list['Display']) -> bool:
