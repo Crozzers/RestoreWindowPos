@@ -1,17 +1,19 @@
 import re
 import sys
+import types
 import typing
 from collections.abc import Iterable
+from copy import deepcopy
 from dataclasses import dataclass, is_dataclass
 from pathlib import Path
-from test.conftest import DISPLAYS, DISPLAYS1, DISPLAYS2, WINDOWS, WINDOWS1, WINDOWS2
+from test.conftest import DISPLAYS1, DISPLAYS2, RULES1, RULES2, WINDOWS1, WINDOWS2
 
 import pytest
 from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 from src import common  # noqa:E402
-from src.common import Display, WindowType  # noqa:E402
+from src.common import Display, Rule, Window, WindowType  # noqa:E402
 
 
 def test_local_path(monkeypatch: MonkeyPatch):
@@ -115,7 +117,11 @@ def recursive_type_check(value, v_type):
     # get the original type from the generic
     # tuple[int, int] -> tuple
     o_type = typing.get_origin(v_type)
-    assert isinstance(value, o_type)
+    if issubclass(o_type, types.UnionType):
+        assert isinstance(value, sub_types)
+        return
+    else:
+        assert isinstance(value, o_type)
 
     # some typing guides for better dataclasses
     assert o_type != dict, 'use a dataclass instead of dict'
@@ -145,18 +151,20 @@ class TestJSONType:
 
         return Sample
 
+    @pytest.fixture(
+        params=[
+            {'a': 1, 'b': (2, '3', False)},
+            {'a': '4', 'b': [5, '6', True]},
+            {'a': 7, 'b': ['8', 9, 10]},
+        ],
+        ids=['standard', 'compliant-types', 'tuple-sub-types'],
+    )
+    def sample_json(self, request):
+        return request.param
+
     class TestFromJson:
-        @pytest.mark.parametrize(
-            'json_sample',
-            [
-                {'a': 1, 'b': (2, '3', False)},
-                {'a': '4', 'b': [5, '6', True]},
-                {'a': 7, 'b': ['8', 9, 10]},
-            ],
-            ids=['standard', 'compliant-types', 'tuple-sub-types'],
-        )
-        def test_basic(self, klass: common.JSONType, json_sample):
-            base = klass.from_json(json_sample)
+        def test_basic(self, klass: common.JSONType, sample_json):
+            base = klass.from_json(sample_json)
             # check base was initialized correctly
             assert is_dataclass(base)
             assert isinstance(base, klass)
@@ -172,29 +180,62 @@ class TestJSONType:
         def test_invalid(self, klass: common.JSONType):
             assert klass.from_json({}) is None
 
+        def test_ignores_extra_info(self, klass: common.JSONType, sample_json):
+            instance = klass.from_json({**sample_json, 'something': 'else'})
+            assert not hasattr(instance, 'something')
 
+
+# includes Window type, since they are pretty much the same
 class TestWindowType(TestJSONType):
+    @pytest.fixture(params=[WindowType, Window])
+    def klass(self, request):
+        return request.param
+
+    @pytest.fixture
+    def sample_json(self, window_json):
+        return window_json
+
+    @pytest.fixture
+    def sample_cls(self, window_cls):
+        return window_cls
+
+    def test_fits_display(
+        self, klass: WindowType, sample_json, display_json, expected=None
+    ):
+        if expected is None:
+            expected = (sample_json in WINDOWS1 and display_json in DISPLAYS1) or (
+                sample_json in WINDOWS2 and display_json in DISPLAYS2
+            )
+        instance = klass.from_json(sample_json)
+        display_json = Display.from_json(display_json)
+        assert instance.fits_display(display_json) is expected
+
+    def test_fits_display_config(self, sample_cls: WindowType, displays: list[Display]):
+        assert sample_cls.fits_display_config(displays) is True
+
+
+class TestRule(TestWindowType):
     @pytest.fixture
     def klass(self):
-        return WindowType
+        return Rule
 
-    class TestFromJson(TestJSONType.TestFromJson):
-        @pytest.mark.parametrize('window', WINDOWS)
-        def test_basic(self, klass: WindowType, window):
-            assert issubclass(klass, WindowType)
-            super().test_basic(klass, window)
+    @pytest.fixture
+    def sample_json(self, rule_json):
+        return rule_json
 
-    @pytest.mark.parametrize('window', WINDOWS)
-    @pytest.mark.parametrize('display', DISPLAYS)
-    def test_fits_display(self, klass: WindowType, window, display):
-        expected = (window in WINDOWS1 and display in DISPLAYS1) or (
-            window in WINDOWS2 and display in DISPLAYS2
+    @pytest.fixture
+    def sample_cls(self, rule_cls):
+        return rule_cls
+
+    def test_post_init(self, klass: Rule):
+        rule = deepcopy(RULES1[0])
+        del rule['rule_name']
+        instance = klass.from_json(rule)
+        assert instance.name is not None
+        assert isinstance(instance.name, str)
+
+    def test_fits_display(self, klass: Rule, sample_json, display_json):
+        expected = (sample_json in RULES1 and display_json in DISPLAYS1) or (
+            sample_json in RULES2 and display_json in DISPLAYS2
         )
-        instance = klass.from_json(window)
-        display = Display.from_json(display)
-        assert instance.fits_display(display) is expected
-
-    @pytest.mark.parametrize('window', WINDOWS)
-    def test_fits_display_config(self, klass: WindowType, window, displays):
-        instance = klass.from_json(window)
-        assert instance.fits_display_config(displays) is True
+        return super().test_fits_display(klass, sample_json, display_json, expected)

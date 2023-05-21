@@ -42,19 +42,19 @@ DISPLAYS2 = [
 DISPLAYS = DISPLAYS1 + DISPLAYS2
 
 
-@pytest.fixture
-def displays1():
-    return [common.Display.from_json(d) for d in DISPLAYS1]
+@pytest.fixture(params=DISPLAYS)
+def display_json(request):
+    return request.param
 
 
 @pytest.fixture
-def displays2():
-    return [common.Display.from_json(d) for d in DISPLAYS2]
+def display_cls(display_json):
+    return common.Display.from_json(display_json)
 
 
 @pytest.fixture
-def displays(displays1, displays2):
-    return displays1 + displays2
+def displays():
+    return [common.Display.from_json(d) for d in DISPLAYS]
 
 
 # windows that match DISPLAYS1
@@ -155,19 +155,14 @@ WINDOWS = WINDOWS1 + WINDOWS2
 assert len(WINDOWS1) == len(WINDOWS2), 'should be same number of windows per config'
 
 
-@pytest.fixture
-def windows1():
-    return [common.Window.from_json(d) for d in WINDOWS1]
+@pytest.fixture(params=WINDOWS)
+def window_json(request):
+    return request.param
 
 
-@pytest.fixture
-def windows2():
-    return [common.Window.from_json(d) for d in WINDOWS2]
-
-
-@pytest.fixture
-def windows(windows1, windows2):
-    return windows1 + windows2
+@pytest.fixture()
+def window_cls(window_json):
+    return common.Window.from_json(window_json)
 
 
 RULES1 = []
@@ -180,7 +175,7 @@ def populate_rules():
             rule = deepcopy(window)
             del rule['id']
             rule['rule_name'] = rule['name'].replace('window', 'rule').strip()
-            rule['name'] = rule['name'].lower().replace('window', '').strip()
+            rule['name'] = rule['name'].lower().replace('window ', '').strip()
             r_list.append(rule)
 
 
@@ -191,19 +186,14 @@ RULES = RULES1 + RULES2
 assert len(RULES1) == len(RULES2), 'should be same number of rules per config'
 
 
-@pytest.fixture
-def rules1():
-    return [common.Rule.from_json(d) for d in RULES1]
+@pytest.fixture(params=RULES)
+def rule_json(request):
+    return request.param
 
 
 @pytest.fixture
-def rules2():
-    return [common.Rule.from_json(d) for d in RULES2]
-
-
-@pytest.fixture
-def rules(rules1, rules2):
-    return rules1 + rules2
+def rule_cls(rule_json):
+    return common.Rule.from_json(rule_json)
 
 
 @pytest.fixture
@@ -223,41 +213,5 @@ def snapshot0_json():
 
 
 @pytest.fixture
-def snapshot1_json():
-    return {
-        'displays': [deepcopy(DISPLAYS1)],
-        'history': [
-            {'time': 1677924200, 'windows': deepcopy(WINDOWS1)},
-        ],
-        'mru': None,
-        'rules': deepcopy(RULES1),
-        'phony': '',
-    }
-
-
-@pytest.fixture
-def snapshot2_json():
-    return {
-        'displays': [deepcopy(DISPLAYS2)],
-        'history': [
-            {'time': 1677924200, 'windows': deepcopy(WINDOWS2)},
-        ],
-        'mru': None,
-        'rules': deepcopy(RULES2),
-        'phony': '',
-    }
-
-
-@pytest.fixture
 def snapshot0(snapshot0_json: dict) -> common.Snapshot:
     return common.Snapshot.from_json(snapshot0_json)
-
-
-@pytest.fixture
-def snapshot1(snapshot1_json: dict) -> common.Snapshot:
-    return common.Snapshot.from_json(snapshot1_json)
-
-
-@pytest.fixture
-def snapshot2(snapshot2_json: dict) -> common.Snapshot:
-    return common.Snapshot.from_json(snapshot2_json)
