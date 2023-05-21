@@ -4,13 +4,14 @@ import typing
 from collections.abc import Iterable
 from dataclasses import dataclass, is_dataclass
 from pathlib import Path
+from test.conftest import DISPLAYS, DISPLAYS1, DISPLAYS2, WINDOWS, WINDOWS1, WINDOWS2
 
 import pytest
-from conftest import WINDOWS  # noqa: E402
 from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 from src import common  # noqa:E402
+from src.common import Display, WindowType  # noqa:E402
 
 
 def test_local_path(monkeypatch: MonkeyPatch):
@@ -175,15 +176,25 @@ class TestJSONType:
 class TestWindowType(TestJSONType):
     @pytest.fixture
     def klass(self):
-        return common.WindowType
+        return WindowType
 
     class TestFromJson(TestJSONType.TestFromJson):
         @pytest.mark.parametrize('window', WINDOWS)
-        def test_basic(self, klass: common.WindowType, window):
-            assert issubclass(klass, common.WindowType)
+        def test_basic(self, klass: WindowType, window):
+            assert issubclass(klass, WindowType)
             super().test_basic(klass, window)
 
     @pytest.mark.parametrize('window', WINDOWS)
-    def test_fits_display_config(self, klass: common.WindowType, window, displays):
+    @pytest.mark.parametrize('display', DISPLAYS)
+    def test_fits_display(self, klass: WindowType, window, display):
+        expected = (window in WINDOWS1 and display in DISPLAYS1) or (
+            window in WINDOWS2 and display in DISPLAYS2
+        )
+        instance = klass.from_json(window)
+        display = Display.from_json(display)
+        assert instance.fits_display(display) is expected
+
+    @pytest.mark.parametrize('window', WINDOWS)
+    def test_fits_display_config(self, klass: WindowType, window, displays):
         instance = klass.from_json(window)
         assert instance.fits_display_config(displays) is True
