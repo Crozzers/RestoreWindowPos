@@ -69,5 +69,5 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 
 * Test on Windows 11
 * Create wiki with usage instructions
-* Ability to match layouts with resolutions greater or lesser than a certain value
 * Better auto-generated layout and rule names
+* Support for virtual desktops
