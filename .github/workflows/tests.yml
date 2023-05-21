@@ -1,0 +1,14 @@
+name: Tests
+
+on:
+  push:
+    tags-ignore:
+      - '*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: ./.github/actions/build_and_test.yml
