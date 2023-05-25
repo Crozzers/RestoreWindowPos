@@ -365,8 +365,18 @@ class LayoutManager(wx.StaticBox):
     def rename_layout(self, evt: wx.Event):
         def update():
             self.list_control.SetItemText(0, 'Current Snapshot')
-            for index, layout in enumerate(self.layouts[1:], start=1):
-                layout.phony = self.list_control.GetItemText(index)
+            self.list_control.SetItemText(1, 'Global')
+            for index, layout in enumerate(self.layouts[2:], start=2):
+                text = self.list_control.GetItemText(index)
+                if text == 'Global':
+                    self.list_control.SetItemText(index, layout.phony or 'Unnamed Layout')
+                    wx.MessageBox(
+                        'Name "Global" is not allowed for user created layouts',
+                        'Invalid Value',
+                        wx.OK | wx.ICON_WARNING
+                    )
+                else:
+                    layout.phony = text
                 if not layout.phony:
                     layout.phony = 'Unnamed Layout'
                     self.list_control.SetItemText(index, 'Unnamed Layout')
