@@ -1,10 +1,3 @@
-# Sources:
-# https://stackoverflow.com/questions/69712306/list-all-windows-with-win32gui
-# http://timgolden.me.uk/pywin32-docs/win32gui__GetWindowRect_meth.html
-# http://timgolden.me.uk/pywin32-docs/win32gui__MoveWindow_meth.html
-# Todo:
-# https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
-# https://stackoverflow.com/questions/5981520/detect-external-display-being-connected-or-removed-under-windows-7
 import logging
 import signal
 import time
@@ -43,6 +36,13 @@ def update_systray_options():
     menu_options[2][1][:-2] = history_menu
 
     current_snapshot = snap.get_current_snapshot()
+    layout_menu = []
+    for snapshot in snap.data:
+        if not snapshot.phony:
+            continue
+        layout_menu.append([snapshot.phony, lambda *_, s=snapshot: restore_snapshot([], s.rules)])
+    menu_options[6][1][1:] = layout_menu
+
     rule_menu = []
     for header, ruleset in (
         ('Current Snapshot', current_snapshot.rules),
@@ -55,7 +55,7 @@ def update_systray_options():
         for rule in ruleset:
             rule_menu.append([rule.rule_name or 'Unnamed Rule',
                               lambda *_, r=rule: restore_snapshot([], [r])])
-    menu_options[6][1][:-2] = rule_menu
+    menu_options[7][1][:-2] = rule_menu
 
 
 def clear_restore_options():
@@ -85,10 +85,10 @@ if __name__ == '__main__':
     app = WxApp()
 
     menu_options = [
-        ['Capture Now', lambda *_: snap.update()],
-        ['Pause Snapshots', lambda *_: SETTINGS.set(
+        ['Capture now', lambda *_: snap.update()],
+        ['Pause snapshots', lambda *_: SETTINGS.set(
             'pause_snapshots', not SETTINGS.get('pause_snapshots', False))],
-        ['Restore Snapshot', [
+        ['Restore snapshot', [
             TaskbarIcon.SEPARATOR,
             ['Most recent', lambda *_: snap.restore(-1)]
         ]],
@@ -102,11 +102,14 @@ if __name__ == '__main__':
             )
         ],
         TaskbarIcon.SEPARATOR,
+        ['Apply layout', [
+            ['Current Snapshot', lambda *_: restore_snapshot([], snap.get_rules())]
+        ]],
         ['Apply rules', [
             TaskbarIcon.SEPARATOR,
             ['Apply all', lambda *_: restore_snapshot([], snap.get_rules(compatible_with=True))]
         ]],
-        ['Configure Rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
+        ['Configure rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
         TaskbarIcon.SEPARATOR,
         ['Settings', lambda *_: spawn_gui(snap, SETTINGS, 'settings')],
         ['About', lambda *_: about_dialog()]
