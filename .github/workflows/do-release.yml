@@ -33,9 +33,29 @@ jobs:
     needs: getversion
     environment: build
     steps:
-      - uses: ./.github/actions/build_and_test.yml
+      - name: Git checkout
+        uses: actions/checkout@v3
         with:
-          ref: ${{needs.getversion.outputs.version}}
+          ref: ${{ needs.getversion.outputs.version }}
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+      - name: Python tests
+        run: |
+          pytest --verbose
+      - name: Choco install build tools
+        run: |
+          choco install nsis upx checksum -y
+      - name: Build package
+        run: |
+          tools\compile.bat
+      - name: Test Installer
+        run: |
+          tools\test-installer.ps1 -confirm y
       - name: Get installer checksum
         id: get_installer_checksum
         run: |
