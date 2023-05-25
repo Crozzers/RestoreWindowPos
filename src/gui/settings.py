@@ -2,7 +2,7 @@ import os
 
 import wx
 
-from common import JSONFile, reverse_dict_lookup
+from common import JSONFile, local_path, reverse_dict_lookup
 
 
 class SettingsPanel(wx.Panel):
@@ -66,7 +66,7 @@ class SettingsPanel(wx.Panel):
         snap_freq_opt.Bind(wx.EVT_CHOICE, self.on_setting)
         save_freq_opt.Bind(wx.EVT_SPINCTRL, self.on_setting)
         open_install_btn.Bind(
-            wx.EVT_BUTTON, lambda *_: os.startfile(os.path.dirname(__file__)))
+            wx.EVT_BUTTON, lambda *_: os.startfile(local_path('.')))
         open_github_btn.Bind(
             wx.EVT_BUTTON, lambda *_: os.startfile('https://github.com/Crozzers/RestoreWindowPos'))
 
