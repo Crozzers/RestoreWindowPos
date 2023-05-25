@@ -104,7 +104,7 @@ if __name__ == '__main__':
         TaskbarIcon.SEPARATOR,
         ['Apply rules', [
             TaskbarIcon.SEPARATOR,
-            ['Apply all', lambda *_: restore_snapshot([], snap.get_rules())]
+            ['Apply all', lambda *_: restore_snapshot([], snap.get_rules(compatible_with=True))]
         ]],
         ['Configure Rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
         TaskbarIcon.SEPARATOR,
