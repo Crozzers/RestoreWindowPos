@@ -7,8 +7,8 @@ on:
       .github/*
       test/*
       tools/*
-    tags-ignore:
-      - '*'
+    branches:
+      - '**'
   pull_request:
   workflow_dispatch:
 
