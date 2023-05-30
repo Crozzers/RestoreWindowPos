@@ -2,3 +2,4 @@ pywin32
 wmi
 pypiwin32
 wxPython
+pyvda

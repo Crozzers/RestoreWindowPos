@@ -4,7 +4,9 @@ import logging
 import threading
 from typing import Iterator
 
+import comtypes
 import pythoncom
+import pyvda
 import pywintypes
 import win32con
 import win32gui
@@ -32,13 +34,14 @@ def is_window_valid(hwnd: int) -> bool:
     if win32gui.GetWindowRect(hwnd) == (0, 0, 0, 0):
         return False
 
-    # https://stackoverflow.com/a/64597308
-    # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
-    # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
-    cloaked = ctypes.c_int(0)
-    ctypes.windll.dwmapi.DwmGetWindowAttribute(
-        hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
-    if cloaked.value != 0:
+    try:
+        # this seems to do a pretty decent job catching all cloaked windows
+        # whilst allowing windows on other v_desktops
+        app_view = pyvda.AppView(hwnd=hwnd)
+        if app_view.desktop_id == comtypes.GUID():  # GUID({"00000000..."})
+            return False
+        assert app_view.desktop.number > 0
+    except Exception:
         return False
 
     titlebar = TitleBarInfo()

@@ -250,9 +250,6 @@ class Display(JSONType):
 
 @dataclass(slots=True)
 class Rule(WindowType):
-    size: XandY
-    rect: Rect
-    placement: Placement
     name: str | None = None
     executable: str | None = None
     rule_name: str | None = None
