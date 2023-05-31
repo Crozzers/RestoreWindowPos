@@ -4,7 +4,6 @@ import logging
 import threading
 from typing import Iterator
 
-import comtypes
 import pythoncom
 import pyvda
 import pywintypes
@@ -12,6 +11,7 @@ import win32con
 import win32gui
 import win32process
 import wmi
+from comtypes import GUID
 
 from common import Placement, Rect, Rule, Window, match, size_from_rect
 
@@ -38,7 +38,7 @@ def is_window_valid(hwnd: int) -> bool:
         # this seems to do a pretty decent job catching all cloaked windows
         # whilst allowing windows on other v_desktops
         app_view = pyvda.AppView(hwnd=hwnd)
-        if app_view.desktop_id == comtypes.GUID():  # GUID({"00000000..."})
+        if app_view.desktop_id == GUID():  # GUID({"00000000..."})
             return False
         assert app_view.desktop.number > 0
     except Exception:
