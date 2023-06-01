@@ -3,3 +3,4 @@ pyinstaller
 pyinstaller-versionfile
 packaging
 pytest
+pytest-mock
