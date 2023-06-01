@@ -1,3 +1,4 @@
+import logging
 import os
 
 import wx
@@ -32,6 +33,10 @@ class SettingsPanel(wx.Panel):
         save_freq_opt = wx.SpinCtrl(panel, id=3, min=1, max=10)
 
         header2 = header('Misc')
+
+        log_level_txt = wx.StaticText(panel, label='Logging level')
+        log_level_opt = wx.Choice(panel, id=4, choices=['Debug', 'Info', 'Warning', 'Error', 'Critical'])
+
         open_install_btn = wx.Button(panel, label='Open install directory')
         open_github_btn = wx.Button(panel, label='Open GitHub page')
         # place
@@ -39,7 +44,7 @@ class SettingsPanel(wx.Panel):
         for widget in (
             *header1, pause_snap_opt, (snap_freq_txt,
                                        snap_freq_opt), (save_freq_txt, save_freq_opt),
-            *header2, open_install_btn, open_github_btn
+            *header2, (log_level_txt, log_level_opt), open_install_btn, open_github_btn
         ):
             flag = wx.ALL
             if isinstance(widget, wx.StaticLine):
@@ -60,11 +65,13 @@ class SettingsPanel(wx.Panel):
         snap_freq_opt.SetStringSelection(reverse_dict_lookup(
             self.__snap_freq_choices, settings.get('snapshot_freq', 60)))
         save_freq_opt.SetValue(settings.get('save_freq', 1))
+        log_level_opt.SetStringSelection(settings.get('log_level', 'Info'))
 
         # bind events
         pause_snap_opt.Bind(wx.EVT_CHECKBOX, self.on_setting)
         snap_freq_opt.Bind(wx.EVT_CHOICE, self.on_setting)
         save_freq_opt.Bind(wx.EVT_SPINCTRL, self.on_setting)
+        log_level_opt.Bind(wx.EVT_CHOICE, self.on_setting)
         open_install_btn.Bind(
             wx.EVT_BUTTON, lambda *_: os.startfile(local_path('.')))
         open_github_btn.Bind(
@@ -84,6 +91,10 @@ class SettingsPanel(wx.Panel):
             if event.Id == 2:
                 self.settings.set(
                     'snapshot_freq', self.__snap_freq_choices[widget.GetStringSelection()])
+            elif event.Id == 4:
+                level: str = widget.GetStringSelection().upper()
+                self.settings.set('log_level', level)
+                logging.getLogger().setLevel(logging.getLevelName(level))
         elif isinstance(widget, wx.SpinCtrl):
             if event.Id == 3:
                 self.settings.set('save_freq', widget.GetValue())

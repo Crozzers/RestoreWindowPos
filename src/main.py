@@ -72,14 +72,15 @@ def clear_restore_options():
 if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
-                        format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-                        level=logging.INFO)
+                        format='%(asctime)s:%(levelname)s:%(name)s:%(message)s')
     log = logging.getLogger(__name__)
     log.info('start')
 
     SETTINGS = JSONFile('settings.json')
     SETTINGS.load()
     SETTINGS.set('pause_snapshots', False)  # reset this key
+
+    logging.getLogger().setLevel(logging.getLevelName(SETTINGS.get('log_level', 'INFO').upper()))
 
     snap = SnapshotFile()
     app = WxApp()
@@ -94,7 +95,7 @@ if __name__ == '__main__':
         ]],
         TaskbarIcon.SEPARATOR,
         [
-            "Snapshot frequency", radio_menu(
+            'Snapshot frequency', radio_menu(
                 {'5 seconds': 5, '10 seconds': 10, '30 seconds': 30, '1 minute': 60,
                  '5 minutes': 300, '10 minutes': 600, '30 minutes': 1800, '1 hour': 3600},
                 lambda: SETTINGS.get('snapshot_freq', 60),
