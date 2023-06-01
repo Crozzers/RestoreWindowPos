@@ -68,7 +68,7 @@ DISPLAYS = DISPLAYS1 + DISPLAYS2
 
 
 @pytest.fixture(params=DISPLAYS)
-def display_json(request):
+def display_json(request: pytest.FixtureRequest):
     return request.param
 
 
@@ -181,7 +181,7 @@ assert len(WINDOWS1) == len(WINDOWS2), 'should be same number of windows per con
 
 
 @pytest.fixture(params=WINDOWS)
-def window_json(request):
+def window_json(request: pytest.FixtureRequest):
     return request.param
 
 
@@ -212,7 +212,7 @@ assert len(RULES1) == len(RULES2), 'should be same number of rules per config'
 
 
 @pytest.fixture(params=RULES)
-def rule_json(request):
+def rule_json(request: pytest.FixtureRequest):
     return request.param
 
 
