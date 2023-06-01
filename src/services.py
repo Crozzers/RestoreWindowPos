@@ -65,7 +65,7 @@ class Service(ABC):
         with self._lock:
             if self.pre_callback(*args, **kwargs):
                 try:
-                    self.log.debug('run callback')
+                    self.log.info('run callback')
                     self._run_callback('default')
                 except Exception:
                     self.log.exception('callback failed')

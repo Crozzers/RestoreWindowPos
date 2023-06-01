@@ -43,11 +43,11 @@ class DeviceChangeService(Service):
                 'trigger PBT_APMRESUME[AUTOMATIC|CRITICAL|STANDBY|SUSPEND] signal')
             time.sleep(1)
         elif msg == win32con.WM_DISPLAYCHANGE:
-            self.log.debug('trigger WM_DISPLAYCHANGE')
+            self.log.info('trigger WM_DISPLAYCHANGE')
         elif msg == win32con.WM_WINDOWPOSCHANGING:
-            self.log.debug('trigger WM_WINDOWPOSCHANGING')
+            self.log.info('trigger WM_WINDOWPOSCHANGING')
         else:
-            self.log.debug(f'trigger {msg=:x} {wp=:x} {lp=:x}')
+            self.log.info(f'trigger {msg=:x} {wp=:x} {lp=:x}')
 
         return True
 

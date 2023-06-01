@@ -92,7 +92,7 @@ class SnapshotFile(JSONFile):
                     restore_snapshot(history[-1].windows, rules)
 
     def capture(self):
-        self._log.debug('capture snapshot')
+        self._log.info('capture snapshot')
         return time.time(), enum_display_devices(), capture_snapshot()
 
     def get_current_snapshot(self) -> Snapshot:

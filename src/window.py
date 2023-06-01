@@ -139,7 +139,7 @@ def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
             except KeyError:
                 placement = None
 
-            log.debug(
+            log.info(
                 f'restore window "{window.name}" {window.rect} -> {item.rect}')
             apply_positioning(hwnd, item.rect, placement)
             return
@@ -147,7 +147,7 @@ def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
             if not rules:
                 return
             for rule in find_matching_rules(rules, window):
-                log.debug(f'apply rule "{rule.rule_name}" to "{window.name}"')
+                log.info(f'apply rule "{rule.rule_name}" to "{window.name}"')
                 apply_positioning(hwnd, rule.rect, rule.placement)
 
     win32gui.EnumWindows(callback, None)

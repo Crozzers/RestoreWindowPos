@@ -73,7 +73,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
                         format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     log = logging.getLogger(__name__)
     log.info('start')
 
