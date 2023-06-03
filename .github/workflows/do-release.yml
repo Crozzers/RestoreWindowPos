@@ -7,14 +7,18 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: The tag we need to check out
+        description: The version to publish
         required: true
+      gitRef:
+        description: The git ref to build against
+        required: false
 
 jobs:
   getversion:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.pkgVersion }}
+      gitRef: ${{ steps.get_version.outputs.gitRef }}
     steps:
       - name: Get version
         id: get_version
@@ -28,6 +32,16 @@ jobs:
           fi
           echo "pkgVersion=$version" >> $GITHUB_OUTPUT
           echo "Version: $version"
+
+          gitRef=""
+          if [ "${{ github.event.inputs.gitRef }}" != "" ]
+          then
+            gitRef = "${{ github.event.inputs.gitRef }}"
+          else
+            gitRef = "$version"
+          fi
+          echo "gitRef=$gitRef" >> $GITHUB_OUTPUT
+          echo "GIT Ref: $gitRef"
   publish:
     runs-on: windows-latest
     needs: getversion
@@ -36,7 +50,7 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ needs.getversion.outputs.version }}
+          ref: ${{ needs.getversion.outputs.gitRef }}
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
@@ -49,7 +63,7 @@ jobs:
           pytest --verbose
       - name: Choco install build tools
         run: |
-          choco install nsis upx checksum -y
+          choco install nsis upx -y
       - name: Build package
         run: |
           tools\compile.bat
