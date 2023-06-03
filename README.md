@@ -63,11 +63,10 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 * Easy to use installer that registers the program as a startup task
 * Can pause and resume taking snapshots
 * Create and apply rules for specific windows
-* Create and apply rules for specific display configurations, or all compatible display configurations
+* Create and apply rules for specific display configurations
 
 ## TODO
 
 * Test on Windows 11
 * Create wiki with usage instructions
 * Better auto-generated layout and rule names
-* Support for virtual desktops
