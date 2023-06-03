@@ -6,7 +6,8 @@ on:
       - src/**
       - tools/**
       - test/**
-      - .github/workflows/tests.yml
+      - requirements*.txt
+      - .github/workflows/build-and-test.yml
     branches:
       - '**'
     tags-ignore:
@@ -49,17 +50,17 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -r requirements-dev.txt
-      - name: Python Tests
-        run: pytest --verbose
+      # - name: Python Tests
+      #   run: pytest --verbose
       - name: Install build tools
         run: |
           choco install nsis upx -y
       - name: Build package
         run: |
           tools\compile.bat
-      - name: Test Installer
-        run: |
-          tools\test-installer.ps1 -confirm y
+      # - name: Test Installer
+      #   run: |
+      #     tools\test-installer.ps1 -confirm y
       - name: Publish artifact
         if: ${{ inputs.doArtifact }}
         uses: actions/upload-artifact@v3

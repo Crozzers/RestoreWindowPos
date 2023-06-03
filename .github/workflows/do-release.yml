@@ -56,6 +56,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: RWP-dist
+          path: dist
+      - run: |
+          Get-ChildItem -Recurse
       - name: Get installer checksum
         id: get_installer_checksum
         run: |
