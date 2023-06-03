@@ -24,16 +24,7 @@ class TitleBarInfo(ctypes.Structure):
                 ('rgState', ctypes.wintypes.DWORD * 6)]
 
 
-def is_window_valid(hwnd: int) -> bool:
-    if not win32gui.IsWindow(hwnd):
-        return False
-    if not win32gui.IsWindowVisible(hwnd):
-        return False
-    if not win32gui.GetWindowText(hwnd):
-        return False
-    if win32gui.GetWindowRect(hwnd) == (0, 0, 0, 0):
-        return False
-
+def is_window_cloaked(hwnd) -> bool:
     # https://stackoverflow.com/a/64597308
     # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
     # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
@@ -46,10 +37,24 @@ def is_window_valid(hwnd: int) -> bool:
             # whilst allowing windows on other v_desktops
             app_view = pyvda.AppView(hwnd=hwnd)
             if app_view.desktop_id == GUID():  # GUID({"00000000..."})
-                return False
+                return True
             assert app_view.desktop.number > 0
         except Exception:
-            return False
+            return True
+    return False
+
+
+def is_window_valid(hwnd: int) -> bool:
+    if not win32gui.IsWindow(hwnd):
+        return False
+    if not win32gui.IsWindowVisible(hwnd):
+        return False
+    if not win32gui.GetWindowText(hwnd):
+        return False
+    if win32gui.GetWindowRect(hwnd) == (0, 0, 0, 0):
+        return False
+    if is_window_cloaked(hwnd):
+        return False
 
     titlebar = TitleBarInfo()
     titlebar.cbSize = ctypes.sizeof(titlebar)
