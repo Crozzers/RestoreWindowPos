@@ -36,9 +36,9 @@ jobs:
           gitRef=""
           if [ "${{ github.event.inputs.gitRef }}" != "" ]
           then
-            gitRef = "${{ github.event.inputs.gitRef }}"
+            gitRef="${{ github.event.inputs.gitRef }}"
           else
-            gitRef = "$version"
+            gitRef="$version"
           fi
           echo "gitRef=$gitRef" >> $GITHUB_OUTPUT
           echo "GIT Ref: $gitRef"
