@@ -59,7 +59,7 @@ jobs:
       - name: Get installer checksum
         id: get_installer_checksum
         run: |
-          echo "pkgChecksum=$(Get-FileHash -Path .\RestoreWindowPos_install.exe -Algorithm sha256).Hash" >> $env:GITHUB_OUTPUT
+          echo "pkgChecksum=$(Get-FileHash -Path .\dist\RestoreWindowPos_install.exe -Algorithm sha256).Hash" >> $env:GITHUB_OUTPUT
       - name: Draft GitHub release
         uses: softprops/action-gh-release@v1
         with:
