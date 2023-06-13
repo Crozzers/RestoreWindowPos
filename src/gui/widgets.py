@@ -8,14 +8,9 @@ from common import local_path
 
 class Frame(wx.Frame):
     def __init__(self, parent=None, title=None, **kwargs):
-        if title is None:
-            title = 'RestoreWindowPos'
-        else:
-            title = f'{title} - RestoreWindowPos'
-        wx.Frame.__init__(self, parent=parent, id=wx.ID_ANY,
-                          title=title, **kwargs)
-        self.SetBackgroundColour(
-            wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+        wx.Frame.__init__(self, parent=parent, id=wx.ID_ANY, **kwargs)
+        self.SetTitle(title)
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
 
     def GetIdealSize(self):
@@ -30,6 +25,13 @@ class Frame(wx.Frame):
 
     def SetIdealSize(self):
         self.SetSize(self.GetIdealSize())
+
+    def SetTitle(self, title):
+        if title is None:
+            title = 'RestoreWindowPos'
+        else:
+            title = f'{title} - RestoreWindowPos'
+        return super().SetTitle(title)
 
 
 class ListCtrl(wx.ListCtrl):
@@ -61,22 +63,45 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
         parent,
         *args,
         edit_cols: list[int] = None,
-        edit_callback: Callable[[int, int], bool] = None,
-        **kwargs
+        on_edit: Callable[[int, int], bool] = None,
+        post_edit: Callable[[int, int], None] = None,
+        **kwargs,
     ):
+        '''
+        Args:
+            parent: parent widget
+            *args: passed to `ListCtrl.__init__`
+            edit_cols: columns to allow editing in, zero based
+            on_edit: callback for when editing starts. Takes column and row
+                being edited as params. Boolean return determines whether to
+                allow that cell to be edited
+            post_edit: callback for once editing has been completed. Takes
+                column and row as params.
+            **kwargs: passed to `ListCtrl.__init__`
+        '''
         kwargs.setdefault('style', wx.LC_REPORT | wx.LC_EDIT_LABELS)
         ListCtrl.__init__(self, parent, *args, **kwargs)
         TextEditMixin.__init__(self)
         self.edit_cols = edit_cols
-        self.edit_callback = edit_callback
+        self.on_edit = on_edit
+        self.post_edit = post_edit
+
+    def CloseEditor(self, evt=None):
+        if not self.editor.IsShown():
+            return
+        super().CloseEditor(evt)
+
+        self.post_edit(self.curCol, self.curRow)
 
     def OpenEditor(self, col, row):
-        if self.edit_callback is not None:
-            if not self.edit_callback(col, row):
+        if self.on_edit is not None:
+            if not self.on_edit(col, row):
+                self.Select(row)
                 return
 
         if self.edit_cols is not None:
             if col not in self.edit_cols:
+                self.Select(row)
                 return
 
         super().OpenEditor(col, row)
@@ -90,8 +115,7 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
             y0 = self.GetItemRect(row)[1]
 
             scrolloffset = self.GetScrollPos(wx.HORIZONTAL)
-            self.editor.SetSize(x0 - scrolloffset, y0,
-                                x1, -1, wx.SIZE_USE_EXISTING)
+            self.editor.SetSize(x0 - scrolloffset, y0, x1, -1, wx.SIZE_USE_EXISTING)
             self.editor.SetValue(self.GetItem(row, col).GetText())
             self.editor.Show()
             self.editor.Raise()
@@ -101,9 +125,12 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
 
 class SelectionWindow(Frame):
     def __init__(
-        self, parent, select_from: list,
+        self,
+        parent,
+        select_from: list,
         callback: Callable[[list[int], dict[str, bool]], None],
-        options: dict[str, str] = None, **kwargs
+        options: dict[str, str] = None,
+        **kwargs,
     ):
         super().__init__(parent, **kwargs)
         self.CenterOnParent()
@@ -140,8 +167,7 @@ class SelectionWindow(Frame):
             option_sizer.Add(check, 0, wx.ALIGN_CENTER)
         option_panel.SetSizer(option_sizer)
 
-        self.check_list = wx.CheckListBox(
-            self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
+        self.check_list = wx.CheckListBox(self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
         self.check_list.AppendItems(select_from)
 
         sizer = wx.BoxSizer(wx.VERTICAL)

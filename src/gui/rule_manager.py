@@ -8,7 +8,7 @@ import wx.adv
 import wx.lib.scrolledpanel
 
 from common import Rule, Snapshot, Window, size_from_rect
-from gui.widgets import Frame, ListCtrl, SelectionWindow
+from gui.widgets import EditableListCtrl, Frame, SelectionWindow
 from snapshot import SnapshotFile
 from window import capture_snapshot, restore_snapshot
 
@@ -68,10 +68,7 @@ class RuleWindow(Frame):
         self.panel.SetSizerAndFit(self.sizer)
         self.sizer.Fit(self.panel)
 
-        # insert data
-        self.rule_name.Value = self.rule.rule_name or ''
-        self.window_name.Value = self.rule.name or ''
-        self.window_exe.Value = self.rule.executable or ''
+        self.populate_form()
 
         # final steps
         self.panel.SetupScrolling()
@@ -85,6 +82,14 @@ class RuleWindow(Frame):
 
     def get_rect(self):
         return win32gui.GetWindowRect(self.GetHandle())
+
+    def populate_form(self):
+        # insert data
+        self.rule_name.ChangeValue(self.rule.rule_name or '')
+        self.window_name.ChangeValue(self.rule.name or '')
+        self.window_exe.ChangeValue(self.rule.executable or '')
+        self.SetTitle(self.rule.rule_name)
+        self.Update()
 
     def set_rect(self):
         rect = self.rule.rect
@@ -144,7 +149,7 @@ class RuleSubsetManager(wx.StaticBox):
         action_panel.SetSizer(action_sizer)
 
         # create list control
-        self.list_control = ListCtrl(self)
+        self.list_control = EditableListCtrl(self, edit_cols=[0, 1, 2], post_edit=self.post_edit)
         self.list_control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.edit_rule)
         for index, col in enumerate(('Rule Name', 'Window Title', 'Window Executable', 'Window Rect', 'Window Size')):
             self.list_control.AppendColumn(col)
@@ -178,18 +183,6 @@ class RuleSubsetManager(wx.StaticBox):
         self.list_control.Append(
             (rule.rule_name or 'Unnamed rule', rule.name or '',
              rule.executable or '', str(rule.rect), str(rule.size)))
-
-    def edit_rule(self, *_):
-        alive_windows = {i.GetName(): i for i in self.GetChildren()
-                         if isinstance(i, Frame)}
-        for item in self.list_control.GetAllSelected():
-            rule = self.rules[item]
-            r_name = f'editrule-{id(rule)}'
-            if r_name in alive_windows:
-                alive_windows[r_name].Raise()
-            else:
-                RuleWindow(self, rule,
-                           on_save=self.refresh_list, name=r_name).Show()
 
     def clone_windows(self, *_):
         def on_clone(indexes: list[int], options: dict[str, bool]):
@@ -232,6 +225,18 @@ class RuleSubsetManager(wx.StaticBox):
             self.rules.append(deepcopy(self.rules[item]))
             self.append_rule(self.rules[-1])
         self.snapshot.save()
+
+    def edit_rule(self, *_):
+        alive_windows = {i.GetName(): i for i in self.GetChildren()
+                         if isinstance(i, Frame)}
+        for item in self.list_control.GetAllSelected():
+            rule = self.rules[item]
+            r_name = f'editrule-{id(rule)}'
+            if r_name in alive_windows:
+                alive_windows[r_name].Raise()
+            else:
+                RuleWindow(self, rule,
+                           on_save=self.refresh_list, name=r_name).Show()
 
     def insert_rule(self, index: int, rule: Rule):
         self.list_control.Insert(
@@ -285,6 +290,23 @@ class RuleSubsetManager(wx.StaticBox):
 
         SelectionWindow(self, l_names, on_select, options,
                         title='Move Rules Between Layouts').Show()
+
+    def post_edit(self, col, row):
+        rule: Rule = self.rules[row]
+        for window in self.GetChildren():
+            if not isinstance(window, RuleWindow):
+                continue
+            if window.rule is not rule:
+                continue
+            text = self.list_control.GetItemText(row, col)
+            match col:
+                case 0:
+                    rule.rule_name = text
+                case 1:
+                    rule.name = text
+                case 3:
+                    rule.executable = text
+            window.populate_form()
 
     def refresh_list(self, selected=None):
         selected = selected or []

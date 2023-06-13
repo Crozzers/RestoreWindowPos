@@ -111,7 +111,7 @@ class DisplayManager(wx.StaticBox):
 
         # create list control
         self.list_control = EditableListCtrl(
-            self, edit_cols=list(range(0, 4)), edit_callback=self.on_edit)
+            self, edit_cols=list(range(0, 4)), on_edit=self.on_edit)
         self.list_control.Bind(wx.EVT_TEXT_ENTER, self.edit_display)
         for index, col in enumerate(
             ('Display UID (regex)', 'Display Name (regex)',
