@@ -8,6 +8,7 @@ from common import Display, Snapshot
 from gui.rule_manager import RuleSubsetManager
 from gui.widgets import EditableListCtrl, Frame, ListCtrl, SelectionWindow
 from snapshot import SnapshotFile, enum_display_devices
+from window import restore_snapshot
 
 
 class EditResolutionWindow(Frame):
@@ -233,7 +234,8 @@ class LayoutManager(wx.StaticBox):
 
         # create action buttons
         action_panel = wx.Panel(self)
-        add_layout_btn = wx.Button(action_panel, label='New')
+        add_layout_btn = wx.Button(action_panel, label='Add New')
+        apply_layout_btn = wx.Button(action_panel, label='Apply')
         clone_layout_btn = wx.Button(action_panel, label='Clone Current')
         edit_layout_btn = wx.Button(action_panel, label='Edit')
         dup_layout_btn = wx.Button(action_panel, label='Duplicate')
@@ -253,6 +255,7 @@ class LayoutManager(wx.StaticBox):
 
         # bind events
         add_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.add_layout))
+        apply_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.apply_layout))
         clone_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.clone_layout))
         edit_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.edit_layout, False))
         dup_layout_btn.Bind(wx.EVT_BUTTON, btn_evt(self.duplicate_layout))
@@ -265,8 +268,8 @@ class LayoutManager(wx.StaticBox):
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
-            add_layout_btn, clone_layout_btn, edit_layout_btn, dup_layout_btn,
-            del_layout_btn, mov_up_btn, mov_dn_btn, rename_btn
+            add_layout_btn, apply_layout_btn, clone_layout_btn, edit_layout_btn,
+            dup_layout_btn, del_layout_btn, mov_up_btn, mov_dn_btn, rename_btn
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
@@ -308,6 +311,11 @@ class LayoutManager(wx.StaticBox):
             return
         self.layouts.append(layout)
         self.update_snapshot_file()
+
+    def apply_layout(self, *_):
+        for item in self.list_control.GetAllSelected():
+            layout: Snapshot = self.layouts[item]
+            restore_snapshot([], layout.rules)
 
     def clone_layout(self, *_):
         layout = deepcopy(self.snapshot_file.get_current_snapshot())
