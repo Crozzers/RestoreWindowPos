@@ -82,16 +82,23 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
         kwargs.setdefault('style', wx.LC_REPORT | wx.LC_EDIT_LABELS)
         ListCtrl.__init__(self, parent, *args, **kwargs)
         TextEditMixin.__init__(self)
+        self.Bind(wx.EVT_LEFT_DCLICK, self._on_double_click)
         self.edit_cols = edit_cols
         self.on_edit = on_edit
         self.post_edit = post_edit
+
+    def _on_double_click(self, evt):
+        handler: wx.EvtHandler = self.GetEventHandler()
+        handler.ProcessEvent(wx.PyCommandEvent(wx.EVT_LIST_ITEM_ACTIVATED.typeId, self.GetId()))
+        evt.Skip()
 
     def CloseEditor(self, evt=None):
         if not self.editor.IsShown():
             return
         super().CloseEditor(evt)
 
-        self.post_edit(self.curCol, self.curRow)
+        if callable(self.post_edit):
+            self.post_edit(self.curCol, self.curRow)
 
     def OpenEditor(self, col, row):
         if self.on_edit is not None:
