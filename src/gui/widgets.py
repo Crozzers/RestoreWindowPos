@@ -87,7 +87,7 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
         self.on_edit = on_edit
         self.post_edit = post_edit
 
-    def _on_double_click(self, evt):
+    def _on_double_click(self, evt: wx.Event):
         handler: wx.EvtHandler = self.GetEventHandler()
         handler.ProcessEvent(wx.PyCommandEvent(wx.EVT_LIST_ITEM_ACTIVATED.typeId, self.GetId()))
         evt.Skip()
@@ -99,6 +99,13 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
 
         if callable(self.post_edit):
             self.post_edit(self.curCol, self.curRow)
+
+    def OnChar(self, event: wx.KeyEvent):
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_ESCAPE:
+            self.editor.Hide()
+        else:
+            super().OnChar(event)
 
     def OpenEditor(self, col, row):
         if self.on_edit is not None:
