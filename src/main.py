@@ -10,7 +10,7 @@ from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
 from snapshot import SnapshotFile, SnapshotService
-from window import restore_snapshot
+from window import apply_positioning, from_hwnd, is_window_valid, restore_snapshot
 
 
 def update_systray_options():
@@ -41,7 +41,7 @@ def update_systray_options():
         if not snapshot.phony:
             continue
         layout_menu.append([snapshot.phony, lambda *_, s=snapshot: restore_snapshot([], s.rules)])
-    menu_options[6][1][1:] = layout_menu
+    menu_options[7][1][1:] = layout_menu
 
     rule_menu = []
     for header, ruleset in (
@@ -55,7 +55,7 @@ def update_systray_options():
         for rule in ruleset:
             rule_menu.append([rule.rule_name or 'Unnamed Rule',
                               lambda *_, r=rule: restore_snapshot([], [r])])
-    menu_options[7][1][:-2] = rule_menu
+    menu_options[8][1][:-2] = rule_menu
 
 
 def clear_restore_options():
@@ -67,6 +67,20 @@ def clear_restore_options():
     )
     if result == win32con.IDYES:
         snap.clear_history()
+
+
+def rescue_windows(snap: SnapshotFile):
+    def callback(hwnd, _):
+        if not is_window_valid(hwnd):
+            return
+        window = from_hwnd(hwnd)
+        if not window.fits_display_config(displays):
+            rect = [0, 0, *window.size]
+            logging.info(f'rescue window {window.name!r} {window.rect} -> {rect}')
+            apply_positioning(hwnd, rect)
+
+    displays = snap.get_current_snapshot().displays
+    win32gui.EnumWindows(callback, None)
 
 
 if __name__ == '__main__':
@@ -93,6 +107,7 @@ if __name__ == '__main__':
             TaskbarIcon.SEPARATOR,
             ['Most recent', lambda *_: snap.restore(-1)]
         ]],
+        ['Rescue windows', lambda *_: rescue_windows(snap)],
         TaskbarIcon.SEPARATOR,
         [
             'Snapshot frequency', radio_menu(
