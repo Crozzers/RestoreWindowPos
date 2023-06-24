@@ -28,6 +28,7 @@ from src import common  # noqa:E402
 
 
 if os.getenv('GITHUB_ACTIONS') == 'true':
+
     def pytest_sessionstart():
         shutil.copyfile(__pyvda_utils, __pyvda_utils.parent / 'utils-old.py')
 

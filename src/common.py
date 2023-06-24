@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import typing
+from typing import Callable, Any, Union
 from dataclasses import dataclass, field, is_dataclass
 
 import win32con
@@ -71,6 +72,12 @@ def match(a: int | str, b: int | str) -> int:
     except re.error:
         log.exception(f'fail to compile pattern "{a}"')
         return 0
+
+
+def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
+    if op_name in ('lt', 'le', 'eq', 'ge', 'gt'):
+        return getattr(operator, op_name)
+    raise ValueError(f'invalid operation {op_name!r}')
 
 
 class JSONFile():
@@ -234,7 +241,7 @@ class Display(JSONType):
             if 0 in metric:
                 continue
             op = self.comparison_params.get('resolution', ('eq', 'eq'))[index]
-            if not getattr(operator, op.lower(), operator.eq)(*metric):
+            if not str_to_op(op)(*metric):
                 return False
         else:
             return True

@@ -1,3 +1,4 @@
+import operator
 import re
 import sys
 import types
@@ -13,7 +14,7 @@ from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 from src import common  # noqa:E402
-from src.common import Display, Rule, Window, WindowType  # noqa:E402
+from src.common import Display, Rule, Snapshot, Window, WindowType  # noqa:E402
 
 
 def test_local_path(monkeypatch: MonkeyPatch):
@@ -90,6 +91,28 @@ def test_match():
         # check that our regex DOES indeed raise an error
         re.compile(regex)
     assert match(regex, 'abc') == 0, 'returns 0 on regex error'
+
+
+class TestStrToOp:
+    valid_ops = {
+        'lt': operator.lt,
+        'le': operator.le,
+        'eq': operator.eq,
+        'ge': operator.ge,
+        'gt': operator.gt,
+    }
+
+    @pytest.mark.parametrize('name,func', valid_ops.items())
+    def test_valid(self, name, func):
+        assert common.str_to_op(name) is func
+
+    @pytest.mark.parametrize(
+        'name',
+        (i for i in dir(operator) if i not in TestStrToOp.valid_ops),  # noqa: F821
+    )
+    def test_invalid(self, name):
+        with pytest.raises(ValueError):
+            common.str_to_op(name)
 
 
 @pytest.mark.parametrize(
@@ -185,7 +208,7 @@ class TestJSONType:
             assert not hasattr(instance, 'something')
 
 
-# includes Window type, since they are pretty much the same
+# includes `Window` type, since they are pretty much the same
 class TestWindowType(TestJSONType):
     @pytest.fixture(params=[WindowType, Window])
     def klass(self, request):
