@@ -94,21 +94,27 @@ class DisplayManager(wx.StaticBox):
         clone_display_btn = wx.Button(action_panel, label='Clone')
         dup_display_btn = wx.Button(action_panel, label='Duplicate')
         del_display_btn = wx.Button(action_panel, label='Delete')
+        mode_txt = wx.StaticText(action_panel, label='Match:')
+        mode_opt = wx.Choice(action_panel, choices=('All', 'Any'))
 
         # bind events
         add_display_btn.Bind(wx.EVT_BUTTON, self.add_display)
         clone_display_btn.Bind(wx.EVT_BUTTON, self.clone_display)
         dup_display_btn.Bind(wx.EVT_BUTTON, self.duplicate_display)
         del_display_btn.Bind(wx.EVT_BUTTON, self.delete_display)
+        mode_opt.Bind(wx.EVT_CHOICE, self.select_mode)
 
-        # position buttons
+        # position widgets
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        for btn in (
-            add_display_btn, clone_display_btn,
-            dup_display_btn, del_display_btn
+        for widget in (
+            add_display_btn, clone_display_btn, dup_display_btn,
+            del_display_btn, mode_txt, mode_opt
         ):
-            action_sizer.Add(btn, 0, wx.ALL, 5)
+            action_sizer.Add(widget, 0, wx.ALL | wx.CENTER, 5)
         action_panel.SetSizer(action_sizer)
+
+        # set widget states
+        mode_opt.SetSelection(0 if layout.comparison_params.get('displays') == 'all' else 1)
 
         # create list control
         self.list_control = EditableListCtrl(
@@ -217,6 +223,10 @@ class DisplayManager(wx.StaticBox):
         self.list_control.DeleteAllItems()
         for display in self.displays:
             self.append_display(display, new=False)
+
+    def select_mode(self, evt: wx.CommandEvent):
+        choice = 'any' if evt.GetSelection() == 1 else 'all'
+        self.layout.comparison_params['display'] = choice
 
 
 class LayoutManager(wx.StaticBox):
