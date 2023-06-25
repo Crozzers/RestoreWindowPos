@@ -61,6 +61,8 @@ class SnapshotFile(JSONFile):
         if not g_phony_found:
             self.data.append(Snapshot(phony='Global'))
 
+        self.data = list(filter(None, self.data))
+
     def save(self):
         with self.lock:
             return super().save([asdict(i) for i in self.data])

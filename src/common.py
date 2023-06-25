@@ -277,6 +277,9 @@ class Snapshot(JSONType):
 
     @classmethod
     def from_json(cls, data: dict):
+        if not data:
+            return None
+
         if 'history' not in data:
             if 'windows' in data:
                 data['history'] = [{

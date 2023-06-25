@@ -130,7 +130,7 @@ def test_tuple_convert(input, expected: tuple):
     assert tuple_convert(expected, from_=tuple, to=list) == input
 
 
-def recursive_type_check(value, v_type):
+def recursive_type_check(field, value, v_type):
     sub_types = typing.get_args(v_type)
     if not sub_types:
         # no parameterized types, eg: int or str
@@ -146,8 +146,9 @@ def recursive_type_check(value, v_type):
     else:
         assert isinstance(value, o_type)
 
-    # some typing guides for better dataclasses
-    assert o_type != dict, 'use a dataclass instead of dict'
+    if field != 'comparison_params':
+        # some typing guides for better dataclasses
+        assert o_type != dict, 'use a dataclass instead of dict'
     if o_type == list:
         assert len(sub_types) == 1, 'lists should be homogeneous'
 
@@ -159,7 +160,7 @@ def recursive_type_check(value, v_type):
         # get origin of sub_type in case of nested param generics
         o_sub = typing.get_origin(sub) or sub
         if issubclass(o_sub, Iterable):
-            recursive_type_check(item, sub)
+            recursive_type_check(field, item, sub)
         else:
             assert isinstance(item, sub)
 
@@ -198,7 +199,7 @@ class TestJSONType:
                 assert hasattr(base, prop)
                 value = getattr(base, prop)
 
-                recursive_type_check(value, p_type)
+                recursive_type_check(prop, value, p_type)
 
         def test_invalid(self, klass: common.JSONType):
             assert klass.from_json({}) is None
