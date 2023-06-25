@@ -222,22 +222,53 @@ def rule_cls(rule_json):
     return common.Rule.from_json(rule_json)
 
 
-@pytest.fixture
-def snapshot0_json():
+@pytest.fixture(
+    params=(
+        (DISPLAYS1, WINDOWS1, RULES1),
+        (DISPLAYS2, WINDOWS2, RULES2),
+        (DISPLAYS, WINDOWS, RULES),
+    )
+)
+def snapshot_json(request: pytest.FixtureRequest):
     '''
     Combines `DISPLAYS*` and both `WINDOWS*` and `RULES*` lists
     '''
+    displays, windows, rules = request.param
     return {
-        'displays': deepcopy(DISPLAYS),
+        'displays': deepcopy(displays),
         'history': [
-            {'time': 1677924200, 'windows': deepcopy(WINDOWS)},
+            {'time': 1677924200, 'windows': deepcopy(windows)},
         ],
         'mru': None,
-        'rules': deepcopy(RULES),
+        'rules': deepcopy(rules),
         'phony': '',
     }
 
 
 @pytest.fixture
-def snapshot0(snapshot0_json: dict) -> common.Snapshot:
-    return common.Snapshot.from_json(snapshot0_json)
+def snapshot_cls(snapshot_json) -> common.Snapshot:
+    return common.Snapshot.from_json(snapshot_json)
+
+
+@pytest.fixture
+def snapshots() -> list[common.Snapshot]:
+    snapshots = []
+    for d, w, r in (
+        (DISPLAYS1, WINDOWS1, RULES1),
+        (DISPLAYS2, WINDOWS2, RULES2),
+        (DISPLAYS, WINDOWS, RULES),
+    ):
+        snapshots.append(
+            common.Snapshot.from_json(
+                {
+                    'displays': deepcopy(d),
+                    'history': [
+                        {'time': 1677924200, 'windows': deepcopy(w)},
+                    ],
+                    'mru': None,
+                    'rules': deepcopy(r),
+                    'phony': '',
+                }
+            )
+        )
+    return snapshots

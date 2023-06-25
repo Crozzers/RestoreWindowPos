@@ -263,3 +263,31 @@ class TestRule(TestWindowType):
             sample_json in RULES2 and display_json in DISPLAYS2
         )
         return super().test_fits_display(klass, sample_json, display_json, expected)
+
+
+class TestSnapshot(TestJSONType):
+    @pytest.fixture
+    def klass(self):
+        return Snapshot
+
+    @pytest.fixture
+    def sample_json(self, snapshot_json):
+        return snapshot_json
+
+    @pytest.fixture
+    def sample_cls(self, snapshot_cls):
+        return snapshot_cls
+
+    class TestMatchesDisplayConfig:
+        def test_basic(self, snapshots: list[Snapshot]):
+            assert snapshots[0].matches_display_config(snapshots[2]) is True
+            assert snapshots[0].matches_display_config(snapshots[1]) is False
+
+        def test_config_param_types(self, snapshot_cls: Snapshot):
+            assert snapshot_cls.matches_display_config(snapshot_cls) is True
+            assert snapshot_cls.matches_display_config(snapshot_cls.displays) is True
+
+        @pytest.mark.parametrize('param,expected', (('any', True), ('all', False)))
+        def test_comparison_params(self, snapshots: list[Snapshot], param, expected):
+            snapshots[2].comparison_params['displays'] = param
+            assert snapshots[2].matches_display_config(snapshots[0]) is expected

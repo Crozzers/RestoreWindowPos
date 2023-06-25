@@ -274,6 +274,11 @@ class Snapshot(JSONType):
     mru: float | None = None
     rules: list[Rule] = field(default_factory=list)
     phony: str = ''
+    comparison_params: dict[str, str | list[str]] = field(default_factory=dict)
+    '''
+    Optional member detailing how comparisons should be made between members of
+    this class and members of another class
+    '''
 
     @classmethod
     def from_json(cls, data: dict):
@@ -297,14 +302,25 @@ class Snapshot(JSONType):
 
         return super(cls, cls).from_json(data)
 
+    # use union because `|` doesn't like string forward refs
+    def matches_display_config(self, config: Union[list[Display], 'Snapshot']) -> bool:
+        '''
+        Whether this snapshot is deemed compatible with a another snapshot/list
+        of displays.
+        Can operate in 2 modes depending on how `self.comparison_params` are set.
+        If set to 'all' mode every display in this snapshot must find a match
+        within `config`. Otherwise, only one match needs to be found.
+        '''
+        if isinstance(config, Snapshot):
+            config = config.displays
+        matches, misses = 0, 0
+        for display in self.displays:
+            if display.matches_config(config):
+                matches += 1
+            else:
+                misses += 1
 
-def display_configs_match(current: list[Display], displays: list[Display]):
-    for d2 in displays:
-        # all of the displays in the config must match at least once to the
-        # current config. If there are no matches, break
-        if not d2.matches_config(current):
-            break
-    else:
-        # all displays match at least once to the current config
-        # so return True
-        return True
+        mode = self.comparison_params.get('displays')
+        if mode == 'all':
+            return misses == 0
+        return matches >= 1

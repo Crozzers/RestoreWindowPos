@@ -9,7 +9,7 @@ import win32api
 import win32gui
 
 from common import (Display, JSONFile, Snapshot, Window, WindowHistory,
-                    display_configs_match, local_path, size_from_rect)
+                    local_path, size_from_rect)
 from services import Service
 from window import capture_snapshot, restore_snapshot
 
@@ -122,7 +122,7 @@ class SnapshotFile(JSONFile):
             for snap in self.data:
                 if snap == compatible_with or not snap.phony:
                     continue
-                if not display_configs_match(compatible_with.displays, snap.displays):
+                if not compatible_with.matches_display_config(snap.displays):
                     continue
                 yield snap
 
