@@ -69,6 +69,4 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 
 * Test on Windows 11
 * Create wiki with usage instructions
-* Better auto-generated layout and rule names
 * Add behaviour methods to dataclasses. EG: `Rule` should have method `Rule.apply` to apply the rule
-* Allow user to specify "and" or "or" matching for displays within a layout
