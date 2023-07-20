@@ -324,3 +324,9 @@ class Snapshot(JSONType):
         if mode == 'all':
             return misses == 0
         return matches >= 1
+
+    def last_known_process_instance(self, process: str) -> Window | None:
+        for history in reversed(self.history):
+            for window in reversed(history.windows):
+                if window.executable == process:
+                    return window

@@ -88,9 +88,13 @@ def rescue_windows(snap: SnapshotFile):
 def on_window_spawn(windows: list[Window]):
     if not SETTINGS.get('apply_snapshot_on_window_spawn', True):
         return
+    current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
     for window in windows:
-        apply_rules(rules, window)
+        if (last_instance := current_snap.last_known_process_instance(window.executable)):
+            apply_positioning(window.id, last_instance.rect, last_instance.placement)
+        else:
+            apply_rules(rules, window)
 
 
 if __name__ == '__main__':
