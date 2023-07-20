@@ -5,12 +5,14 @@ import time
 import win32con
 import win32gui
 
-from common import JSONFile, local_path, single_call
+from common import JSONFile, Window, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
+from services import ServiceCallback
 from snapshot import SnapshotFile, SnapshotService
-from window import apply_positioning, from_hwnd, is_window_valid, restore_snapshot
+from window import (WindowSpawnService, apply_positioning, apply_rules,
+                    from_hwnd, is_window_valid, restore_snapshot)
 
 
 def update_systray_options():
@@ -83,6 +85,14 @@ def rescue_windows(snap: SnapshotFile):
     win32gui.EnumWindows(callback, None)
 
 
+def on_window_spawn(windows: list[Window]):
+    if not SETTINGS.get('apply_snapshot_on_window_spawn', True):
+        return
+    rules = snap.get_rules(compatible_with=True, exclusive=True)
+    for window in windows:
+        apply_rules(rules, window)
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
@@ -150,6 +160,8 @@ if __name__ == '__main__':
             snap.lock
         )
         monitor_thread.start()
+        window_spawn_thread = WindowSpawnService(ServiceCallback(on_window_spawn))
+        window_spawn_thread.start()
         snapshot_service = SnapshotService(None)
         snapshot_service.start(args=(snap, SETTINGS))
 

@@ -2,6 +2,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import threading
+import time
 from typing import Iterator
 
 import pythoncom
@@ -14,6 +15,7 @@ import wmi
 from comtypes import GUID
 
 from common import Placement, Rect, Rule, Window, match, size_from_rect
+from services import Service
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +24,27 @@ class TitleBarInfo(ctypes.Structure):
     _fields_ = [('cbSize', ctypes.wintypes.DWORD),
                 ('rcTitleBar', ctypes.wintypes.RECT),
                 ('rgState', ctypes.wintypes.DWORD * 6)]
+
+
+class WindowSpawnService(Service):
+    def _runner(self):
+        def get_windows() -> set[int]:
+            hwnds = set()
+            win32gui.EnumWindows(lambda h, *_: hwnds.add(h), None)
+            return hwnds
+
+        old = get_windows()
+        while not self._kill_signal.wait(timeout=0.1):
+            new = get_windows() - old
+            if new:
+                # wait for window to load in before checking validity
+                time.sleep(0.1)
+                try:
+                    windows = [from_hwnd(h) for h in new if is_window_valid(h)]
+                except Exception:
+                    self.log.info('failed to get list of newly spawned windows')
+                self._run_callback('default', windows)
+            old.update(new)
 
 
 def is_window_cloaked(hwnd) -> bool:
@@ -128,6 +151,11 @@ def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
     except pywintypes.error as e:
         log.error('err moving window %s : %s' %
                   (win32gui.GetWindowText(hwnd), e))
+
+
+def apply_rules(rules: list[Rule], window: Window):
+    for rule in find_matching_rules(rules, window):
+        apply_positioning(window.id, rule.rect, rule.placement)
 
 
 def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
