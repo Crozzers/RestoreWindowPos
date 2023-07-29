@@ -5,6 +5,7 @@ import wx.adv
 
 from common import JSONFile
 from gui.layout_manager import LayoutPage
+from gui.on_spawn_manager import OnSpawnPage
 from gui.settings import SettingsPanel
 from gui.widgets import Frame
 from snapshot import SnapshotFile
@@ -57,12 +58,14 @@ def spawn_gui(
         nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
         f.nb = nb
         layout_panel = LayoutPage(nb, snapshot)
+        on_spawn_panel = OnSpawnPage(nb, settings)
         settings_panel = SettingsPanel(nb, settings)
         nb.AddPage(layout_panel, 'Layouts and Rules')
+        nb.AddPage(on_spawn_panel, 'Window Spawn Behaviour')
         nb.AddPage(settings_panel, 'Settings')
         nb.SetPadding(wx.Size(5, 2))
 
-    nb.ChangeSelection(1 if start_page == 'settings' else 0)
+    nb.ChangeSelection(2 if start_page == 'settings' else 0)
     f.SetIdealSize()
     f.Show()
     f.Raise()

@@ -31,8 +31,6 @@ class SettingsPanel(wx.Panel):
             self.__snap_freq_choices.keys()))
         save_freq_txt = wx.StaticText(panel, label='Save frequency')
         save_freq_opt = wx.SpinCtrl(panel, id=3, min=1, max=10)
-        apply_on_window_spawn_opt = wx.CheckBox(
-            panel, id=5, label='Apply rules to newly spawned windows')
 
         header2 = header('Misc')
 
@@ -49,7 +47,6 @@ class SettingsPanel(wx.Panel):
             pause_snap_opt,
             (snap_freq_txt, snap_freq_opt),
             (save_freq_txt, save_freq_opt),
-            apply_on_window_spawn_opt,
             *header2,
             (log_level_txt, log_level_opt),
             open_install_btn,
@@ -81,7 +78,7 @@ class SettingsPanel(wx.Panel):
         snap_freq_opt.Bind(wx.EVT_CHOICE, self.on_setting)
         save_freq_opt.Bind(wx.EVT_SPINCTRL, self.on_setting)
         log_level_opt.Bind(wx.EVT_CHOICE, self.on_setting)
-        apply_on_window_spawn_opt.Bind(wx.EVT_CHECKBOX, self.on_setting)
+
         open_install_btn.Bind(
             wx.EVT_BUTTON, lambda *_: os.startfile(local_path('.')))
         open_github_btn.Bind(
@@ -97,8 +94,6 @@ class SettingsPanel(wx.Panel):
         if isinstance(widget, wx.CheckBox):
             if event.Id == 1:
                 self.settings.set('pause_snapshots', widget.GetValue())
-            elif event.Id == 5:
-                self.settings.set('apply_snapshot_on_window_spawn', widget.GetValue())
         elif isinstance(widget, wx.Choice):
             if event.Id == 2:
                 self.settings.set(

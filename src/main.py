@@ -86,14 +86,25 @@ def rescue_windows(snap: SnapshotFile):
 
 
 def on_window_spawn(windows: list[Window]):
-    if not SETTINGS.get('apply_snapshot_on_window_spawn', True):
+    on_spawn_settings = SETTINGS.get('on_window_spawn', {})
+    if not on_spawn_settings or not on_spawn_settings.get('enabled', False):
         return
+    # sleep to make sure window is fully initialised with resizability info
+    time.sleep(0.1)
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
+    do_lkp = on_spawn_settings.get('apply_lkp', True)
+    do_rules = on_spawn_settings.get('apply_rules', True)
     for window in windows:
-        if (last_instance := current_snap.last_known_process_instance(window.executable)):
-            apply_positioning(window.id, last_instance.rect, last_instance.placement)
-        else:
+        if do_lkp:
+            if (last_instance := current_snap.last_known_process_instance(window.executable)):
+                apply_positioning(window.id, last_instance.rect, last_instance.placement)
+                # giving window same placement as lkp often puts it behind that window
+                if last_instance.placement[1] != win32con.SW_SHOWMINIMIZED:
+                    # TODO: this isn't working
+                    win32gui.BringWindowToTop(window.id)
+                continue
+        if do_rules:
             apply_rules(rules, window)
 
 
