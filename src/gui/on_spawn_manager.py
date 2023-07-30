@@ -19,6 +19,7 @@ class OnSpawnPage(wx.Panel):
         # create widgets
         enable_opt = wx.CheckBox(
             self, id=1, label='Enable reacting to new windows being created')
+        enable_opt.SetToolTip('It\'s recommended to disable "Prune window history" when this is enabled')
         self.panel = wx.Panel(self)
         header1 = wx.StaticText(self.panel, label='When a new window is created:')
         apply_lkp_opt = wx.CheckBox(

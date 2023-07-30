@@ -151,17 +151,25 @@ class SnapshotFile(JSONFile):
             snap.history = []
 
     def squash(self, history: list[WindowHistory]):
-        def should_keep(window: Window):
-            if not win32gui.IsWindow(window.id):
-                return False
+        def should_keep(window: Window) -> bool:
+            prune = settings.get('prune_history', True)
             try:
+                if prune:
+                    return (
+                        # window exists and hwnd still belongs to same process
+                        win32gui.IsWindow(window.id)
+                        and window.id in exe_by_id
+                        and window.executable == exe_by_id[window.id]
+                    )
                 return (
-                    window.id in exe_by_id
-                    and window.executable == exe_by_id[window.id]
+                    # hwnd is not in use by another window
+                    window.id not in exe_by_id
+                    or window.executable == exe_by_id[window.id]
                 )
             except Exception:
                 return False
 
+        settings = load_json('settings')
         index = len(history) - 1
         exe_by_id = {}
         while index > 0:
@@ -207,14 +215,21 @@ class SnapshotFile(JSONFile):
             index -= 1
 
     def prune_history(self):
+        settings = load_json('settings')
         with self.lock:
             for snapshot in self.data:
                 if snapshot.phony:
                     continue
                 self.squash(snapshot.history)
 
-                if len(snapshot.history) > 10:
-                    snapshot.history = snapshot.history[-10:]
+                ttl = settings.get('window_history_ttl', 0)
+                if ttl != 0:
+                    current = time.time()
+                    snapshot.history = [i for i in snapshot.history if current - i.time <= ttl]
+
+                max_snapshots = settings.get('max_snapshots', 10)
+                if len(snapshot.history) > max_snapshots:
+                    snapshot.history = snapshot.history[-max_snapshots:]
 
     def update(self):
         timestamp, displays, windows = self.capture()

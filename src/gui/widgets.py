@@ -2,6 +2,7 @@ from typing import Callable
 
 import wx
 from wx.lib.mixins.listctrl import TextEditMixin
+from wx.lib.newevent import NewEvent
 
 from common import local_path
 
@@ -207,3 +208,57 @@ class SelectionWindow(Frame):
     def select_all(self, *_, check=True):
         for i in range(len(self.select_from)):
             self.check_list.Check(i, check=check)
+
+
+TimeSpanSelect, EVT_TIME_SPAN_SELECT = NewEvent()
+
+
+class TimeSpanSelector(wx.Panel):
+    def __init__(self, parent, *a, **kw):
+        wx.Panel.__init__(self, parent, *a, **kw)
+
+        # create widgets
+        self.spin_ctrl = wx.SpinCtrl(self, min=1)
+        self.choices = {'Forever': 0, 'Minutes': 60, 'Hours': 3600, 'Days': 86400, 'Months': 86400 * 30}
+        self.multiplier_selector = wx.Choice(self, choices=list(self.choices.keys()))
+
+        # bind events
+        self.spin_ctrl.Bind(wx.EVT_SPINCTRL, self.OnSelection)
+        self.multiplier_selector.Bind(wx.EVT_CHOICE, self.OnSelection)
+
+        # place widgets
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.spin_ctrl, 0, wx.ALL, 0)
+        sizer.Add(self.multiplier_selector, 0, wx.ALL, 0)
+        self.SetSizerAndFit(sizer)
+
+    def GetTime(self) -> int:
+        multiplier = tuple(self.choices.values())[self.multiplier_selector.GetSelection()]
+        return self.spin_ctrl.GetValue() * multiplier
+
+    def OnSelection(self, _):
+        if self.multiplier_selector.GetSelection() == 0:
+            self.spin_ctrl.Hide()
+        elif not self.spin_ctrl.IsShown():
+            self.spin_ctrl.Show()
+        self.Layout()
+
+        evt = TimeSpanSelect()
+        evt.SetEventObject(self)
+        evt.SetId(self.Id)
+        wx.PostEvent(self.GetEventHandler(), evt)
+
+    def SetTime(self, seconds: int):
+        if seconds == 0:
+            self.multiplier_selector.SetSelection(0)
+            self.spin_ctrl.Hide()
+            return
+        if not self.spin_ctrl.IsShown():
+            self.spin_ctrl.Show()
+        self.Layout()
+
+        for name, multiplier in reversed(self.choices.items()):
+            if (count := seconds // multiplier) >= 1:
+                self.spin_ctrl.SetValue(count)
+                self.multiplier_selector.SetSelection(tuple(self.choices).index(name))
+                return
