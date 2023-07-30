@@ -7,13 +7,14 @@ class OnSpawnSettings(TypedDict):
     enabled: bool
     apply_lkp: bool
     apply_rules: bool
+    ignore_children: bool
 
 
 class OnSpawnPage(wx.Panel):
     def __init__(self, parent: wx.Frame):
         wx.Panel.__init__(self, parent, id=wx.ID_ANY)
         self.settings_file = load_json('settings')
-        self.settings = OnSpawnSettings(enabled=False, apply_lkp=True, apply_rules=True)
+        self.settings = OnSpawnSettings(enabled=False, apply_lkp=True, apply_rules=True, ignore_children=True)
         self.settings.update(self.settings_file.get('on_window_spawn', default={}))
 
         # create widgets
@@ -26,6 +27,11 @@ class OnSpawnPage(wx.Panel):
             self.panel, id=2, label='Apply last known position')
         apply_rules_opt = wx.CheckBox(
             self.panel, id=3, label='Apply compatible rules')
+        ignore_children_opt = wx.CheckBox(self.panel, id=4, label='Ignore child windows')
+        ignore_children_opt.SetToolTip(
+            'Child windows are typically small popup windows and spawn near where the cursor is.'
+            '\nDisabling this means such windows will be moved to the top left corner of the parent window.'
+        )
 
         # set state
         enable_opt.SetValue(self.settings['enabled'])
@@ -33,14 +39,15 @@ class OnSpawnPage(wx.Panel):
             self.panel.Disable()
         apply_lkp_opt.SetValue(self.settings['apply_lkp'])
         apply_rules_opt.SetValue(self.settings['apply_rules'])
+        ignore_children_opt.SetValue(self.settings['ignore_children'])
 
         # bind events
-        for widget in (enable_opt, apply_lkp_opt, apply_rules_opt):
+        for widget in (enable_opt, apply_lkp_opt, apply_rules_opt, ignore_children_opt):
             widget.Bind(wx.EVT_CHECKBOX, self.on_setting)
 
         # place
         panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        for widget in (header1, apply_lkp_opt, apply_rules_opt):
+        for widget in (header1, apply_lkp_opt, apply_rules_opt, ignore_children_opt):
             panel_sizer.Add(widget, 0, wx.ALL, 5)
         self.panel.SetSizerAndFit(panel_sizer)
 
@@ -61,7 +68,7 @@ class OnSpawnPage(wx.Panel):
                 else:
                     self.panel.Disable()
             else:
-                key = {2: 'apply_lkp', 3: 'apply_rules'}[event.Id]
+                key = {2: 'apply_lkp', 3: 'apply_rules', 4: 'ignore_children'}[event.Id]
                 self.settings[key] = widget.GetValue()
 
         self.settings_file.set('on_window_spawn', self.settings)

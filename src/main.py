@@ -12,7 +12,7 @@ from gui.wx_app import spawn_gui
 from services import ServiceCallback
 from snapshot import SnapshotFile, SnapshotService
 from window import (WindowSpawnService, apply_positioning, apply_rules,
-                    from_hwnd, is_window_valid, restore_snapshot)
+                    is_window_valid, restore_snapshot)
 
 
 def update_systray_options():
@@ -75,7 +75,7 @@ def rescue_windows(snap: SnapshotFile):
     def callback(hwnd, _):
         if not is_window_valid(hwnd):
             return
-        window = from_hwnd(hwnd)
+        window = Window.from_hwnd(hwnd)
         if not window.fits_display_config(displays):
             rect = [0, 0, *window.size]
             logging.info(f'rescue window {window.name!r} {window.rect} -> {rect}')
@@ -90,12 +90,16 @@ def on_window_spawn(windows: list[Window]):
     if not on_spawn_settings or not on_spawn_settings.get('enabled', False):
         return
     # sleep to make sure window is fully initialised with resizability info
-    time.sleep(0.1)
+    time.sleep(0.05)
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
     do_lkp = on_spawn_settings.get('apply_lkp', True)
     do_rules = on_spawn_settings.get('apply_rules', True)
+    ignore_children = on_spawn_settings.get('ignore_children', True)
+
     for window in windows:
+        if window.parent is not None and ignore_children:
+            continue
         if do_lkp:
             if (last_instance := current_snap.last_known_process_instance(window.executable)):
                 apply_positioning(window.id, last_instance.rect, last_instance.placement)

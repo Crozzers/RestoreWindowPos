@@ -9,9 +9,13 @@ import time
 import typing
 from dataclasses import dataclass, field, is_dataclass
 from functools import lru_cache
-from typing import Any, Callable, Literal, Union
+from typing import Any, Callable, Literal, Optional, Union
 
+import pythoncom
 import win32con
+import win32gui
+import win32process
+import wmi
 
 log = logging.getLogger(__name__)
 
@@ -223,6 +227,31 @@ class Window(WindowType):
     id: int
     name: str
     executable: str
+
+    @property
+    def parent(self) -> Optional['Window']:
+        p_id = win32gui.GetParent(self.id)
+        if p_id == 0:
+            return None
+        return self.from_hwnd(p_id)
+
+    @classmethod
+    def from_hwnd(cls, hwnd: int) -> 'Window':
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
+        w = wmi.WMI()
+        # https://stackoverflow.com/a/14973422
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        exe = w.query(
+            f'SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}')[0]
+        rect = win32gui.GetWindowRect(hwnd)
+
+        return Window(id=hwnd, name=win32gui.GetWindowText(hwnd),
+                      executable=exe.ExecutablePath,
+                      size=size_from_rect(rect),
+                      rect=rect,
+                      placement=win32gui.GetWindowPlacement(hwnd)
+                      )
 
 
 @dataclass(slots=True)

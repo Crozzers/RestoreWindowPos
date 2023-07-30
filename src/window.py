@@ -1,17 +1,13 @@
 import ctypes
 import ctypes.wintypes
 import logging
-import threading
 import time
 from typing import Iterator
 
-import pythoncom
 import pyvda
 import pywintypes
 import win32con
 import win32gui
-import win32process
-import wmi
 from comtypes import GUID
 
 from common import Placement, Rect, Rule, Window, load_json, match, size_from_rect
@@ -44,7 +40,7 @@ class WindowSpawnService(Service):
                 # wait for window to load in before checking validity
                 time.sleep(0.1)
                 try:
-                    windows = [from_hwnd(h) for h in new if is_window_valid(h)]
+                    windows = [Window.from_hwnd(h) for h in new if is_window_valid(h)]
                 except Exception:
                     self.log.info('failed to get list of newly spawned windows')
                 self._run_callback('default', windows)
@@ -89,28 +85,10 @@ def is_window_valid(hwnd: int) -> bool:
     return not titlebar.rgState[0] & win32con.STATE_SYSTEM_INVISIBLE
 
 
-def from_hwnd(hwnd: int) -> Window:
-    if threading.current_thread() != threading.main_thread():
-        pythoncom.CoInitialize()
-    w = wmi.WMI()
-    # https://stackoverflow.com/a/14973422
-    _, pid = win32process.GetWindowThreadProcessId(hwnd)
-    exe = w.query(
-        f'SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}')[0]
-    rect = win32gui.GetWindowRect(hwnd)
-
-    return Window(id=hwnd, name=win32gui.GetWindowText(hwnd),
-                  executable=exe.ExecutablePath,
-                  size=size_from_rect(rect),
-                  rect=rect,
-                  placement=win32gui.GetWindowPlacement(hwnd)
-                  )
-
-
 def capture_snapshot() -> list[Window]:
     def callback(hwnd, *_):
         if is_window_valid(hwnd):
-            snapshot.append(from_hwnd(hwnd))
+            snapshot.append(Window.from_hwnd(hwnd))
 
     snapshot = []
     win32gui.EnumWindows(callback, None)
@@ -167,7 +145,7 @@ def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
         if not is_window_valid(hwnd):
             return
 
-        window = from_hwnd(hwnd)
+        window = Window.from_hwnd(hwnd)
         for item in snap:
             if item.rect == (0, 0, 0, 0):
                 return
