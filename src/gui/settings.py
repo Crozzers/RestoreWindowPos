@@ -3,13 +3,13 @@ import os
 
 import wx
 
-from common import JSONFile, local_path, reverse_dict_lookup
+from common import load_json, local_path, reverse_dict_lookup
 
 
 class SettingsPanel(wx.Panel):
-    def __init__(self, parent: wx.Frame, settings: JSONFile):
+    def __init__(self, parent: wx.Frame):
         wx.Panel.__init__(self, parent, id=wx.ID_ANY)
-        self.settings = settings
+        self.settings = load_json('settings')
 
         def header(text: str):
             txt = wx.StaticText(panel, label=text)
@@ -66,12 +66,12 @@ class SettingsPanel(wx.Panel):
         panel.Layout()
 
         # set widget states
-        pause_snap_opt.SetValue(wx.CHK_CHECKED if settings.get(
+        pause_snap_opt.SetValue(wx.CHK_CHECKED if self.settings.get(
             'pause_snapshots', False) else wx.CHK_UNCHECKED)
         snap_freq_opt.SetStringSelection(reverse_dict_lookup(
-            self.__snap_freq_choices, settings.get('snapshot_freq', 60)))
-        save_freq_opt.SetValue(settings.get('save_freq', 1))
-        log_level_opt.SetStringSelection(settings.get('log_level', 'Info'))
+            self.__snap_freq_choices, self.settings.get('snapshot_freq', 60)))
+        save_freq_opt.SetValue(self.settings.get('save_freq', 1))
+        log_level_opt.SetStringSelection(self.settings.get('log_level', 'Info'))
 
         # bind events
         pause_snap_opt.Bind(wx.EVT_CHECKBOX, self.on_setting)

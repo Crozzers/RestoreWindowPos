@@ -1,6 +1,6 @@
 from typing import TypedDict
 import wx
-from common import JSONFile
+from common import load_json
 
 
 class OnSpawnSettings(TypedDict):
@@ -10,9 +10,9 @@ class OnSpawnSettings(TypedDict):
 
 
 class OnSpawnPage(wx.Panel):
-    def __init__(self, parent: wx.Frame, settings_file: JSONFile):
+    def __init__(self, parent: wx.Frame):
         wx.Panel.__init__(self, parent, id=wx.ID_ANY)
-        self.settings_file = settings_file
+        self.settings_file = load_json('settings')
         self.settings = OnSpawnSettings(enabled=False, apply_lkp=True, apply_rules=True)
         self.settings.update(self.settings_file.get('on_window_spawn', default={}))
 

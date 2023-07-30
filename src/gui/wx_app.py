@@ -58,8 +58,8 @@ def spawn_gui(
         nb = wx.Notebook(f, id=wx.ID_ANY, style=wx.BK_DEFAULT)
         f.nb = nb
         layout_panel = LayoutPage(nb, snapshot)
-        on_spawn_panel = OnSpawnPage(nb, settings)
-        settings_panel = SettingsPanel(nb, settings)
+        on_spawn_panel = OnSpawnPage(nb)
+        settings_panel = SettingsPanel(nb)
         nb.AddPage(layout_panel, 'Layouts and Rules')
         nb.AddPage(on_spawn_panel, 'Window Spawn Behaviour')
         nb.AddPage(settings_panel, 'Settings')

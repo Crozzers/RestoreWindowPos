@@ -8,7 +8,7 @@ import pywintypes
 import win32api
 import win32gui
 
-from common import (Display, JSONFile, Snapshot, Window, WindowHistory,
+from common import (Display, JSONFile, Snapshot, Window, WindowHistory, load_json,
                     local_path, size_from_rect)
 from services import Service
 from window import capture_snapshot, restore_snapshot
@@ -237,8 +237,9 @@ class SnapshotFile(JSONFile):
 
 
 class SnapshotService(Service):
-    def _runner(self, snapshot: SnapshotFile, settings: JSONFile):
+    def _runner(self, snapshot: SnapshotFile):
         count = 0
+        settings = load_json('settings')
         while not self._kill_signal.is_set():
             if not settings.get('pause_snapshots', False):
                 snapshot.update()

@@ -5,7 +5,7 @@ import time
 import win32con
 import win32gui
 
-from common import JSONFile, Window, local_path, single_call
+from common import Window, load_json, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
@@ -101,7 +101,7 @@ def on_window_spawn(windows: list[Window]):
                 apply_positioning(window.id, last_instance.rect, last_instance.placement)
                 # giving window same placement as lkp often puts it behind that window
                 if last_instance.placement[1] != win32con.SW_SHOWMINIMIZED:
-                    # TODO: this isn't working
+                    # TODO: this isn't working sometimes. Struggle to replicate
                     win32gui.BringWindowToTop(window.id)
                 continue
         if do_rules:
@@ -115,8 +115,7 @@ if __name__ == '__main__':
     log = logging.getLogger(__name__)
     log.info('start')
 
-    SETTINGS = JSONFile('settings.json')
-    SETTINGS.load()
+    SETTINGS = load_json('settings')
     SETTINGS.set('pause_snapshots', False)  # reset this key
 
     logging.getLogger().setLevel(logging.getLevelName(SETTINGS.get('log_level', 'INFO').upper()))
@@ -178,7 +177,7 @@ if __name__ == '__main__':
         window_spawn_thread = WindowSpawnService(ServiceCallback(on_window_spawn))
         window_spawn_thread.start()
         snapshot_service = SnapshotService(None)
-        snapshot_service.start(args=(snap, SETTINGS))
+        snapshot_service.start(args=(snap,))
 
         try:
             app.MainLoop()

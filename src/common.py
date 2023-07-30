@@ -7,8 +7,9 @@ import sys
 import threading
 import time
 import typing
-from typing import Callable, Any, Union
 from dataclasses import dataclass, field, is_dataclass
+from functools import lru_cache
+from typing import Any, Callable, Literal, Union
 
 import win32con
 
@@ -81,7 +82,7 @@ def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
 
 
 class JSONFile():
-    def __init__(self, file, *a, **kw):
+    def __init__(self, file: str, *a, **kw):
         self._log = logging.getLogger(__name__).getChild(
             self.__class__.__name__
             + '.' + str(id(self))
@@ -122,6 +123,19 @@ class JSONFile():
                 return self.data[key]
             except (IndexError, KeyError):
                 return default
+
+
+@lru_cache
+def load_json(file: Literal['settings',  'history']):
+    '''
+    Load a JSON file and cache the instance. Useful for creating global instances for settings files.
+    The `.json` suffix is automatically added if missing.
+    '''
+    if not file.endswith('.json'):
+        file += '.json'
+    json_file = JSONFile(file)
+    json_file.load()
+    return json_file
 
 
 def tuple_convert(item, to=tuple, from_=list):
