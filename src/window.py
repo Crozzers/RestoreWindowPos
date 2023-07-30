@@ -14,7 +14,7 @@ import win32process
 import wmi
 from comtypes import GUID
 
-from common import Placement, Rect, Rule, Window, match, size_from_rect
+from common import Placement, Rect, Rule, Window, load_json, match, size_from_rect
 from services import Service
 
 log = logging.getLogger(__name__)
@@ -33,8 +33,12 @@ class WindowSpawnService(Service):
             win32gui.EnumWindows(lambda h, *_: hwnds.add(h), None)
             return hwnds
 
+        settings = load_json('settings')
         old = get_windows()
         while not self._kill_signal.wait(timeout=0.1):
+            if not settings.get('on_window_spawn', {}).get('enabled', False):
+                time.sleep(1)
+                continue
             new = get_windows() - old
             if new:
                 # wait for window to load in before checking validity
