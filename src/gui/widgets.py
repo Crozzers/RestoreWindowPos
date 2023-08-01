@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Iterable
 
 import wx
 from wx.lib.mixins.listctrl import TextEditMixin
@@ -262,3 +262,21 @@ class TimeSpanSelector(wx.Panel):
                 self.spin_ctrl.SetValue(count)
                 self.multiplier_selector.SetSelection(tuple(self.choices).index(name))
                 return
+
+
+def simple_box_sizer(parent: wx.Panel, widgets: Iterable[wx.Frame | Iterable[wx.Frame]], group_mode=wx.VERTICAL):
+    # place
+    sizer = wx.BoxSizer(wx.VERTICAL)
+    for widget in widgets:
+        flag = wx.ALL
+        if isinstance(widget, wx.StaticLine):
+            flag |= wx.EXPAND
+        elif isinstance(widget, tuple):
+            sz = wx.BoxSizer(group_mode)
+            for w in widget:
+                sz.Add(w, 0, wx.ALL, 0)
+            widget = sz
+
+        sizer.Add(widget, 0, flag, 5)
+    parent.SetSizerAndFit(sizer)
+    parent.Layout()

@@ -1,6 +1,9 @@
 from typing import TypedDict
+
 import wx
+
 from common import load_json
+from gui.widgets import simple_box_sizer
 
 
 class OnSpawnSettings(TypedDict):
@@ -46,10 +49,11 @@ class OnSpawnPage(wx.Panel):
             widget.Bind(wx.EVT_CHECKBOX, self.on_setting)
 
         # place
-        panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        for widget in (header1, apply_lkp_opt, apply_rules_opt, ignore_children_opt):
-            panel_sizer.Add(widget, 0, wx.ALL, 5)
-        self.panel.SetSizerAndFit(panel_sizer)
+        simple_box_sizer(
+            self.panel,
+            (header1, apply_lkp_opt, apply_rules_opt, ignore_children_opt),
+            group_mode=wx.HORIZONTAL
+        )
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         for widget in (enable_opt, self.panel):

@@ -4,7 +4,7 @@ import os
 import wx
 
 from common import load_json, local_path, reverse_dict_lookup
-from gui.widgets import EVT_TIME_SPAN_SELECT, TimeSpanSelector
+from gui.widgets import EVT_TIME_SPAN_SELECT, TimeSpanSelector, simple_box_sizer
 
 
 class SettingsPanel(wx.Panel):
@@ -55,8 +55,7 @@ class SettingsPanel(wx.Panel):
         open_install_btn = wx.Button(panel, label='Open install directory')
         open_github_btn = wx.Button(panel, label='Open GitHub page')
         # place
-        snapshot_sizer = wx.BoxSizer(wx.VERTICAL)
-        for widget in (
+        simple_box_sizer(panel, (
             *header1,
             pause_snap_opt,
             (snap_freq_txt, snap_freq_opt),
@@ -68,19 +67,7 @@ class SettingsPanel(wx.Panel):
             (log_level_txt, log_level_opt),
             open_install_btn,
             open_github_btn
-        ):
-            flag = wx.ALL
-            if isinstance(widget, wx.StaticLine):
-                flag |= wx.EXPAND
-            elif isinstance(widget, tuple):
-                sz = wx.BoxSizer(wx.VERTICAL)
-                for w in widget:
-                    sz.Add(w, 0, wx.ALL, 0)
-                widget = sz
-
-            snapshot_sizer.Add(widget, 0, flag, 5)
-        panel.SetSizerAndFit(snapshot_sizer)
-        panel.Layout()
+        ))
 
         # set widget states
         pause_snap_opt.SetValue(wx.CHK_CHECKED if self.settings.get(
