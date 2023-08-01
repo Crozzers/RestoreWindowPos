@@ -153,9 +153,9 @@ if __name__ == '__main__':
             TaskbarIcon.SEPARATOR,
             ['Apply all', lambda *_: restore_snapshot([], snap.get_rules(compatible_with=True))]
         ]],
-        ['Configure rules', lambda *_: spawn_gui(snap, SETTINGS, 'rules')],
+        ['Configure rules', lambda *_: spawn_gui(snap, 'rules')],
         TaskbarIcon.SEPARATOR,
-        ['Settings', lambda *_: spawn_gui(snap, SETTINGS, 'settings')],
+        ['Settings', lambda *_: spawn_gui(snap, 'settings')],
         ['About', lambda *_: about_dialog()]
     ]
 
