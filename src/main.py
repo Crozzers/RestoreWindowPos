@@ -102,11 +102,16 @@ def on_window_spawn(windows: list[Window]):
             continue
         if do_lkp:
             if (last_instance := current_snap.last_known_process_instance(window.executable)):
-                apply_positioning(window.id, last_instance.rect, last_instance.placement)
-                # giving window same placement as lkp often puts it behind that window
-                if last_instance.placement[1] != win32con.SW_SHOWMINIMIZED:
-                    # TODO: this isn't working sometimes. Struggle to replicate
-                    win32gui.BringWindowToTop(window.id)
+                current_rect = window.rect
+                tries = 0
+                while window.rect == current_rect and tries < 3:
+                    apply_positioning(window.id, last_instance.rect, last_instance.placement)
+                    # giving window same placement as lkp often puts it behind that window
+                    if last_instance.placement[1] != win32con.SW_SHOWMINIMIZED:
+                        # TODO: this isn't working sometimes. Struggle to replicate
+                        win32gui.BringWindowToTop(window.id)
+                    tries += 1
+                    time.sleep(0.1)
                 continue
         if do_rules:
             apply_rules(rules, window)
