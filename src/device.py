@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Optional
 
 import win32con
 import win32gui
@@ -13,7 +13,7 @@ GUID_DEVINTERFACE_DISPLAY_DEVICE = "{E6F07B5F-EE97-4a90-B076-33F57BF4EAA7}"
 
 @dataclass(slots=True)
 class DeviceChangeCallback(ServiceCallback):
-    capture: Callable = None
+    capture: Optional[Callable] = None
 
 
 class DeviceChangeService(Service):

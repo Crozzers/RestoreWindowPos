@@ -3,17 +3,17 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Optional
 
 
 @dataclass(slots=True)
 class ServiceCallback():
     default: Callable
-    shutdown: Callable = None
+    shutdown: Optional[Callable] = None
 
 
 class Service(ABC):
-    def __init__(self, callback: ServiceCallback, lock=None):
+    def __init__(self, callback: ServiceCallback | None, lock=None):
         self.log = logging.getLogger(__name__).getChild(
             self.__class__.__name__).getChild(str(id(self)))
         self._callback = callback
@@ -30,9 +30,16 @@ class Service(ABC):
         self._thread.start()
         self.log.info('started thread')
 
-    def stop(self, timeout=10):
+    def stop(self, timeout=10) -> bool:
+        '''
+        Returns:
+            Whether stopping the thread was successful
+        '''
         self.log.info('send kill signal')
         self._kill_signal.set()
+
+        if self._thread is None:
+            return True
 
         start = time.time()
         while self._thread.is_alive():
@@ -60,6 +67,7 @@ class Service(ABC):
 
     def pre_callback(self, *args, **kwargs) -> bool:
         self.log.debug('run pre_callback')
+        return True
 
     def callback(self, *args, **kwargs):
         with self._lock:

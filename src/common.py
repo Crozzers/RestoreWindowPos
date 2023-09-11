@@ -31,7 +31,7 @@ Placement = tuple[int, int, XandY, XandY, Rect]
 def local_path(path, asset=False):
     if getattr(sys, 'frozen', False):
         if asset:
-            base = sys._MEIPASS
+            base = sys._MEIPASS  # type: ignore
         else:
             base = os.path.dirname(sys.executable)
     else:
@@ -67,19 +67,24 @@ def reverse_dict_lookup(d: dict, value):
 
 def match(a: int | str, b: int | str) -> int:
     '''`b` must be of the same type as `a`'''
+
     if a is None or b is None:
         return 1
     if a == b:
         return 2
 
-    if isinstance(a, int):
+    # both must be same type. Just do this to make type checker happy
+    if isinstance(a, int) and isinstance(b, int):
         return 2 if abs(a) == abs(b) else 0
 
-    try:
-        return 0 if re.match(a, b, re.IGNORECASE) is None else 1
-    except re.error:
-        log.exception(f'fail to compile pattern "{a}"')
-        return 0
+    if isinstance(a, str) and isinstance(b, str):
+        try:
+            return 0 if re.match(a, b, re.IGNORECASE) is None else 1
+        except re.error:
+            log.exception(f'fail to compile pattern "{a}"')
+            return 0
+
+    return 0
 
 
 def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
@@ -138,14 +143,12 @@ def load_json(file: Literal['settings',  'history']):
     Load a JSON file and cache the instance. Useful for creating global instances for settings files.
     The `.json` suffix is automatically added if missing.
     '''
-    if not file.endswith('.json'):
-        file += '.json'
-    json_file = JSONFile(file)
+    json_file = JSONFile(file + '.json')
     json_file.load()
     return json_file
 
 
-def tuple_convert(item, to=tuple, from_=list):
+def tuple_convert(item, to=tuple, from_: type = list):
     if isinstance(item, from_):
         item = to(tuple_convert(sub, to=to, from_=from_) for sub in item)
     return item
@@ -298,14 +301,12 @@ class Window(WindowType):
                 # if the window is not resizeable, make sure we don't resize it.
                 # includes 95 era system dialogs and the Outlook reminder window
                 w, h = self.get_size()
-                placement = list(placement)
-                placement[-1] = (*rect[:2], rect[2] + w, rect[3] + h)
-                placement = tuple(placement)
+                placement = (*placement[:-1], (*rect[:2], rect[2] + w, rect[3] + h))
 
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)
 
-            win32gui.MoveWindow(self.id, *rect[:2], w, h, 0)
+            win32gui.MoveWindow(self.id, *rect[:2], w, h, False)
         except pywintypes.error as e:
             log.error('err moving window %s : %s' %
                       (win32gui.GetWindowText(self.id), e))
@@ -350,9 +351,9 @@ class Display(JSONType):
         return any(self.matches(d) for d in config)
 
     def set_res(self, index, value):
-        self.resolution = list(self.resolution)
-        self.resolution[index] = value
-        self.resolution = tuple(self.resolution)
+        res = list(self.resolution)
+        res[index] = value
+        self.resolution = tuple(res)
 
 
 @dataclass(slots=True)

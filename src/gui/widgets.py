@@ -1,4 +1,4 @@
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 
 import wx
 from wx.lib.mixins.listctrl import TextEditMixin
@@ -63,9 +63,9 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
         self,
         parent,
         *args,
-        edit_cols: list[int] = None,
-        on_edit: Callable[[int, int], bool] = None,
-        post_edit: Callable[[int, int], None] = None,
+        edit_cols: Optional[list[int]] = None,
+        on_edit: Optional[Callable[[int, int], bool]] = None,
+        post_edit: Optional[Callable[[int, int], None]] = None,
         **kwargs,
     ):
         '''
@@ -144,7 +144,7 @@ class SelectionWindow(Frame):
         parent,
         select_from: list,
         callback: Callable[[list[int], dict[str, bool]], None],
-        options: dict[str, str] = None,
+        options: Optional[dict[str, str]] = None,
         **kwargs,
     ):
         super().__init__(parent, **kwargs)
@@ -264,7 +264,7 @@ class TimeSpanSelector(wx.Panel):
                 return
 
 
-def simple_box_sizer(parent: wx.Panel, widgets: Iterable[wx.Frame | Iterable[wx.Frame]], group_mode=wx.VERTICAL):
+def simple_box_sizer(parent: wx.Panel, widgets: Iterable[wx.Window | Iterable[wx.Window]], group_mode=wx.VERTICAL):
     # place
     sizer = wx.BoxSizer(wx.VERTICAL)
     for widget in widgets:
