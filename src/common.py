@@ -12,6 +12,7 @@ from functools import lru_cache
 from typing import Any, Callable, Literal, Optional, Union
 
 import pythoncom
+import pywintypes
 import win32con
 import win32gui
 import win32process
@@ -22,7 +23,9 @@ log = logging.getLogger(__name__)
 # some basic types
 XandY = tuple[int, int]
 Rect = tuple[int, int, int, int]
+'''X, W, Y, H'''
 Placement = tuple[int, int, XandY, XandY, Rect]
+'''Flags, showCmd, min pos, max pos, normal pos'''
 
 
 def local_path(path, asset=False):
@@ -235,6 +238,15 @@ class Window(WindowType):
             return None
         return self.from_hwnd(p_id)
 
+    def focus(self):
+        '''
+        Raises a window and brings it to the top of the Z order.
+
+        Called 'focus' rather than 'raise' because the latter is a keyword
+        '''
+        win32gui.BringWindowToTop(self.id)
+        win32gui.ShowWindow(self.id, win32con.SW_SHOWNORMAL)
+
     @classmethod
     def from_hwnd(cls, hwnd: int) -> 'Window':
         if threading.current_thread() != threading.main_thread():
@@ -252,6 +264,51 @@ class Window(WindowType):
                       rect=rect,
                       placement=win32gui.GetWindowPlacement(hwnd)
                       )
+
+    def get_placement(self) -> Placement:
+        return win32gui.GetWindowPlacement(self.id)
+
+    def get_rect(self) -> Rect:
+        return win32gui.GetWindowRect(self.id)
+
+    def get_size(self) -> XandY:
+        return size_from_rect(self.get_rect())
+
+    def is_minimised(self) -> bool:
+        return self.get_placement()[1] == win32con.SW_SHOWMINIMIZED
+
+    def move(self, coords: XandY):
+        '''
+        Move the window to a new position. This does not resize the window or
+        adjust placement
+        '''
+        size = size_from_rect(win32gui.GetWindowRect(self.id))
+        win32gui.MoveWindow(self.id, *coords, *size)
+
+    def set_pos(self, rect: Rect, placement: Placement):
+        '''
+        Set the position and placement of the window
+        '''
+        try:
+            w_long = win32gui.GetWindowLong(self.id, win32con.GWL_STYLE)
+            resizeable = w_long & win32con.WS_THICKFRAME
+            if resizeable:
+                w, h = size_from_rect(rect)
+            else:
+                # if the window is not resizeable, make sure we don't resize it.
+                # includes 95 era system dialogs and the Outlook reminder window
+                w, h = self.get_size()
+                placement = list(placement)
+                placement[-1] = (*rect[:2], rect[2] + w, rect[3] + h)
+                placement = tuple(placement)
+
+            if placement:
+                win32gui.SetWindowPlacement(self.id, placement)
+
+            win32gui.MoveWindow(self.id, *rect[:2], w, h, 0)
+        except pywintypes.error as e:
+            log.error('err moving window %s : %s' %
+                      (win32gui.GetWindowText(self.id), e))
 
 
 @dataclass(slots=True)

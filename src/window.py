@@ -5,12 +5,11 @@ import time
 from typing import Iterator
 
 import pyvda
-import pywintypes
 import win32con
 import win32gui
 from comtypes import GUID
 
-from common import Placement, Rect, Rule, Window, load_json, match, size_from_rect
+from common import Rule, Window, load_json, match
 from services import Service
 
 log = logging.getLogger(__name__)
@@ -112,32 +111,9 @@ def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
     return (i[1] for i in sorted(matching, reverse=True, key=lambda m: m[0]))
 
 
-def apply_positioning(hwnd: int, rect: Rect, placement: Placement = None):
-    try:
-        w_long = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-        resizeable = w_long & win32con.WS_THICKFRAME
-        if resizeable:
-            w, h = size_from_rect(rect)
-        else:
-            # if the window is not resizeable, make sure we don't resize it.
-            # includes 95 era system dialogs and the Outlook reminder window
-            w, h = size_from_rect(win32gui.GetWindowRect(hwnd))
-            placement = list(placement)
-            placement[-1] = (*rect[:2], rect[2] + w, rect[3] + h)
-            placement = tuple(placement)
-
-        if placement:
-            win32gui.SetWindowPlacement(hwnd, placement)
-
-        win32gui.MoveWindow(hwnd, *rect[:2], w, h, 0)
-    except pywintypes.error as e:
-        log.error('err moving window %s : %s' %
-                  (win32gui.GetWindowText(hwnd), e))
-
-
 def apply_rules(rules: list[Rule], window: Window):
     for rule in find_matching_rules(rules, window):
-        apply_positioning(window.id, rule.rect, rule.placement)
+        window.set_pos(rule.rect, rule.placement)
 
 
 def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
@@ -163,13 +139,13 @@ def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
 
             log.info(
                 f'restore window "{window.name}" {window.rect} -> {item.rect}')
-            apply_positioning(hwnd, item.rect, placement)
+            window.set_pos(item.rect, placement)
             return
         else:
             if not rules:
                 return
             for rule in find_matching_rules(rules, window):
                 log.info(f'apply rule "{rule.rule_name}" to "{window.name}"')
-                apply_positioning(hwnd, rule.rect, rule.placement)
+                window.set_pos(rule.rect, rule.placement)
 
     win32gui.EnumWindows(callback, None)

@@ -11,7 +11,7 @@ from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
 from services import ServiceCallback
 from snapshot import SnapshotFile, SnapshotService
-from window import (WindowSpawnService, apply_positioning, apply_rules,
+from window import (WindowSpawnService, apply_rules,
                     is_window_valid, restore_snapshot)
 
 
@@ -79,7 +79,7 @@ def rescue_windows(snap: SnapshotFile):
         if not window.fits_display_config(displays):
             rect = [0, 0, *window.size]
             logging.info(f'rescue window {window.name!r} {window.rect} -> {rect}')
-            apply_positioning(hwnd, rect)
+            window.move((0, 0))
 
     displays = snap.get_current_snapshot().displays
     win32gui.EnumWindows(callback, None)
@@ -105,13 +105,12 @@ def on_window_spawn(windows: list[Window]):
                 current_rect = window.rect
                 tries = 0
                 while window.rect == current_rect and tries < 3:
-                    apply_positioning(window.id, last_instance.rect, last_instance.placement)
-                    # giving window same placement as lkp often puts it behind that window
-                    if last_instance.placement[1] != win32con.SW_SHOWMINIMIZED:
-                        # TODO: this isn't working sometimes. Struggle to replicate
-                        win32gui.BringWindowToTop(window.id)
+                    window.set_pos(last_instance.rect, last_instance.placement)
+                    # always focus newly spawned window
+                    window.focus()
                     tries += 1
                     time.sleep(0.1)
+                    current_rect = window.get_rect()
                 continue
         if do_rules:
             apply_rules(rules, window)
