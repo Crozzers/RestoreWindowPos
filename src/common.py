@@ -283,7 +283,7 @@ class Window(WindowType):
         adjust placement
         '''
         size = size_from_rect(win32gui.GetWindowRect(self.id))
-        win32gui.MoveWindow(self.id, *coords, *size)
+        win32gui.MoveWindow(self.id, *coords, *size, False)
 
     def set_pos(self, rect: Rect, placement: Placement):
         '''
