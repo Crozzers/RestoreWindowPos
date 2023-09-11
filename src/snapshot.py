@@ -94,6 +94,10 @@ class SnapshotFile(JSONFile):
                     restore_snapshot(history[-1].windows, rules)
 
     def capture(self):
+        '''
+        Captures the info for a snapshot but does not update the history.
+        Use `update` instead.
+        '''
         self._log.info('capture snapshot')
         return time.time(), enum_display_devices(), capture_snapshot()
 
@@ -232,6 +236,7 @@ class SnapshotFile(JSONFile):
                     snapshot.history = snapshot.history[-max_snapshots:]
 
     def update(self):
+        '''Captures a new snapshot, updates and prunes the history then saves to disk'''
         timestamp, displays, windows = self.capture()
 
         if not displays:
@@ -249,6 +254,8 @@ class SnapshotFile(JSONFile):
                 self.data.append(Snapshot(displays=displays, history=[wh]))
 
             self.prune_history()
+
+            self.save()
 
 
 class SnapshotService(Service):

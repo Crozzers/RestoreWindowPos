@@ -115,6 +115,9 @@ def on_window_spawn(windows: list[Window]):
         if do_rules:
             apply_rules(rules, window)
 
+    if on_spawn_settings.get('capture_snapshot', True):
+        snap.update()
+
 
 if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
