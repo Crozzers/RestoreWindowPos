@@ -1,3 +1,4 @@
+import pywintypes
 import ctypes
 import ctypes.wintypes
 import logging
@@ -87,7 +88,10 @@ def is_window_valid(hwnd: int) -> bool:
 def capture_snapshot() -> list[Window]:
     def callback(hwnd, *_):
         if is_window_valid(hwnd):
-            snapshot.append(Window.from_hwnd(hwnd))
+            try:
+                snapshot.append(Window.from_hwnd(hwnd))
+            except pywintypes.error:
+                log.error(f'could not load window info for hwnd: {hwnd}')
 
     snapshot = []
     win32gui.EnumWindows(callback, None)

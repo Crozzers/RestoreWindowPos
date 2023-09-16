@@ -93,6 +93,7 @@ def on_window_spawn(windows: list[Window]):
     time.sleep(0.05)
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
+    move_to_mouse = on_spawn_settings.get('move_to_mouse', True)
     do_lkp = on_spawn_settings.get('apply_lkp', True)
     do_rules = on_spawn_settings.get('apply_rules', True)
     ignore_children = on_spawn_settings.get('ignore_children', True)
@@ -100,20 +101,26 @@ def on_window_spawn(windows: list[Window]):
     for window in windows:
         if window.parent is not None and ignore_children:
             continue
+        # if action has not been taken, fall back to using rules
+        fallback = True
         if do_lkp:
             if (last_instance := current_snap.last_known_process_instance(window.executable)):
-                current_rect = window.rect
+                orig_rect = window.rect
                 tries = 0
-                while window.rect == current_rect and tries < 3:
+                while window.get_rect() == orig_rect and tries < 3:
                     window.set_pos(last_instance.rect, last_instance.placement)
-                    # always focus newly spawned window
-                    window.focus()
                     tries += 1
                     time.sleep(0.1)
-                    current_rect = window.get_rect()
-                continue
-        if do_rules:
+                fallback = False
+
+        if move_to_mouse:
+            window.center_on(win32gui.GetCursorPos())
+            fallback = False
+
+        if do_rules and fallback:
             apply_rules(rules, window)
+        # always focus newly spawned window
+        window.focus()
 
     if on_spawn_settings.get('capture_snapshot', True):
         snap.update()

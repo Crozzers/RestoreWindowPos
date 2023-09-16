@@ -13,6 +13,7 @@ from typing import Any, Callable, Literal, Optional, Union
 
 import pythoncom
 import pywintypes
+import win32api
 import win32con
 import win32gui
 import win32process
@@ -241,6 +242,24 @@ class Window(WindowType):
             return None
         return self.from_hwnd(p_id)
 
+    def center_on(self, coords: XandY):
+        '''
+        Centers the window around a point, making sure to keep it on screen
+        '''
+        # get basic centering coords
+        w, h = self.get_size()
+        x = coords[0] - (w // 2)
+        y = coords[1] - (h // 2)
+        display = win32api.MonitorFromPoint(coords, win32con.MONITOR_DEFAULTTONEAREST)
+        # use working area rather than total monitor area so we don't move window into the taskbar
+        display_rect = win32api.GetMonitorInfo(display)['Work']
+        dx, dy, drx, dry = display_rect
+        # make sure bottom right corner is on-screen
+        x, y = min(drx - w, x), min(dry - h, y)
+        # make sure x, y >= top left corner of display
+        x, y = max(dx, x), max(dy, y)
+        self.move((x, y))
+
     def focus(self):
         '''
         Raises a window and brings it to the top of the Z order.
@@ -269,10 +288,12 @@ class Window(WindowType):
                       )
 
     def get_placement(self) -> Placement:
-        return win32gui.GetWindowPlacement(self.id)
+        self.placement = win32gui.GetWindowPlacement(self.id)
+        return self.placement
 
     def get_rect(self) -> Rect:
-        return win32gui.GetWindowRect(self.id)
+        self.rect = win32gui.GetWindowRect(self.id)
+        return self.rect
 
     def get_size(self) -> XandY:
         return size_from_rect(self.get_rect())
@@ -290,7 +311,7 @@ class Window(WindowType):
 
     def set_pos(self, rect: Rect, placement: Placement):
         '''
-        Set the position and placement of the window
+        Set the position, size and placement of the window
         '''
         try:
             w_long = win32gui.GetWindowLong(self.id, win32con.GWL_STYLE)
