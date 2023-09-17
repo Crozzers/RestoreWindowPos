@@ -9,7 +9,7 @@ import time
 import typing
 from dataclasses import dataclass, field, is_dataclass
 from functools import lru_cache
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Iterable, Literal, Optional, Union
 
 import pythoncom
 import pywintypes
@@ -149,7 +149,7 @@ def load_json(file: Literal['settings',  'history']):
     return json_file
 
 
-def tuple_convert(item, to=tuple, from_: type = list):
+def tuple_convert(item: Iterable, to=tuple, from_: type = list):
     if isinstance(item, from_):
         item = to(tuple_convert(sub, to=to, from_=from_) for sub in item)
     return item
@@ -452,3 +452,4 @@ class Snapshot(JSONType):
             for window in reversed(history.windows):
                 if window.executable == process:
                     return window
+        return None

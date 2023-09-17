@@ -18,7 +18,7 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
     RADIO = wx.ITEM_RADIO
     NORMAL = wx.ITEM_NORMAL
 
-    def __init__(self, menu_options: MenuList, on_click: Callable = None, on_exit: Callable = None):
+    def __init__(self, menu_options: MenuList, on_click: Optional[Callable] = None, on_exit: Optional[Callable] = None):
         wx.adv.TaskBarIcon.__init__(self)
         self.SetIcon(
             wx.Icon(local_path('assets/icon32.ico', asset=True)), 'RestoreWindowPos')
@@ -64,7 +64,8 @@ def execute_menu_item(callback, *args):
         raise
 
 
-def menu_from_list(menu: wx.Menu, menu_items: MenuList) -> wx.Menu:
+def menu_from_list(menu: wx.Menu, menu_items: MenuList):
+    '''Modifies menu inplace'''
     item_kind = TaskbarIcon.NORMAL
 
     for index, item in enumerate(menu_items):

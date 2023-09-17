@@ -144,7 +144,7 @@ class SelectionWindow(Frame):
         parent,
         select_from: list,
         callback: Callable[[list[int], dict[str, bool]], None],
-        options: Optional[dict[str, str]] = None,
+        options: Optional[dict[str, bool]] = None,
         **kwargs,
     ):
         super().__init__(parent, **kwargs)
@@ -173,8 +173,8 @@ class SelectionWindow(Frame):
             self.options[key] = not self.options[key]
 
         option_panel = wx.Panel(self)
-        option_sizer = wx.GridSizer(cols=len(options), hgap=5, vgap=5)
-        for key, value in options.items():
+        option_sizer = wx.GridSizer(cols=len(self.options), hgap=5, vgap=5)
+        for key, value in self.options.items():
             check = wx.CheckBox(option_panel, label=key)
             if value:
                 check.SetValue(wx.CHK_CHECKED)

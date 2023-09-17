@@ -44,6 +44,8 @@ class RuleWindow(Frame):
         self.reset_btn.Bind(wx.EVT_BUTTON, self.set_pos)
         self.save_btn.Bind(wx.EVT_BUTTON, self.save)
 
+        pos = [-1, 1]
+
         # place everything
         def next_pos():
             nonlocal pos
@@ -53,7 +55,6 @@ class RuleWindow(Frame):
                 pos[1] += 1
             return tuple(pos)
 
-        pos = [-1, 1]
         self.sizer = wx.GridBagSizer(5, 5)
         self.sizer.Add(self.rule_name_label, pos=next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.rule_name, pos=next_pos(), flag=wx.EXPAND)
@@ -92,9 +93,9 @@ class RuleWindow(Frame):
         self.Update()
 
     def set_rect(self):
-        rect = self.rule.rect
-        w, h = size_from_rect(rect)
-        win32gui.MoveWindow(self.GetHandle(), *rect[:2], w, h, 0)
+        x, y = self.rule.rect[:2]
+        w, h = size_from_rect(self.rule.rect)
+        win32gui.MoveWindow(self.GetHandle(), x, y, w, h, False)
 
     def set_pos(self, *_):
         self.set_placement()

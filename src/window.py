@@ -3,7 +3,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import time
-from typing import Iterator
+from typing import Iterator, Optional
 
 import pyvda
 import win32con
@@ -43,7 +43,8 @@ class WindowSpawnService(Service):
                     windows = [Window.from_hwnd(h) for h in new if is_window_valid(h)]
                 except Exception:
                     self.log.info('failed to get list of newly spawned windows')
-                self._run_callback('default', windows)
+                else:
+                    self._run_callback('default', windows)
             old.update(new)
 
 
@@ -93,7 +94,7 @@ def capture_snapshot() -> list[Window]:
             except pywintypes.error:
                 log.error(f'could not load window info for hwnd: {hwnd}')
 
-    snapshot = []
+    snapshot: list[Window] = []
     win32gui.EnumWindows(callback, None)
     return snapshot
 
@@ -120,7 +121,7 @@ def apply_rules(rules: list[Rule], window: Window):
         window.set_pos(rule.rect, rule.placement)
 
 
-def restore_snapshot(snap: list[Window], rules: list[Rule] = None):
+def restore_snapshot(snap: list[Window], rules: Optional[list[Rule]] = None):
     def callback(hwnd, extra):
         if not is_window_valid(hwnd):
             return

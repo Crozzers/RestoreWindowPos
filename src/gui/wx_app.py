@@ -11,10 +11,10 @@ from snapshot import SnapshotFile
 
 
 class WxApp(wx.App):
-    __instance: 'WxApp' = None
+    __instance: 'WxApp'
 
     def __new__(cls, *args, **kwargs):
-        if not isinstance(cls.__instance, cls):
+        if not isinstance(getattr(cls, '__instance', None), cls):
             cls.__instance = wx.App.__new__(cls, *args, **kwargs)
         return cls.__instance
 

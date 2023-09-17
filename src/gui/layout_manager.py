@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Callable
+from typing import Callable, Optional
 
 import wx
 import wx.lib.scrolledpanel
@@ -83,7 +83,7 @@ class EditResolutionWindow(Frame):
 
 
 class DisplayManager(wx.StaticBox):
-    def __init__(self, parent: wx.Frame, layout: Snapshot, **kwargs):
+    def __init__(self, parent: wx.Frame | wx.Panel, layout: Snapshot, **kwargs):
         wx.StaticBox.__init__(self, parent, **kwargs)
         self.layout = layout
         self.displays = layout.displays
@@ -218,6 +218,7 @@ class DisplayManager(wx.StaticBox):
             if child.GetName() == w_name:
                 return child.Raise()
         EditResolutionWindow(self, display, callback=self.refresh_list, name=w_name).Show()
+        return False
 
     def refresh_list(self):
         self.list_control.DeleteAllItems()
@@ -431,8 +432,9 @@ class LayoutPage(wx.Panel):
         self.snapshot = snapshot_file
 
         self.layout_manager = LayoutManager(self, snapshot_file)
-        self.display_manager = None
-        self.rule_manager = None
+        # set in swap_layout
+        self.display_manager: DisplayManager
+        self.rule_manager: RuleSubsetManager
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.layout_manager, 0, wx.ALL | wx.EXPAND, 0)
@@ -440,12 +442,14 @@ class LayoutPage(wx.Panel):
 
         self.swap_layout()
 
-    def swap_layout(self, layout: Snapshot = None):
+    def swap_layout(self, layout: Optional[Snapshot] = None):
         if self.sizer.GetItemCount() > 1:
             self.sizer.Remove(2)
             self.sizer.Remove(1)
-            self.display_manager.Destroy()
-            self.rule_manager.Destroy()
+            if self.display_manager:
+                self.display_manager.Destroy()
+            if self.rule_manager:
+                self.rule_manager.Destroy()
 
         if layout is None:
             try:

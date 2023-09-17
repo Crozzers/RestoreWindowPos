@@ -2,7 +2,7 @@ import logging
 import re
 import time
 from dataclasses import asdict
-from typing import Iterator, Literal
+from typing import Iterator, Literal, Optional
 
 import pywintypes
 import win32api
@@ -20,7 +20,7 @@ def enum_display_devices() -> list[Display]:
     result = []
     for monitor in win32api.EnumDisplayMonitors():
         try:
-            info = win32api.GetMonitorInfo(monitor[0])
+            info = win32api.GetMonitorInfo(monitor[0])  # type: ignore
         except pywintypes.error:
             log.exception(f'GetMonitorInfo failed on handle {monitor[0]}')
             continue
@@ -67,7 +67,7 @@ class SnapshotFile(JSONFile):
         with self.lock:
             return super().save([asdict(i) for i in self.data])
 
-    def restore(self, timestamp: float = None):
+    def restore(self, timestamp: Optional[float] = None):
         with self.lock:
             snap = self.get_current_snapshot()
             if snap is None or not snap.history:
@@ -118,7 +118,7 @@ class SnapshotFile(JSONFile):
                 snap = find()
             return snap
 
-    def get_compatible_snapshots(self, compatible_with: Snapshot = None) -> Iterator[Snapshot]:
+    def get_compatible_snapshots(self, compatible_with: Optional[Snapshot] = None) -> Iterator[Snapshot]:
         with self.lock:
             if compatible_with is None:
                 compatible_with = self.get_current_snapshot()
@@ -135,7 +135,7 @@ class SnapshotFile(JSONFile):
             snap = self.get_current_snapshot()
             return snap.history
 
-    def get_rules(self, compatible_with: Snapshot | Literal[True] = None, exclusive=False):
+    def get_rules(self, compatible_with: Optional[Snapshot | Literal[True]] = None, exclusive=False):
         with self.lock:
             current = self.get_current_snapshot()
             if not compatible_with:
