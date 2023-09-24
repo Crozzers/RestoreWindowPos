@@ -12,7 +12,7 @@ class OnSpawnSettings(TypedDict):
     apply_lkp: bool
     apply_rules: bool
     ignore_children: bool
-    capture_snapshot: bool
+    capture_snapshot: bool | int  # 0/False: disable, 1/True: capture, 2: update
 
 
 class OnSpawnPage(wx.Panel):
@@ -21,7 +21,7 @@ class OnSpawnPage(wx.Panel):
         self.settings_file = load_json('settings')
         self.settings = OnSpawnSettings(
             enabled=False, move_to_mouse=False, apply_lkp=True, apply_rules=True,
-            ignore_children=True, capture_snapshot=True)
+            ignore_children=True, capture_snapshot=2)
         self.settings.update(self.settings_file.get(
             'on_window_spawn', default={}))
 
@@ -46,8 +46,12 @@ class OnSpawnPage(wx.Panel):
             'Child windows are typically small popup windows and spawn near where the cursor is.'
             '\nDisabling this means such windows will be moved to the top left corner of the parent window.'
         )
-        capture_snapshot_opt = wx.CheckBox(
-            self.panel, id=6, label='Capture a new snapshot')
+        update_snapshot_opt = wx.RadioButton(
+            self.panel, id=6, label='Update the current snapshot', style=wx.RB_GROUP)
+        capture_snapshot_opt = wx.RadioButton(
+            self.panel, id=7, label='Capture a new snapshot')
+        do_nothing_opt = wx.RadioButton(
+            self.panel, id=8, label='Do nothing')
 
         # set state
         enable_opt.SetValue(self.settings['enabled'])
@@ -55,24 +59,34 @@ class OnSpawnPage(wx.Panel):
             self.panel.Disable()
         move_to_mouse_opt.SetValue(self.settings['move_to_mouse'])
         if move_to_mouse_opt.GetValue():
-            apply_lkp_opt.SetLabelText(apply_lkp_opt.LabelText.removesuffix('and position'))
+            apply_lkp_opt.SetLabelText(
+                apply_lkp_opt.LabelText.removesuffix('and position'))
         apply_lkp_opt.SetValue(self.settings['apply_lkp'])
         apply_rules_opt.SetValue(self.settings['apply_rules'])
         ignore_children_opt.SetValue(self.settings['ignore_children'])
-        capture_snapshot_opt.SetValue(self.settings['capture_snapshot'])
+
+        update_snapshot_opt.SetValue(False)
+        capture_snapshot_opt.SetValue(False)
+        do_nothing_opt.SetValue(False)
+        # set the relevant radio button based on user settings
+        [do_nothing_opt, capture_snapshot_opt, update_snapshot_opt][int(
+            self.settings['capture_snapshot'])].SetValue(True)
 
         # bind events
         for widget in (
             enable_opt, move_to_mouse_opt, apply_lkp_opt, apply_rules_opt,
-            ignore_children_opt, capture_snapshot_opt
+            ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt
         ):
-            widget.Bind(wx.EVT_CHECKBOX, self.on_setting)
+            widget.Bind(
+                wx.EVT_CHECKBOX if isinstance(widget, wx.CheckBox) else wx.EVT_RADIOBUTTON,
+                self.on_setting
+            )
 
         # place
         simple_box_sizer(
             self.panel,
             (header1, move_to_mouse_opt, apply_lkp_opt, apply_rules_opt,
-             ignore_children_opt, capture_snapshot_opt),
+             ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt),
             group_mode=wx.HORIZONTAL
         )
 
@@ -86,12 +100,15 @@ class OnSpawnPage(wx.Panel):
         widget = event.GetEventObject()
         if isinstance(widget, wx.CheckBox):
             key = {1: 'enabled', 2: 'move_to_mouse', 3: 'apply_lkp', 4: 'apply_rules',
-                   5: 'ignore_children', 6: 'capture_snapshot'}[event.Id]
+                   5: 'ignore_children'}[event.Id]
             self.settings[key] = widget.GetValue()
             if event.Id == 1:  # enable/disable feature
                 if widget.GetValue():
                     self.panel.Enable()
                 else:
                     self.panel.Disable()
+        elif isinstance(widget, wx.RadioButton):
+            ids = [8, 7, 6]  # do nothing, capture, update
+            self.settings['capture_snapshot'] = ids.index(widget.Id)
 
         self.settings_file.set('on_window_spawn', self.settings)

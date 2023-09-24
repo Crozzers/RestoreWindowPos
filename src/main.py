@@ -122,7 +122,11 @@ def on_window_spawn(windows: list[Window]):
         # always focus newly spawned window
         window.focus()
 
-    if on_spawn_settings.get('capture_snapshot', True):
+    capture_snapshot = on_spawn_settings.get('capture_snapshot', 2)
+    if capture_snapshot == 2:
+        # these are all newly spawned windows so we don't have to worry about merging them into the history
+        current_snap.history[-1].windows.extend(windows)
+    elif capture_snapshot == 1:
         snap.update()
 
 
