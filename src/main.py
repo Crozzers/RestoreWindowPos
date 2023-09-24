@@ -24,7 +24,7 @@ def update_systray_options():
         menu_options[1][0] = 'Pause snapshots'
 
     history_menu = []
-    for config in snap.get_history():
+    for config in snap.get_current_snapshot().history:
         timestamp = config.time
         label = time.strftime('%b %d %H:%M:%S', time.localtime(timestamp))
         history_menu.append(
@@ -68,7 +68,7 @@ def clear_restore_options():
         win32con.MB_YESNO | win32con.MB_ICONWARNING
     )
     if result == win32con.IDYES:
-        snap.clear_history()
+        snap.get_current_snapshot().history.clear()
 
 
 def rescue_windows(snap: SnapshotFile):

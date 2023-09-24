@@ -66,8 +66,17 @@ def reverse_dict_lookup(d: dict, value):
     return list(d.keys())[list(d.values()).index(value)]
 
 
-def match(a: int | str, b: int | str) -> int:
-    '''`b` must be of the same type as `a`'''
+def match(a: Optional[int | str], b: Optional[int | str]) -> int:
+    '''
+    Check if `a` matches `b` as an integer or string.
+    Values are deemed to be "matching" if they are equal in some way, with more exact equalities
+    resulting in stronger matches. Integers are matched on absulute value. Strings are matched
+    against `a` as a regex.
+
+    Returns:
+        A score that indicates how well the two match. 0 means no match, 1 means
+        partial match and 2 means exact match.
+    '''
 
     if a is None or b is None:
         return 1
@@ -374,7 +383,7 @@ class Display(JSONType):
     def set_res(self, index, value):
         res = list(self.resolution)
         res[index] = value
-        self.resolution = tuple(res)
+        self.resolution = tuple(res) # type: ignore
 
 
 @dataclass(slots=True)
@@ -402,8 +411,28 @@ class Snapshot(JSONType):
     this class and members of another class
     '''
 
+    def cleanup(self, prune=True, ttl=0, maximum=10):
+        '''
+        Perform a variety of operations to clean up the window history
+
+        Args:
+            prune: remove windows that no longer exist
+            ttl: remove captures older than this. Set to 0 to ignore
+            maximum: max number of captures to keep
+        '''
+        self.squash_history(prune)
+        if ttl != 0:
+            current = time.time()
+            self.history = [i for i in self.history if current - i.time <= ttl]
+        if len(self.history) > maximum:
+            self.history = self.history[-maximum:]
+
     @classmethod
-    def from_json(cls, data: dict):
+    def from_json(cls, data: dict) -> Optional['Snapshot']:
+        '''
+        Returns:
+            A new snapshot, or None if `data` is falsey
+        '''
         if not data:
             return None
 
@@ -423,6 +452,13 @@ class Snapshot(JSONType):
                     data['phony'] = 'Unnamed Layout'
 
         return super(cls, cls).from_json(data)
+
+    def last_known_process_instance(self, process: str) -> Window | None:
+        for history in reversed(self.history):
+            for window in reversed(history.windows):
+                if window.executable == process:
+                    return window
+        return None
 
     # use union because `|` doesn't like string forward refs
     def matches_display_config(self, config: Union[list[Display], 'Snapshot']) -> bool:
@@ -447,9 +483,71 @@ class Snapshot(JSONType):
             return misses == 0
         return matches >= 1
 
-    def last_known_process_instance(self, process: str) -> Window | None:
-        for history in reversed(self.history):
-            for window in reversed(history.windows):
-                if window.executable == process:
-                    return window
-        return None
+    def squash_history(self, prune=True):
+        '''
+        Squashes the window history by merging overlapping captures and
+        removing duplicates.
+
+        Args:
+            prune: remove windows that no longer exist
+        '''
+        def should_keep(window: Window) -> bool:
+            try:
+                if prune:
+                    return (
+                        # window exists and hwnd still belongs to same process
+                        win32gui.IsWindow(window.id) == 1
+                        and window.id in exe_by_id
+                        and window.executable == exe_by_id[window.id]
+                    )
+                return (
+                    # hwnd is not in use by another window
+                    window.id not in exe_by_id
+                    or window.executable == exe_by_id[window.id]
+                )
+            except Exception:
+                return False
+
+        index = len(self.history) - 1
+        exe_by_id = {}
+        while index > 0:
+            for window in self.history[index].windows:
+                if window.id not in exe_by_id:
+                    try:
+                        exe_by_id[window.id] = window.executable
+                    except KeyError:
+                        pass
+
+            current = self.history[index].windows = list(
+                filter(should_keep, self.history[index].windows))
+            previous = self.history[index - 1].windows = list(
+                filter(should_keep, self.history[index - 1].windows))
+
+            if len(current) > len(previous):
+                # if current is greater but contains all the items of previous
+                smaller, greater = previous, current
+                to_pop = index - 1
+            else:
+                # if current is lesser but all items are already in previous
+                smaller, greater = current, previous
+                to_pop = index
+
+            for window_a in smaller:
+                if window_a in greater:
+                    continue
+
+                for window_b in greater:
+                    if (
+                        window_a.id == window_b.id
+                        and window_a.rect == window_b.rect
+                        and window_a.placement == window_b.placement
+                    ):
+                        break
+                else:
+                    break
+            else:
+                # successful loop, all items in smaller are already present in greater.
+                # remove smaller
+                self.history.pop(to_pop)
+
+            index -= 1

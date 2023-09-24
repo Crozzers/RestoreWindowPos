@@ -7,6 +7,9 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass, is_dataclass
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import win32gui
 from test.conftest import DISPLAYS1, DISPLAYS2, RULES1, RULES2, WINDOWS1, WINDOWS2
 
 import pytest
@@ -14,7 +17,7 @@ from pytest import MonkeyPatch
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 from src import common  # noqa:E402
-from src.common import Display, Rule, Snapshot, Window, WindowType  # noqa:E402
+from src.common import Display, Rect, Rule, Snapshot, Window, WindowType  # noqa:E402
 
 
 def test_local_path(monkeypatch: MonkeyPatch):
@@ -51,7 +54,7 @@ def test_single_call():
 
 
 @pytest.mark.parametrize('rect', ((0, 0, 1920, 1080), (-1920, 1080, 2160, 1440)))
-def test_size_from_rect(rect: tuple[int]):
+def test_size_from_rect(rect: Rect):
     size = common.size_from_rect(rect)
     assert isinstance(size, tuple)
     assert size[0] == rect[2] - rect[0]
@@ -108,7 +111,7 @@ class TestStrToOp:
 
     @pytest.mark.parametrize(
         'name',
-        (i for i in dir(operator) if i not in TestStrToOp.valid_ops),  # noqa: F821
+        (i for i in dir(operator) if i not in TestStrToOp.valid_ops),  # noqa: F821 # type: ignore
     )
     def test_invalid(self, name):
         with pytest.raises(ValueError):
@@ -278,6 +281,27 @@ class TestSnapshot(TestJSONType):
     def sample_cls(self, snapshot_cls):
         return snapshot_cls
 
+    class TestLastKnownProcessInstance:
+        def test_basic(self, snapshots: list[Snapshot]):
+            window = snapshots[0].history[-1].windows[0]
+            assert snapshots[0].last_known_process_instance(
+                window.executable) is window
+
+        def test_returns_most_recent_window(self, snapshots: list[Snapshot]):
+            snapshot = deepcopy(snapshots[0])
+            snapshot.history.append(deepcopy(snapshot.history[0]))
+
+            window = snapshot.history[-1].windows[0]
+            other_window = snapshot.history[0].windows[0]
+            lkp = snapshot.last_known_process_instance(window.executable)
+
+            assert lkp is window
+            assert lkp is not other_window
+
+        def test_returns_none_if_window_not_found(self, snapshots: list[Snapshot]):
+            assert snapshots[0].last_known_process_instance(
+                'does not exist') is None
+
     class TestMatchesDisplayConfig:
         def test_basic(self, snapshots: list[Snapshot]):
             assert snapshots[0].matches_display_config(snapshots[2]) is True
@@ -285,9 +309,55 @@ class TestSnapshot(TestJSONType):
 
         def test_config_param_types(self, snapshot_cls: Snapshot):
             assert snapshot_cls.matches_display_config(snapshot_cls) is True
-            assert snapshot_cls.matches_display_config(snapshot_cls.displays) is True
+            assert snapshot_cls.matches_display_config(
+                snapshot_cls.displays) is True
 
         @pytest.mark.parametrize('param,expected', (('any', True), ('all', False)))
         def test_comparison_params(self, snapshots: list[Snapshot], param, expected):
             snapshots[2].comparison_params['displays'] = param
-            assert snapshots[2].matches_display_config(snapshots[0]) is expected
+            assert snapshots[2].matches_display_config(
+                snapshots[0]) is expected
+
+    class TestSquashHistory:
+        @pytest.fixture
+        def squashable(self) -> Snapshot:
+            # create copy of WINDOWS2 but with different hwnds because history squash
+            # uses identical hwnds as factor in deciding which windows to squash
+            windows2 = []
+            for i, window in enumerate(deepcopy(WINDOWS2)):
+                window['id'] = i + len(WINDOWS1)
+                windows2.append(window)
+            snap = Snapshot.from_json({
+                'history': [{
+                    'time': 0,
+                    'windows': WINDOWS1[1: -1]
+                }, {
+                    'time': 0,
+                    'windows': WINDOWS1
+                }]
+            })
+            assert snap is not None
+            return snap
+
+        def test_previous_frames_that_overlap_are_removed(self, squashable: Snapshot):
+            lesser, greater = squashable.history
+            with patch.object(win32gui, 'IsWindow', Mock(return_value=1)):
+                squashable.squash_history()
+            assert greater in squashable.history
+            assert lesser not in squashable.history
+
+        def test_newer_frames_that_overlap_are_removed(self, squashable: Snapshot):
+            lesser, greater = squashable.history
+            squashable.history = list(reversed(squashable.history))
+            with patch.object(win32gui, 'IsWindow', Mock(return_value=1)):
+                squashable.squash_history(False)
+            assert greater in squashable.history
+            assert lesser not in squashable.history
+
+        def test_pruning(self, squashable: Snapshot):
+            lesser, greater = squashable.history
+            squashable.history = list(reversed(squashable.history))
+            with patch.object(win32gui, 'IsWindow', Mock(return_value=1)):
+                squashable.squash_history()
+            assert len(squashable.history) == 1
+            assert greater == lesser, 'greater should have had dead windows pruned'

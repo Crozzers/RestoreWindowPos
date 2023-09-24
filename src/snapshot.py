@@ -6,9 +6,8 @@ from typing import Iterator, Literal, Optional
 
 import pywintypes
 import win32api
-import win32gui
 
-from common import (Display, JSONFile, Snapshot, Window, WindowHistory, load_json,
+from common import (Display, JSONFile, Snapshot, WindowHistory, load_json,
                     local_path, size_from_rect)
 from services import Service
 from window import capture_snapshot, restore_snapshot
@@ -130,11 +129,6 @@ class SnapshotFile(JSONFile):
                     continue
                 yield snap
 
-    def get_history(self):
-        with self.lock:
-            snap = self.get_current_snapshot()
-            return snap.history
-
     def get_rules(self, compatible_with: Optional[Snapshot | Literal[True]] = None, exclusive=False):
         with self.lock:
             current = self.get_current_snapshot()
@@ -149,91 +143,17 @@ class SnapshotFile(JSONFile):
                 rules.extend(r for r in snap.rules if r.fits_display_config(compatible_with.displays))
             return rules
 
-    def clear_history(self):
-        with self.lock:
-            snap = self.get_current_snapshot()
-            snap.history = []
-
-    def squash(self, history: list[WindowHistory]):
-        def should_keep(window: Window) -> bool:
-            prune = settings.get('prune_history', True)
-            try:
-                if prune:
-                    return (
-                        # window exists and hwnd still belongs to same process
-                        win32gui.IsWindow(window.id)
-                        and window.id in exe_by_id
-                        and window.executable == exe_by_id[window.id]
-                    )
-                return (
-                    # hwnd is not in use by another window
-                    window.id not in exe_by_id
-                    or window.executable == exe_by_id[window.id]
-                )
-            except Exception:
-                return False
-
-        settings = load_json('settings')
-        index = len(history) - 1
-        exe_by_id = {}
-        while index > 0:
-            for window in history[index].windows:
-                if window.id not in exe_by_id:
-                    try:
-                        exe_by_id[window.id] = window.executable
-                    except KeyError:
-                        pass
-
-            current = history[index].windows = list(
-                filter(should_keep, history[index].windows))
-            previous = history[index - 1].windows = list(
-                filter(should_keep, history[index - 1].windows))
-
-            if len(current) > len(previous):
-                # if current is greater but contains all the items of previous
-                smaller, greater = previous, current
-                to_pop = index - 1
-            else:
-                # if current is lesser but all items are already in previous
-                smaller, greater = current, previous
-                to_pop = index
-
-            for window_a in smaller:
-                if window_a in greater:
-                    continue
-
-                for window_b in greater:
-                    if (
-                        window_a.id == window_b.id
-                        and window_a.rect == window_b.rect
-                        and window_a.placement == window_b.placement
-                    ):
-                        break
-                else:
-                    break
-            else:
-                # successful loop, all items in smaller are already present in greater.
-                # remove smaller
-                history.pop(to_pop)
-
-            index -= 1
-
     def prune_history(self):
         settings = load_json('settings')
         with self.lock:
             for snapshot in self.data:
                 if snapshot.phony:
                     continue
-                self.squash(snapshot.history)
-
-                ttl = settings.get('window_history_ttl', 0)
-                if ttl != 0:
-                    current = time.time()
-                    snapshot.history = [i for i in snapshot.history if current - i.time <= ttl]
-
-                max_snapshots = settings.get('max_snapshots', 10)
-                if len(snapshot.history) > max_snapshots:
-                    snapshot.history = snapshot.history[-max_snapshots:]
+                snapshot.cleanup(
+                    prune=settings.get('prune_history', True),
+                    ttl=settings.get('window_history_ttl', 0),
+                    maximum=settings.get('max_snapshots', 10)
+                )
 
     def update(self):
         '''Captures a new snapshot, updates and prunes the history then saves to disk'''
