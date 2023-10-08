@@ -60,7 +60,7 @@ def spawn_gui(
         on_spawn_panel = OnSpawnPage(nb)
         settings_panel = SettingsPanel(nb)
         nb.AddPage(layout_panel, 'Layouts and Rules')
-        nb.AddPage(on_spawn_panel, 'Window Spawn Behaviour (Beta)')
+        nb.AddPage(on_spawn_panel, 'Window Spawn Behaviour')
         nb.AddPage(settings_panel, 'Settings')
         nb.SetPadding(wx.Size(5, 2))
 
