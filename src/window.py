@@ -116,9 +116,15 @@ def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
     return (i[1] for i in sorted(matching, reverse=True, key=lambda m: m[0]))
 
 
-def apply_rules(rules: list[Rule], window: Window):
-    for rule in find_matching_rules(rules, window):
+def apply_rules(rules: list[Rule], window: Window) -> bool:
+    '''
+    Returns:
+        whether any rules were applied
+    '''
+    matching = list(find_matching_rules(rules, window))
+    for rule in matching:
         window.set_pos(rule.rect, rule.placement)
+    return len(matching) > 0
 
 
 def restore_snapshot(snap: list[Window], rules: Optional[list[Rule]] = None):

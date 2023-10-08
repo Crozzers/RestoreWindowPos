@@ -1,4 +1,5 @@
-from typing import Callable, Iterable, Optional
+from typing import Optional
+from collections.abc import Sequence, Iterable, Callable, Mapping
 
 import wx
 from wx.lib.mixins.listctrl import TextEditMixin
@@ -11,7 +12,8 @@ class Frame(wx.Frame):
     def __init__(self, parent=None, title=None, **kwargs):
         wx.Frame.__init__(self, parent=parent, id=wx.ID_ANY, **kwargs)
         self.SetTitle(title)
-        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+        self.SetBackgroundColour(
+            wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
         self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
 
     def GetIdealSize(self):
@@ -90,7 +92,8 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
 
     def _on_double_click(self, evt: wx.Event):
         handler: wx.EvtHandler = self.GetEventHandler()
-        handler.ProcessEvent(wx.PyCommandEvent(wx.EVT_LIST_ITEM_ACTIVATED.typeId, self.GetId()))
+        handler.ProcessEvent(wx.PyCommandEvent(
+            wx.EVT_LIST_ITEM_ACTIVATED.typeId, self.GetId()))
         evt.Skip()
 
     def CloseEditor(self, evt=None):
@@ -130,12 +133,73 @@ class EditableListCtrl(ListCtrl, TextEditMixin):
             y0 = self.GetItemRect(row)[1]
 
             scrolloffset = self.GetScrollPos(wx.HORIZONTAL)
-            self.editor.SetSize(x0 - scrolloffset, y0, x1, -1, wx.SIZE_USE_EXISTING)
+            self.editor.SetSize(x0 - scrolloffset, y0,
+                                x1, -1, wx.SIZE_USE_EXISTING)
             self.editor.SetValue(self.GetItem(row, col).GetText())
             self.editor.Show()
             self.editor.Raise()
             self.editor.SetSelection(-1, -1)
             self.editor.SetFocus()
+
+
+RearrangeListSelect, EVT_REARRANGE_LIST_SELECT = NewEvent()
+
+
+class RearrangeListCtrl(wx.Panel):
+    def __init__(self, parent, options: Mapping[str, bool], order: Sequence[str], label_mapping: Mapping[str, str]):
+        '''
+        Args:
+            parent: parent widget
+            options: mapping of programmatic name -> enabled/disabled
+            order: ordered list of the programmatic option names
+            label_mapping: mapping of friendly name -> programmatic name
+        '''
+        wx.Panel.__init__(self, parent)
+
+        self.__labels = label_mapping
+        self.rearrange_list = wx.RearrangeList(self, items=list(
+            label_mapping.keys()), order=[list(label_mapping.values()).index(i) for i in order])
+        self.up_btn = wx.Button(self, label='Up')
+        self.down_btn = wx.Button(self, label='Down')
+
+        # set state
+        self.rearrange_list.SetCheckedItems([order.index(opt) for opt, state in options.items() if state])
+
+        self.rearrange_list.Bind(
+            wx.EVT_CHECKLISTBOX, lambda *_: self.OnSelectionChange())
+        self.up_btn.Bind(wx.EVT_BUTTON, self.move_selection)
+        self.down_btn.Bind(wx.EVT_BUTTON, self.move_selection)
+
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.button_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.rearrange_list)
+        self.button_sizer.Add(self.up_btn)
+        self.button_sizer.Add(self.down_btn)
+        self.sizer.Add(self.button_sizer)
+        self.SetSizerAndFit(self.sizer)
+
+    def get_selection(self):
+        '''
+        Returns:
+            mapping of option -> checked status. Dict items are inserted in the correct order
+        '''
+        items_in_order = self.rearrange_list.GetItems()
+        checked = self.rearrange_list.GetCheckedStrings()
+        return {self.__labels[item]: item in checked for item in items_in_order}
+
+    def move_selection(self, evt: wx.Event):
+        if evt.Id == self.up_btn.Id:
+            self.rearrange_list.MoveCurrentUp()
+        elif evt.Id == self.down_btn.Id:
+            self.rearrange_list.MoveCurrentDown()
+        self.OnSelectionChange()
+
+    def OnSelectionChange(self):
+        '''Posts a `EVT_REARRANGE_LIST_SELECT` event'''
+        evt = RearrangeListSelect()
+        evt.SetEventObject(self)
+        evt.SetId(self.Id)
+        wx.PostEvent(self.GetEventHandler(), evt)
 
 
 class SelectionWindow(Frame):
@@ -182,7 +246,8 @@ class SelectionWindow(Frame):
             option_sizer.Add(check, 0, wx.ALIGN_CENTER)
         option_panel.SetSizer(option_sizer)
 
-        self.check_list = wx.CheckListBox(self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
+        self.check_list = wx.CheckListBox(
+            self, style=wx.LB_EXTENDED | wx.LB_NEEDED_SB)
         self.check_list.AppendItems(select_from)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -219,8 +284,10 @@ class TimeSpanSelector(wx.Panel):
 
         # create widgets
         self.spin_ctrl = wx.SpinCtrl(self, min=1)
-        self.choices = {'Forever': 0, 'Minutes': 60, 'Hours': 3600, 'Days': 86400, 'Months': 86400 * 30}
-        self.multiplier_selector = wx.Choice(self, choices=list(self.choices.keys()))
+        self.choices = {'Forever': 0, 'Minutes': 60,
+                        'Hours': 3600, 'Days': 86400, 'Months': 86400 * 30}
+        self.multiplier_selector = wx.Choice(
+            self, choices=list(self.choices.keys()))
 
         # bind events
         self.spin_ctrl.Bind(wx.EVT_SPINCTRL, self.OnSelection)
@@ -233,7 +300,8 @@ class TimeSpanSelector(wx.Panel):
         self.SetSizerAndFit(sizer)
 
     def GetTime(self) -> int:
-        multiplier = tuple(self.choices.values())[self.multiplier_selector.GetSelection()]
+        multiplier = tuple(self.choices.values())[
+            self.multiplier_selector.GetSelection()]
         return self.spin_ctrl.GetValue() * multiplier
 
     def OnSelection(self, _):
@@ -260,7 +328,8 @@ class TimeSpanSelector(wx.Panel):
         for name, multiplier in reversed(self.choices.items()):
             if (count := seconds // multiplier) >= 1:
                 self.spin_ctrl.SetValue(count)
-                self.multiplier_selector.SetSelection(tuple(self.choices).index(name))
+                self.multiplier_selector.SetSelection(
+                    tuple(self.choices).index(name))
                 return
 
 

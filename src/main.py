@@ -5,7 +5,7 @@ import time
 import win32con
 import win32gui
 
-from common import Window, load_json, local_path, single_call
+from common import Rule, Window, load_json, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
@@ -93,32 +93,46 @@ def on_window_spawn(windows: list[Window]):
     time.sleep(0.05)
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
-    move_to_mouse = on_spawn_settings.get('move_to_mouse', True)
-    do_lkp = on_spawn_settings.get('apply_lkp', True)
-    do_rules = on_spawn_settings.get('apply_rules', True)
     ignore_children = on_spawn_settings.get('ignore_children', True)
+
+    # get all the operations and the order we run them
+    operations = {
+        k: on_spawn_settings.get(k, True) for k in on_spawn_settings.get(
+            'operation_order', ['apply_lkp', 'apply_rules', 'move_to_mouse']
+        )
+    }
+
+    def lkp(window: Window) -> bool:
+        last_instance = current_snap.last_known_process_instance(window.executable)
+        if not last_instance:
+            return False
+        orig_rect = window.rect
+        tries = 0
+        while window.get_rect() == orig_rect and tries < 3:
+            window.set_pos(last_instance.rect, last_instance.placement)
+            tries += 1
+            time.sleep(0.1)
+        return True
+
+    def mtm(window: Window) -> bool:
+        window.center_on(win32gui.GetCursorPos())
+        return True
+
+    def rls(rules: list[Rule], window: Window) -> bool:
+        return apply_rules(rules, window)
 
     for window in windows:
         if window.parent is not None and ignore_children:
             continue
-        # if action has not been taken, fall back to using rules
-        fallback = True
-        if do_lkp:
-            if (last_instance := current_snap.last_known_process_instance(window.executable)):
-                orig_rect = window.rect
-                tries = 0
-                while window.get_rect() == orig_rect and tries < 3:
-                    window.set_pos(last_instance.rect, last_instance.placement)
-                    tries += 1
-                    time.sleep(0.1)
-                fallback = False
-
-        if move_to_mouse:
-            window.center_on(win32gui.GetCursorPos())
-            fallback = False
-
-        if do_rules and fallback:
-            apply_rules(rules, window)
+        for op_name, state in operations.items():
+            if not state:
+                continue
+            if op_name == 'apply_lkp' and lkp(window):
+                break
+            elif op_name == 'move_to_mouse' and mtm(window):
+                break
+            elif op_name == 'apply_rules' and apply_rules(rules, window):
+                break
         # always focus newly spawned window
         window.focus()
 

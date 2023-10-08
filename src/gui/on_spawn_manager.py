@@ -1,9 +1,11 @@
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import wx
 
 from common import load_json
-from gui.widgets import simple_box_sizer
+from gui.widgets import EVT_REARRANGE_LIST_SELECT, RearrangeListCtrl, simple_box_sizer
+
+OnSpawnOperations = Literal['apply_lkp', 'apply_rules', 'move_to_mouse']
 
 
 class OnSpawnSettings(TypedDict):
@@ -11,6 +13,7 @@ class OnSpawnSettings(TypedDict):
     move_to_mouse: bool
     apply_lkp: bool
     apply_rules: bool
+    operation_order: list[OnSpawnOperations]
     ignore_children: bool
     capture_snapshot: bool | int  # 0/False: disable, 1/True: capture, 2: update
 
@@ -21,6 +24,7 @@ class OnSpawnPage(wx.Panel):
         self.settings_file = load_json('settings')
         self.settings = OnSpawnSettings(
             enabled=False, move_to_mouse=False, apply_lkp=True, apply_rules=True,
+            operation_order=['apply_lkp', 'apply_rules', 'move_to_mouse'],
             ignore_children=True, capture_snapshot=2)
         self.settings.update(self.settings_file.get(
             'on_window_spawn', default={}))
@@ -33,13 +37,19 @@ class OnSpawnPage(wx.Panel):
         self.panel = wx.Panel(self)
         header1 = wx.StaticText(
             self.panel, label='When a new window is created:')
-        move_to_mouse_opt = wx.CheckBox(
-            self.panel, id=2, label='Center on current mouse position')
-        # store as instance attr to modify text later
-        apply_lkp_opt = wx.CheckBox(
-            self.panel, id=3, label='Apply last known size and/or position')
-        apply_rules_opt = wx.CheckBox(
-            self.panel, id=4, label='Apply compatible rules')
+
+        option_mapping: dict[str, OnSpawnOperations] = {
+            'Apply last known size and/or position': 'apply_lkp',
+            'Apply compatible rules': 'apply_rules',
+            'Center on current mouse position': 'move_to_mouse'
+        }
+        self.rc_opt = RearrangeListCtrl(
+            self.panel,
+            options={k: self.settings[k] for k in ('apply_lkp', 'apply_rules', 'move_to_mouse')},
+            order=self.settings['operation_order'],
+            label_mapping=option_mapping
+        )
+
         ignore_children_opt = wx.CheckBox(
             self.panel, id=5, label='Ignore child windows')
         ignore_children_opt.SetToolTip(
@@ -57,12 +67,6 @@ class OnSpawnPage(wx.Panel):
         enable_opt.SetValue(self.settings['enabled'])
         if not self.settings['enabled']:
             self.panel.Disable()
-        move_to_mouse_opt.SetValue(self.settings['move_to_mouse'])
-        if move_to_mouse_opt.GetValue():
-            apply_lkp_opt.SetLabelText(
-                apply_lkp_opt.LabelText.removesuffix('and position'))
-        apply_lkp_opt.SetValue(self.settings['apply_lkp'])
-        apply_rules_opt.SetValue(self.settings['apply_rules'])
         ignore_children_opt.SetValue(self.settings['ignore_children'])
 
         update_snapshot_opt.SetValue(False)
@@ -74,18 +78,18 @@ class OnSpawnPage(wx.Panel):
 
         # bind events
         for widget in (
-            enable_opt, move_to_mouse_opt, apply_lkp_opt, apply_rules_opt,
-            ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt
+            enable_opt, ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt
         ):
             widget.Bind(
                 wx.EVT_CHECKBOX if isinstance(widget, wx.CheckBox) else wx.EVT_RADIOBUTTON,
                 self.on_setting
             )
+        self.rc_opt.Bind(EVT_REARRANGE_LIST_SELECT, self.on_setting)
 
         # place
         simple_box_sizer(
             self.panel,
-            (header1, move_to_mouse_opt, apply_lkp_opt, apply_rules_opt,
+            (header1, self.rc_opt,
              ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt),
             group_mode=wx.HORIZONTAL
         )
@@ -110,5 +114,9 @@ class OnSpawnPage(wx.Panel):
         elif isinstance(widget, wx.RadioButton):
             ids = [8, 7, 6]  # do nothing, capture, update
             self.settings['capture_snapshot'] = ids.index(widget.Id)
+        elif isinstance(widget, RearrangeListCtrl):
+            operations = self.rc_opt.get_selection()
+            self.settings['operation_order'] = list(operations.keys())  # type: ignore
+            self.settings.update(operations)  # type: ignore
 
         self.settings_file.set('on_window_spawn', self.settings)

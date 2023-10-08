@@ -383,7 +383,7 @@ class Display(JSONType):
     def set_res(self, index, value):
         res = list(self.resolution)
         res[index] = value
-        self.resolution = tuple(res) # type: ignore
+        self.resolution = tuple(res)  # type: ignore
 
 
 @dataclass(slots=True)
