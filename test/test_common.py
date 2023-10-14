@@ -302,6 +302,38 @@ class TestSnapshot(TestJSONType):
             assert snapshots[0].last_known_process_instance(
                 'does not exist') is None
 
+        class TestTitleKwarg:
+            @pytest.fixture
+            def sample(self) -> Snapshot:
+                snap = Snapshot.from_json({'history': [{'time': 0, 'windows': [
+                    {**WINDOWS1[0], 'name': 'Some Other Website - Web Browser',
+                        'executable': 'browser.exe'},
+                    {**WINDOWS1[1],
+                        'name': '12 Reminder(s)', 'executable': 'email.exe'},
+                ]},
+                    {'time': 1, 'windows': [
+                        {**WINDOWS1[0], 'name': 'Some Other Website - Web Browser',
+                         'executable': 'browser.exe'},
+                        {**WINDOWS1[2], 'name': 'My Website - Web Browser',
+                         'executable': 'browser.exe'},
+                        {**WINDOWS1[3], 'name': 'Appointment - Email Client',
+                         'executable': 'email.exe'},
+                        {**WINDOWS1[4], 'name': 'Inbox - Email Client',
+                         'executable': 'email.exe'},
+                    ]}]})
+                assert snap is not None
+                return snap
+
+            @pytest.mark.parametrize('title', ['12 Reminder(s)', '1 Reminder(s)', 'Email Reminder(s)'])
+            def test_returns_high_overlap_title_matches(self, sample: Snapshot, title: str):
+                lkp = sample.last_known_process_instance('email.exe', title)
+                assert lkp is not None
+                assert lkp.id == WINDOWS1[1]['id']
+
+            def test_still_filters_by_process(self, sample: Snapshot):
+                lkp = sample.last_known_process_instance('doodad.exe', '12 Reminder(s)')
+                assert lkp is None
+
     class TestMatchesDisplayConfig:
         def test_basic(self, snapshots: list[Snapshot]):
             assert snapshots[0].matches_display_config(snapshots[2]) is True

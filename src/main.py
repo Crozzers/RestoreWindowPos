@@ -103,7 +103,7 @@ def on_window_spawn(windows: list[Window]):
     }
 
     def lkp(window: Window) -> bool:
-        last_instance = current_snap.last_known_process_instance(window.executable)
+        last_instance = current_snap.last_known_process_instance(window.executable, window.name)
         if not last_instance:
             return False
         orig_rect = window.rect

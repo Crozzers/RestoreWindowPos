@@ -453,12 +453,33 @@ class Snapshot(JSONType):
 
         return super(cls, cls).from_json(data)
 
-    def last_known_process_instance(self, process: str) -> Window | None:
+    def last_known_process_instance(self, process: str, title: Optional[str] = None) -> Window | None:
+        def compare_titles(base: str, other: str):
+            base_chunks = base.split()
+            if base == other:
+                # shortcut
+                return len(base_chunks)
+            score = 0
+            for a, b in zip(reversed(base_chunks), reversed(other.split())):
+                if a != b:
+                    return score
+                score += 1
+            return score
+
+        contenders = []
         for history in reversed(self.history):
             for window in reversed(history.windows):
                 if window.executable == process:
-                    return window
-        return None
+                    if not title:
+                        return window
+                    contenders.append(window)
+
+        if not title:
+            return None
+
+        contenders.sort(key=lambda x: compare_titles(title, x.name), reverse=True)
+        if contenders:
+            return contenders[0]
 
     # use union because `|` doesn't like string forward refs
     def matches_display_config(self, config: Union[list[Display], 'Snapshot']) -> bool:
