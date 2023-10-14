@@ -118,9 +118,6 @@ def on_window_spawn(windows: list[Window]):
         window.center_on(win32gui.GetCursorPos())
         return True
 
-    def rls(rules: list[Rule], window: Window) -> bool:
-        return apply_rules(rules, window)
-
     for window in windows:
         if window.parent is not None and ignore_children:
             continue

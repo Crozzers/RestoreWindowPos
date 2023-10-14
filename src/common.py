@@ -331,7 +331,7 @@ class Window(WindowType):
                 # if the window is not resizeable, make sure we don't resize it.
                 # includes 95 era system dialogs and the Outlook reminder window
                 w, h = self.get_size()
-                placement = (*placement[:-1], (*rect[:2], rect[2] + w, rect[3] + h))
+                placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
 
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)

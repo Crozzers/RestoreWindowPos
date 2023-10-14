@@ -44,8 +44,13 @@ class WindowSpawnService(Service):
                 except Exception:
                     self.log.info('failed to get list of newly spawned windows')
                 else:
-                    self._run_callback('default', windows)
+                    if windows:
+                        try:
+                            self._run_callback('default', windows)
+                        except Exception:
+                            self.log.exception('failed to run callback on new window spawn')
             old.update(new)
+            old = set(i for i in old if is_window_valid(i))
 
 
 def is_window_cloaked(hwnd) -> bool:
