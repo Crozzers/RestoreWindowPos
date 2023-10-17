@@ -5,7 +5,7 @@ import time
 import win32con
 import win32gui
 
-from common import Rule, Window, load_json, local_path, single_call
+from common import Window, load_json, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
@@ -13,6 +13,11 @@ from services import ServiceCallback
 from snapshot import SnapshotFile, SnapshotService
 from window import (WindowSpawnService, apply_rules,
                     is_window_valid, restore_snapshot)
+
+
+class LoggingFilter(logging.Filter):
+    def filter(self, record):
+        return 'Release <POINTER(IApplicationView)' not in record.message
 
 
 def update_systray_options():
@@ -145,6 +150,8 @@ if __name__ == '__main__':
     logging.basicConfig(filename=local_path('log.txt'),
                         filemode='w',
                         format='%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+    # filter the excessive comtypes logs
+    logging.getLogger('comtypes').addFilter(LoggingFilter())
     log = logging.getLogger(__name__)
     log.info('start')
 
