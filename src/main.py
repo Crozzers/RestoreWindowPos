@@ -111,10 +111,22 @@ def on_window_spawn(windows: list[Window]):
         last_instance = current_snap.last_known_process_instance(window.executable, window.name)
         if not last_instance:
             return False
+        log.info(f'apply LKP: {window} -> {last_instance}')
         orig_rect = window.rect
         tries = 0
+
+        # if the last known process instance was minimised then we need to override the placement here
+        rect = last_instance.rect
+        placement = last_instance.placement
+        if placement[1] == win32con.SW_SHOWMINIMIZED:
+            show_cmd = win32con.SW_SHOWNORMAL
+            if placement[0] == win32con.WPF_RESTORETOMAXIMIZED:
+                show_cmd = win32con.SW_SHOWMAXIMIZED
+            rect = placement[4]
+            placement = (placement[0], show_cmd, (-1, -1), (-1, -1), placement[4])
+
         while window.get_rect() == orig_rect and tries < 3:
-            window.set_pos(last_instance.rect, last_instance.placement)
+            window.set_pos(rect, placement)
             tries += 1
             time.sleep(0.1)
         return True
@@ -135,8 +147,6 @@ def on_window_spawn(windows: list[Window]):
                 break
             elif op_name == 'apply_rules' and apply_rules(rules, window):
                 break
-        # always focus newly spawned window
-        window.focus()
 
     capture_snapshot = on_spawn_settings.get('capture_snapshot', 2)
     if capture_snapshot == 2:

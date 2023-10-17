@@ -318,7 +318,7 @@ class Window(WindowType):
         size = size_from_rect(win32gui.GetWindowRect(self.id))
         win32gui.MoveWindow(self.id, *coords, *size, False)
 
-    def set_pos(self, rect: Rect, placement: Placement):
+    def set_pos(self, rect: Rect, placement: Optional[Placement] = None):
         '''
         Set the position, size and placement of the window
         '''
@@ -331,12 +331,14 @@ class Window(WindowType):
                 # if the window is not resizeable, make sure we don't resize it.
                 # includes 95 era system dialogs and the Outlook reminder window
                 w, h = self.get_size()
-                placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
+                if placement:
+                    placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
 
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)
 
-            win32gui.MoveWindow(self.id, *rect[:2], w, h, False)
+            win32gui.MoveWindow(self.id, *rect[:2], w, h, True)
+            log.debug(f'move window {self.id}, X,Y:{rect[:2]!r}, W:{w}, H:{h}')
         except pywintypes.error as e:
             log.error('err moving window %s : %s' %
                       (win32gui.GetWindowText(self.id), e))
@@ -466,7 +468,7 @@ class Snapshot(JSONType):
                 score += 1
             return score
 
-        contenders = []
+        contenders: list = []
         for history in reversed(self.history):
             for window in reversed(history.windows):
                 if window.executable == process:
