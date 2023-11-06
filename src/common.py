@@ -317,6 +317,14 @@ class Window(WindowType):
         '''
         size = size_from_rect(win32gui.GetWindowRect(self.id))
         win32gui.MoveWindow(self.id, *coords, *size, False)
+        self.refresh()
+
+    def refresh(self):
+        '''Re-fetch stale window information'''
+        self.rect = self.get_rect()
+        self.placement = self.get_placement()
+        self.size = size_from_rect(self.rect)
+        self.name = win32gui.GetWindowText(self.id)
 
     def set_pos(self, rect: Rect, placement: Optional[Placement] = None):
         '''
@@ -339,6 +347,7 @@ class Window(WindowType):
 
             win32gui.MoveWindow(self.id, *rect[:2], w, h, True)
             log.debug(f'move window {self.id}, X,Y:{rect[:2]!r}, W:{w}, H:{h}')
+            self.refresh()
         except pywintypes.error as e:
             log.error('err moving window %s : %s' %
                       (win32gui.GetWindowText(self.id), e))
