@@ -470,7 +470,7 @@ class Snapshot(JSONType):
 
         return super(cls, cls).from_json(data)
 
-    def last_known_process_instance(self, process: str, title: Optional[str] = None) -> Window | None:
+    def last_known_process_instance(self, window: Window, match_title=False, match_resizability=True) -> Window | None:
         def compare_titles(base: str, other: str):
             base_chunks = base.split()
             if base == other:
@@ -483,18 +483,18 @@ class Snapshot(JSONType):
                 score += 1
             return score
 
-        contenders: list = []
+        contenders: list[Window] = []
         for history in reversed(self.history):
-            for window in reversed(history.windows):
-                if window.executable == process:
-                    if not title:
-                        return window
-                    contenders.append(window)
+            for archived in reversed(history.windows):
+                if archived.executable == window.executable:
+                    contenders.append(archived)
 
-        if not title:
-            return None
+        if match_resizability:
+            contenders = [c for c in contenders if c.resizable == window.resizable]
 
-        contenders.sort(key=lambda x: compare_titles(title, x.name), reverse=True)
+        if match_title:
+            contenders.sort(key=lambda x: compare_titles(window.name, x.name), reverse=True)
+
         if contenders:
             return contenders[0]
 

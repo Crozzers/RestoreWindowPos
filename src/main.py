@@ -99,6 +99,7 @@ def on_window_spawn(windows: list[Window]):
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
     ignore_children = on_spawn_settings.get('ignore_children', True)
+    match_resizability = on_spawn_settings.get('match_resizability', True)
 
     # get all the operations and the order we run them
     operations = {
@@ -108,7 +109,11 @@ def on_window_spawn(windows: list[Window]):
     }
 
     def lkp(window: Window) -> bool:
-        last_instance = current_snap.last_known_process_instance(window.executable, window.name)
+        last_instance = current_snap.last_known_process_instance(
+            window,
+            match_title=True,
+            match_resizability=match_resizability
+        )
         if not last_instance:
             return False
         log.info(f'apply LKP: {window} -> {last_instance}')

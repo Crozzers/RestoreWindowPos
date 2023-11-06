@@ -43,7 +43,7 @@ class WindowSpawnService(Service):
             )
 
         settings = load_json('settings')
-        # quickly set `old` before calling `get_windows` because it relys on `old` being defined
+        # quickly set `old` before calling `get_windows` because it relies on `old` being defined
         old = {}
         old.update(get_windows())
         while not self._kill_signal.wait(timeout=0.1):

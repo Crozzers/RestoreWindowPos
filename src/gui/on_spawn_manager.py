@@ -17,6 +17,7 @@ class OnSpawnSettings(TypedDict):
     ignore_children: bool
     capture_snapshot: bool | int  # 0/False: disable, 1/True: capture, 2: update
     skip_non_resizable: bool
+    match_resizability: bool
 
 
 class OnSpawnPage(wx.Panel):
@@ -26,7 +27,8 @@ class OnSpawnPage(wx.Panel):
         self.settings = OnSpawnSettings(
             enabled=False, move_to_mouse=False, apply_lkp=True, apply_rules=True,
             operation_order=['apply_lkp', 'apply_rules', 'move_to_mouse'],
-            ignore_children=True, capture_snapshot=2, skip_non_resizable=False)
+            ignore_children=True, capture_snapshot=2, skip_non_resizable=False,
+            match_resizability=True)
         self.settings.update(OnSpawnSettings(**self.settings_file.get('on_window_spawn', default={})))
 
         # create widgets
@@ -70,6 +72,15 @@ class OnSpawnPage(wx.Panel):
             ' prevent those windows from being moved, resized or added to the snapshot when they spawn.'
         )
 
+        match_resizability_opt = wx.CheckBox(
+            self.panel, id=10, label='Filter last known window instances by resizability'
+        )
+        match_resizability_opt.SetToolTip(
+            'When looking for the last known size/position of a window, filter out instances where'
+            ' the current window is resizable but the last known instance was not, or vice versa.'
+            '\nThis prevents splash screens from dictating the final window size.'
+        )
+
         # set state
         enable_opt.SetValue(self.settings['enabled'])
         if not self.settings['enabled']:
@@ -82,12 +93,14 @@ class OnSpawnPage(wx.Panel):
         # set the relevant radio button based on user settings
         [do_nothing_opt, capture_snapshot_opt, update_snapshot_opt][int(
             self.settings['capture_snapshot'])].SetValue(True)
+
         skip_non_resizable_opt.SetValue(self.settings['skip_non_resizable'])
+        match_resizability_opt.SetValue(self.settings['match_resizability'])
 
         # bind events
         for widget in (
             enable_opt, ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt,
-            skip_non_resizable_opt
+            skip_non_resizable_opt, match_resizability_opt
         ):
             widget.Bind(
                 wx.EVT_CHECKBOX if isinstance(widget, wx.CheckBox) else wx.EVT_RADIOBUTTON,
@@ -99,7 +112,8 @@ class OnSpawnPage(wx.Panel):
         simple_box_sizer(
             self.panel,
             (header1, self.rc_opt,
-             ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt, skip_non_resizable_opt),
+             ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt, skip_non_resizable_opt,
+             match_resizability_opt),
             group_mode=wx.HORIZONTAL
         )
 
@@ -113,7 +127,7 @@ class OnSpawnPage(wx.Panel):
         widget = event.GetEventObject()
         if isinstance(widget, wx.CheckBox):
             key = {1: 'enabled', 2: 'move_to_mouse', 3: 'apply_lkp', 4: 'apply_rules',
-                   5: 'ignore_children', 9: 'skip_non_resizable'}[event.Id]
+                   5: 'ignore_children', 9: 'skip_non_resizable', 10: 'match_resizability'}[event.Id]
             self.settings[key] = widget.GetValue()
             if event.Id == 1:  # enable/disable feature
                 if widget.GetValue():
