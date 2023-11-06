@@ -17,7 +17,11 @@ from window import (WindowSpawnService, apply_rules,
 
 class LoggingFilter(logging.Filter):
     def filter(self, record):
-        return 'Release <POINTER(IApplicationView)' not in record.message
+        try:
+            return 'Release <POINTER(IApplicationView)' not in record.message
+        except Exception:
+            # sometimes (rarely) record doesn't have a `message` attr
+            return True
 
 
 def update_systray_options():
