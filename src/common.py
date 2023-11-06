@@ -246,7 +246,8 @@ class Window(WindowType):
     resizable: bool = True
 
     def __post_init__(self):
-        self.resizable = self.is_resizable()
+        if win32gui.IsWindow(self.id):
+            self.resizable = self.is_resizable()
 
     @property
     def parent(self) -> Optional['Window']:
