@@ -474,8 +474,8 @@ class Snapshot(JSONType):
         def compare_titles(base: str, other: str):
             base_chunks = base.split()
             if base == other:
-                # shortcut
-                return len(base_chunks)
+                # return number of chunks plus one to ensure exact matches get highest score
+                return len(base_chunks) + 1
             score = 0
             for a, b in zip(reversed(base_chunks), reversed(other.split())):
                 if a != b:
