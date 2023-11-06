@@ -24,23 +24,38 @@ class TitleBarInfo(ctypes.Structure):
 
 class WindowSpawnService(Service):
     def _runner(self):
-        def get_windows() -> set[int]:
-            hwnds = set()
-            win32gui.EnumWindows(lambda h, *_: hwnds.add(h), None)
+        def get_windows() -> dict[int, bool]:
+            def fill(h, *_):
+                resizable = win32gui.GetWindowLong(h, win32con.GWL_STYLE) & win32con.WS_THICKFRAME
+                # if we've already seen this window and it hasn't changed its resizability status
+                if h in old and old[h] == resizable:
+                    return
+                hwnds[h] = resizable
+
+            hwnds = {}
+            win32gui.EnumWindows(fill, None)
             return hwnds
 
+        def window_valid(hwnd):
+            return is_window_valid(hwnd) and (
+                not settings.get('on_window_spawn', {}).get('skip_non_resizable', False)
+                or win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE) & win32con.WS_THICKFRAME
+            )
+
         settings = load_json('settings')
-        old = get_windows()
+        # quickly set `old` before calling `get_windows` because it relys on `old` being defined
+        old = {}
+        old.update(get_windows())
         while not self._kill_signal.wait(timeout=0.1):
             if not settings.get('on_window_spawn', {}).get('enabled', False):
                 time.sleep(1)
                 continue
-            new = get_windows() - old
+            new = get_windows()
             if new:
                 # wait for window to load in before checking validity
                 time.sleep(0.1)
                 try:
-                    windows = [Window.from_hwnd(h) for h in new if is_window_valid(h)]
+                    windows = [Window.from_hwnd(h) for h in new if window_valid(h)]
                 except Exception:
                     self.log.info('failed to get list of newly spawned windows')
                 else:
@@ -50,7 +65,7 @@ class WindowSpawnService(Service):
                         except Exception:
                             self.log.exception('failed to run callback on new window spawn')
             old.update(new)
-            old = set(i for i in old if is_window_valid(i))
+            old = {h: r for h, r in old.items() if is_window_valid(h)}
 
 
 def is_window_cloaked(hwnd) -> bool:

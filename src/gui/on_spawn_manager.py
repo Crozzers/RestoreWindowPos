@@ -16,6 +16,7 @@ class OnSpawnSettings(TypedDict):
     operation_order: list[OnSpawnOperations]
     ignore_children: bool
     capture_snapshot: bool | int  # 0/False: disable, 1/True: capture, 2: update
+    skip_non_resizable: bool
 
 
 class OnSpawnPage(wx.Panel):
@@ -25,9 +26,8 @@ class OnSpawnPage(wx.Panel):
         self.settings = OnSpawnSettings(
             enabled=False, move_to_mouse=False, apply_lkp=True, apply_rules=True,
             operation_order=['apply_lkp', 'apply_rules', 'move_to_mouse'],
-            ignore_children=True, capture_snapshot=2)
-        self.settings.update(self.settings_file.get(
-            'on_window_spawn', default={}))
+            ignore_children=True, capture_snapshot=2, skip_non_resizable=False)
+        self.settings.update(OnSpawnSettings(**self.settings_file.get('on_window_spawn', default={})))
 
         # create widgets
         enable_opt = wx.CheckBox(
@@ -55,6 +55,7 @@ class OnSpawnPage(wx.Panel):
         ignore_children_opt.SetToolTip(
             'Child windows are typically small popup windows and spawn near where the cursor is.'
             '\nDisabling this means such windows will be moved to the top left corner of the parent window.'
+            # ^ this may not be accurate. TODO: remove or implement this
         )
         update_snapshot_opt = wx.RadioButton(
             self.panel, id=6, label='Update the current snapshot', style=wx.RB_GROUP)
@@ -62,6 +63,12 @@ class OnSpawnPage(wx.Panel):
             self.panel, id=7, label='Capture a new snapshot')
         do_nothing_opt = wx.RadioButton(
             self.panel, id=8, label='Do nothing')
+
+        skip_non_resizable_opt = wx.CheckBox(self.panel, id=9, label='Ignore non-resizable windows')
+        skip_non_resizable_opt.SetToolTip(
+            'Non resizable windows often include splash screens, alerts and notifications. Enable this to'
+            ' prevent those windows from being moved, resized or added to the snapshot when they spawn.'
+        )
 
         # set state
         enable_opt.SetValue(self.settings['enabled'])
@@ -75,10 +82,12 @@ class OnSpawnPage(wx.Panel):
         # set the relevant radio button based on user settings
         [do_nothing_opt, capture_snapshot_opt, update_snapshot_opt][int(
             self.settings['capture_snapshot'])].SetValue(True)
+        skip_non_resizable_opt.SetValue(self.settings['skip_non_resizable'])
 
         # bind events
         for widget in (
-            enable_opt, ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt
+            enable_opt, ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt,
+            skip_non_resizable_opt
         ):
             widget.Bind(
                 wx.EVT_CHECKBOX if isinstance(widget, wx.CheckBox) else wx.EVT_RADIOBUTTON,
@@ -90,7 +99,7 @@ class OnSpawnPage(wx.Panel):
         simple_box_sizer(
             self.panel,
             (header1, self.rc_opt,
-             ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt),
+             ignore_children_opt, update_snapshot_opt, capture_snapshot_opt, do_nothing_opt, skip_non_resizable_opt),
             group_mode=wx.HORIZONTAL
         )
 
@@ -104,7 +113,7 @@ class OnSpawnPage(wx.Panel):
         widget = event.GetEventObject()
         if isinstance(widget, wx.CheckBox):
             key = {1: 'enabled', 2: 'move_to_mouse', 3: 'apply_lkp', 4: 'apply_rules',
-                   5: 'ignore_children'}[event.Id]
+                   5: 'ignore_children', 9: 'skip_non_resizable'}[event.Id]
             self.settings[key] = widget.GetValue()
             if event.Id == 1:  # enable/disable feature
                 if widget.GetValue():

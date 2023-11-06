@@ -243,6 +243,10 @@ class Window(WindowType):
     id: int
     name: str
     executable: str
+    resizable: bool = True
+
+    def __post_init__(self):
+        self.resizable = self.is_resizable()
 
     @property
     def parent(self) -> Optional['Window']:
@@ -310,6 +314,9 @@ class Window(WindowType):
     def is_minimised(self) -> bool:
         return self.get_placement()[1] == win32con.SW_SHOWMINIMIZED
 
+    def is_resizable(self) -> bool:
+        return win32gui.GetWindowLong(self.id, win32con.GWL_STYLE) & win32con.WS_THICKFRAME
+
     def move(self, coords: XandY):
         '''
         Move the window to a new position. This does not resize the window or
@@ -325,15 +332,14 @@ class Window(WindowType):
         self.placement = self.get_placement()
         self.size = size_from_rect(self.rect)
         self.name = win32gui.GetWindowText(self.id)
+        self.resizable = self.is_resizable()
 
     def set_pos(self, rect: Rect, placement: Optional[Placement] = None):
         '''
         Set the position, size and placement of the window
         '''
         try:
-            w_long = win32gui.GetWindowLong(self.id, win32con.GWL_STYLE)
-            resizeable = w_long & win32con.WS_THICKFRAME
-            if resizeable:
+            if self.is_resizable():
                 w, h = size_from_rect(rect)
             else:
                 # if the window is not resizeable, make sure we don't resize it.
