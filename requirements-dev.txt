@@ -1,6 +1,10 @@
 -r requirements.txt
+# packaging
 pyinstaller
 pyinstaller-versionfile
 packaging
+# testing
 pytest
 pytest-mock
+# lint/formatting
+ruff

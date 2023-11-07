@@ -17,9 +17,11 @@ log = logging.getLogger(__name__)
 
 
 class TitleBarInfo(ctypes.Structure):
-    _fields_ = [('cbSize', ctypes.wintypes.DWORD),
-                ('rcTitleBar', ctypes.wintypes.RECT),
-                ('rgState', ctypes.wintypes.DWORD * 6)]
+    _fields_ = [
+        ('cbSize', ctypes.wintypes.DWORD),
+        ('rcTitleBar', ctypes.wintypes.RECT),
+        ('rgState', ctypes.wintypes.DWORD * 6),
+    ]
 
 
 class WindowSpawnService(Service):
@@ -73,8 +75,7 @@ def is_window_cloaked(hwnd) -> bool:
     # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmgetwindowattribute
     # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
     cloaked = ctypes.c_int(0)
-    ctypes.windll.dwmapi.DwmGetWindowAttribute(
-        hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
+    ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
     if cloaked.value != 0:
         try:
             # this seems to do a pretty decent job catching all cloaked windows
@@ -137,10 +138,10 @@ def find_matching_rules(rules: list[Rule], window: Window) -> Iterator[Rule]:
 
 
 def apply_rules(rules: list[Rule], window: Window) -> bool:
-    '''
+    """
     Returns:
         whether any rules were applied
-    '''
+    """
     matching = list(find_matching_rules(rules, window))
     for rule in matching:
         window.set_pos(rule.rect, rule.placement)
@@ -168,8 +169,7 @@ def restore_snapshot(snap: list[Window], rules: Optional[list[Rule]] = None):
             except KeyError:
                 placement = None
 
-            log.info(
-                f'restore window "{window.name}" {window.rect} -> {item.rect}')
+            log.info(f'restore window "{window.name}" {window.rect} -> {item.rect}')
             window.set_pos(item.rect, placement)
             return
         else:

@@ -26,19 +26,20 @@ class RuleWindow(Frame):
         self.panel = wx.lib.scrolledpanel.ScrolledPanel(self)
         self.rule_name_label = wx.StaticText(self.panel, label='Rule name')
         self.rule_name = wx.TextCtrl(self.panel)
-        self.window_name_label = wx.StaticText(
-            self.panel, label='Window name (regex) (leave empty to ignore)')
+        self.window_name_label = wx.StaticText(self.panel, label='Window name (regex) (leave empty to ignore)')
         self.window_name = wx.TextCtrl(self.panel)
-        self.window_exe_label = wx.StaticText(
-            self.panel, label='Executable path (regex) (leave empty to ignore)')
+        self.window_exe_label = wx.StaticText(self.panel, label='Executable path (regex) (leave empty to ignore)')
         self.window_exe = wx.TextCtrl(self.panel)
         self.reset_btn = wx.Button(self.panel, label='Reset rule')
         self.save_btn = wx.Button(self.panel, label='Save')
-        self.explanation_box = wx.StaticText(self.panel, label=(
-            'Resize and reposition this window and then click save.'
-            ' Any window that is not currently part of a snapshot will be moved'
-            ' to the same size and position as this window'
-        ))
+        self.explanation_box = wx.StaticText(
+            self.panel,
+            label=(
+                'Resize and reposition this window and then click save.'
+                ' Any window that is not currently part of a snapshot will be moved'
+                ' to the same size and position as this window'
+            ),
+        )
 
         # bind events
         self.reset_btn.Bind(wx.EVT_BUTTON, self.set_pos)
@@ -64,8 +65,7 @@ class RuleWindow(Frame):
         self.sizer.Add(self.window_exe, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.reset_btn, next_pos(), flag=wx.EXPAND)
         self.sizer.Add(self.save_btn, next_pos(), flag=wx.EXPAND)
-        self.sizer.Add(self.explanation_box, next_pos(),
-                       span=(1, 2), flag=wx.EXPAND)
+        self.sizer.Add(self.explanation_box, next_pos(), span=(1, 2), flag=wx.EXPAND)
         self.panel.SetSizerAndFit(self.sizer)
         self.sizer.Fit(self.panel)
 
@@ -143,8 +143,15 @@ class RuleSubsetManager(wx.StaticBox):
         # position buttons
         action_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for btn in (
-            apply_btn, add_rule_btn, clone_window_btn, edit_rule_btn, dup_rule_btn,
-            del_rule_btn, mov_up_rule_btn, mov_dn_rule_btn, move_to_btn
+            apply_btn,
+            add_rule_btn,
+            clone_window_btn,
+            edit_rule_btn,
+            dup_rule_btn,
+            del_rule_btn,
+            mov_up_rule_btn,
+            mov_dn_rule_btn,
+            move_to_btn,
         ):
             action_sizer.Add(btn, 0, wx.ALL, 5)
         action_panel.SetSizer(action_sizer)
@@ -182,8 +189,8 @@ class RuleSubsetManager(wx.StaticBox):
 
     def append_rule(self, rule: Rule):
         self.list_control.Append(
-            (rule.rule_name or 'Unnamed rule', rule.name or '',
-             rule.executable or '', str(rule.rect), str(rule.size)))
+            (rule.rule_name or 'Unnamed rule', rule.name or '', rule.executable or '', str(rule.rect), str(rule.size))
+        )
 
     def clone_windows(self, *_):
         def on_clone(indexes: list[int], options: dict[str, bool]):
@@ -200,20 +207,15 @@ class RuleSubsetManager(wx.StaticBox):
                     placement=window.placement,
                     name=window.name if options['Clone window names'] else '',
                     executable=window.executable if options['Clone window executable paths'] else '',
-                    rule_name=rule_name
+                    rule_name=rule_name,
                 )
                 self.rules.append(rule)
                 self.append_rule(rule)
             self.snapshot.save()
 
-        windows: list[Window] = sorted(
-            capture_snapshot(), key=lambda w: w.name)
-        options = {
-            'Clone window names': True,
-            'Clone window executable paths': True
-        }
-        SelectionWindow(self, [i.name for i in windows],
-                        on_clone, options, title='Clone Windows').Show()
+        windows: list[Window] = sorted(capture_snapshot(), key=lambda w: w.name)
+        options = {'Clone window names': True, 'Clone window executable paths': True}
+        SelectionWindow(self, [i.name for i in windows], on_clone, options, title='Clone Windows').Show()
 
     def delete_rule(self, *_):
         while (item := self.list_control.GetFirstSelected()) != -1:
@@ -228,22 +230,20 @@ class RuleSubsetManager(wx.StaticBox):
         self.snapshot.save()
 
     def edit_rule(self, *_):
-        alive_windows = {i.GetName(): i for i in self.GetChildren()
-                         if isinstance(i, Frame)}
+        alive_windows = {i.GetName(): i for i in self.GetChildren() if isinstance(i, Frame)}
         for item in self.list_control.GetAllSelected():
             rule = self.rules[item]
             r_name = f'editrule-{id(rule)}'
             if r_name in alive_windows:
                 alive_windows[r_name].Raise()
             else:
-                RuleWindow(self, rule,
-                           on_save=self.refresh_list, name=r_name).Show()
+                RuleWindow(self, rule, on_save=self.refresh_list, name=r_name).Show()
 
     def insert_rule(self, index: int, rule: Rule):
         self.list_control.Insert(
             index,
-            (rule.rule_name or 'Unnamed rule', rule.name or '',
-             rule.executable or '', str(rule.rect), str(rule.size)))
+            (rule.rule_name or 'Unnamed rule', rule.name or '', rule.executable or '', str(rule.rect), str(rule.size)),
+        )
 
     def move_rule(self, btn_event: wx.Event):
         direction = -1 if btn_event.Id == 1 else 1
@@ -289,8 +289,7 @@ class RuleSubsetManager(wx.StaticBox):
             # refresh
             self.refresh_list()
 
-        SelectionWindow(self, l_names, on_select, options,
-                        title='Move Rules Between Layouts').Show()
+        SelectionWindow(self, l_names, on_select, options, title='Move Rules Between Layouts').Show()
 
     def post_edit(self, col, row):
         rule: Rule = self.rules[row]
@@ -320,8 +319,4 @@ class RuleSubsetManager(wx.StaticBox):
 
 def _new_rule():
     rect = (0, 0, 1000, 500)
-    return Rule(
-        size=size_from_rect(rect),
-        rect=rect,
-        placement=(0, 1, (-1, -1), (-1, -1), rect)
-    )
+    return Rule(size=size_from_rect(rect), rect=rect, placement=(0, 1, (-1, -1), (-1, -1), rect))

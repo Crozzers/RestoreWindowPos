@@ -18,10 +18,11 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
     RADIO = wx.ITEM_RADIO
     NORMAL = wx.ITEM_NORMAL
 
-    def __init__(self, menu_options: MenuList, on_click: Optional[Callable] = None, on_exit: Optional[Callable] = None):
+    def __init__(
+        self, menu_options: MenuList, on_click: Optional[Callable] = None, on_exit: Optional[Callable] = None
+    ):
         wx.adv.TaskBarIcon.__init__(self)
-        self.SetIcon(
-            wx.Icon(local_path('assets/icon32.ico', asset=True)), 'RestoreWindowPos')
+        self.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)), 'RestoreWindowPos')
         self.menu_options = menu_options
         self._on_click = on_click
         self._on_exit = on_exit
@@ -35,8 +36,7 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         if self.menu_options is None:
             return False
         menu = wx.Menu()
-        menu_from_list(menu, self.menu_options +
-                       [self.SEPARATOR, ['Quit', lambda *_: self.exit()]])
+        menu_from_list(menu, self.menu_options + [self.SEPARATOR, ['Quit', lambda *_: self.exit()]])
         return menu
 
     def exit(self):
@@ -58,14 +58,15 @@ def execute_menu_item(callback, *args):
     except Exception as e:
         log.exception(f'failed to execute menu item {callback}, args: {args}')
         wx.MessageBox(
-            f'Failed to execute system tray menu command\n{type(e).__name__}: {e}', 'RestoreWindowPos',
-            wx.OK | wx.ICON_ERROR
+            f'Failed to execute system tray menu command\n{type(e).__name__}: {e}',
+            'RestoreWindowPos',
+            wx.OK | wx.ICON_ERROR,
         )
         raise
 
 
 def menu_from_list(menu: wx.Menu, menu_items: MenuList):
-    '''Modifies menu inplace'''
+    """Modifies menu inplace"""
     item_kind = TaskbarIcon.NORMAL
 
     for index, item in enumerate(menu_items):
@@ -80,8 +81,7 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList):
             if index > 0 and menu_items[index - 1] != TaskbarIcon.SEPARATOR:
                 menu.AppendSeparator()
         elif len(item) == 1:
-            item = wx.MenuItem(menu, id=wx.ID_ANY,
-                               text=item[0], kind=TaskbarIcon.NORMAL)
+            item = wx.MenuItem(menu, id=wx.ID_ANY, text=item[0], kind=TaskbarIcon.NORMAL)
             item.Enable(False)
             menu.Append(item)
         elif not callable(item[1]):
@@ -89,10 +89,8 @@ def menu_from_list(menu: wx.Menu, menu_items: MenuList):
             menu_from_list(sub_menu, item[1])
             menu.Append(wx.ID_ANY, item[0], sub_menu)
         else:
-            menu_item = wx.MenuItem(
-                menu, id=wx.ID_ANY, text=item[0], kind=item_kind)
-            menu.Bind(
-                wx.EVT_MENU, lambda *_, cb=item[1]: execute_menu_item(cb, *_), id=menu_item.GetId())
+            menu_item = wx.MenuItem(menu, id=wx.ID_ANY, text=item[0], kind=item_kind)
+            menu.Bind(wx.EVT_MENU, lambda *_, cb=item[1]: execute_menu_item(cb, *_), id=menu_item.GetId())
             menu.Append(menu_item)
 
             if item_kind == TaskbarIcon.RADIO:

@@ -1,0 +1,7 @@
+line-length = 119
+target-version = "py311"
+
+[format]
+quote-style = "single"
+skip-magic-trailing-comma = true
+line-ending = "lf"

@@ -40,10 +40,7 @@ class WxApp(wx.App):
         wx.CallAfter(self.Destroy)
 
 
-def spawn_gui(
-    snapshot: SnapshotFile,
-    start_page: Literal['rules', 'settings'] = 'rules'
-):
+def spawn_gui(snapshot: SnapshotFile, start_page: Literal['rules', 'settings'] = 'rules'):
     top = WxApp()._top_frame
 
     for child in top.GetChildren():

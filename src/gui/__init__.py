@@ -12,13 +12,9 @@ def about_dialog():
     about.SetIcon(wx.Icon(local_path('assets/icon32.ico', asset=True)))
     about.SetName('RestoreWindowPos')
     about.SetVersion(f'v{__version__}')
-    about.SetDescription('\n'.join((
-        f'Build: {__build__}',
-        'Install Dir: %s' % local_path('.')
-    )))
+    about.SetDescription('\n'.join((f'Build: {__build__}', 'Install Dir: %s' % local_path('.'))))
     with open(local_path('./LICENSE', asset=True), encoding='utf8') as f:
         about.SetLicence(f.read())
     about.SetCopyright('© 2023')
-    about.SetWebSite(
-        'https://github.com/Crozzers/RestoreWindowPos', 'Open GitHub Page')
+    about.SetWebSite('https://github.com/Crozzers/RestoreWindowPos', 'Open GitHub Page')
     wx.adv.AboutBox(about)

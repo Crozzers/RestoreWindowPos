@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 # some basic types
 XandY = tuple[int, int]
 Rect = tuple[int, int, int, int]
-'''X, W, Y, H'''
+"""X, W, Y, H"""
 Placement = tuple[int, int, XandY, XandY, Rect]
-'''Flags, showCmd, min pos, max pos, normal pos'''
+"""Flags, showCmd, min pos, max pos, normal pos"""
 
 
 def local_path(path, asset=False):
@@ -36,8 +36,7 @@ def local_path(path, asset=False):
         else:
             base = os.path.dirname(sys.executable)
     else:
-        base = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), os.pardir))
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
     return os.path.abspath(os.path.join(base, path))
 
@@ -56,10 +55,7 @@ def single_call(func):
 
 
 def size_from_rect(rect: Rect) -> XandY:
-    return (
-        rect[2] - rect[0],
-        rect[3] - rect[1]
-    )
+    return (rect[2] - rect[0], rect[3] - rect[1])
 
 
 def reverse_dict_lookup(d: dict, value):
@@ -67,7 +63,7 @@ def reverse_dict_lookup(d: dict, value):
 
 
 def match(a: Optional[int | str], b: Optional[int | str]) -> int:
-    '''
+    """
     Check if `a` matches `b` as an integer or string.
     Values are deemed to be "matching" if they are equal in some way, with more exact equalities
     resulting in stronger matches. Integers are matched on absulute value. Strings are matched
@@ -76,7 +72,7 @@ def match(a: Optional[int | str], b: Optional[int | str]) -> int:
     Returns:
         A score that indicates how well the two match. 0 means no match, 1 means
         partial match and 2 means exact match.
-    '''
+    """
 
     if a is None or b is None:
         return 1
@@ -103,12 +99,9 @@ def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
     raise ValueError(f'invalid operation {op_name!r}')
 
 
-class JSONFile():
+class JSONFile:
     def __init__(self, file: str, *a, **kw):
-        self._log = logging.getLogger(__name__).getChild(
-            self.__class__.__name__
-            + '.' + str(id(self))
-        )
+        self._log = logging.getLogger(__name__).getChild(self.__class__.__name__ + '.' + str(id(self)))
         self.file = file
         self.lock = threading.RLock()
 
@@ -148,11 +141,11 @@ class JSONFile():
 
 
 @lru_cache
-def load_json(file: Literal['settings',  'history']):
-    '''
+def load_json(file: Literal['settings', 'history']):
+    """
     Load a JSON file and cache the instance. Useful for creating global instances for settings files.
     The `.json` suffix is automatically added if missing.
-    '''
+    """
     json_file = JSONFile(file + '.json')
     json_file.load()
     return json_file
@@ -177,17 +170,14 @@ class JSONType:
                 continue
             sub_types = typing.get_args(field_type)
             if sub_types and issubclass(sub_types[0], JSONType):
-                value = field_type(
-                    filter(None, (sub_types[0].from_json(i) for i in data[field_name])))
+                value = field_type(filter(None, (sub_types[0].from_json(i) for i in data[field_name])))
             elif sub_types:
-                value = tuple_convert(
-                    data[field_name], to=field_type, from_=tuple | list)
+                value = tuple_convert(data[field_name], to=field_type, from_=tuple | list)
                 if isinstance(value, tuple):
                     # only convert sub items in tuple because tuple
                     # types are positional
                     try:
-                        value = field_type(sub_types[i](
-                            value[i]) for i in range(len(value)))
+                        value = field_type(sub_types[i](value[i]) for i in range(len(value)))
                     except ValueError:
                         pass
             else:
@@ -257,9 +247,9 @@ class Window(WindowType):
         return self.from_hwnd(p_id)
 
     def center_on(self, coords: XandY):
-        '''
+        """
         Centers the window around a point, making sure to keep it on screen
-        '''
+        """
         # get basic centering coords
         w, h = self.get_size()
         x = coords[0] - (w // 2)
@@ -275,11 +265,11 @@ class Window(WindowType):
         self.move((x, y))
 
     def focus(self):
-        '''
+        """
         Raises a window and brings it to the top of the Z order.
 
         Called 'focus' rather than 'raise' because the latter is a keyword
-        '''
+        """
         win32gui.BringWindowToTop(self.id)
         win32gui.ShowWindow(self.id, win32con.SW_SHOWNORMAL)
 
@@ -290,16 +280,17 @@ class Window(WindowType):
         w = wmi.WMI()
         # https://stackoverflow.com/a/14973422
         _, pid = win32process.GetWindowThreadProcessId(hwnd)
-        exe = w.query(
-            f'SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}')[0]
+        exe = w.query(f'SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}')[0]
         rect = win32gui.GetWindowRect(hwnd)
 
-        return Window(id=hwnd, name=win32gui.GetWindowText(hwnd),
-                      executable=exe.ExecutablePath,
-                      size=size_from_rect(rect),
-                      rect=rect,
-                      placement=win32gui.GetWindowPlacement(hwnd)
-                      )
+        return Window(
+            id=hwnd,
+            name=win32gui.GetWindowText(hwnd),
+            executable=exe.ExecutablePath,
+            size=size_from_rect(rect),
+            rect=rect,
+            placement=win32gui.GetWindowPlacement(hwnd),
+        )
 
     def get_placement(self) -> Placement:
         self.placement = win32gui.GetWindowPlacement(self.id)
@@ -319,16 +310,16 @@ class Window(WindowType):
         return win32gui.GetWindowLong(self.id, win32con.GWL_STYLE) & win32con.WS_THICKFRAME
 
     def move(self, coords: XandY):
-        '''
+        """
         Move the window to a new position. This does not resize the window or
         adjust placement
-        '''
+        """
         size = size_from_rect(win32gui.GetWindowRect(self.id))
         win32gui.MoveWindow(self.id, *coords, *size, False)
         self.refresh()
 
     def refresh(self):
-        '''Re-fetch stale window information'''
+        """Re-fetch stale window information"""
         self.rect = self.get_rect()
         self.placement = self.get_placement()
         self.size = size_from_rect(self.rect)
@@ -336,9 +327,9 @@ class Window(WindowType):
         self.resizable = self.is_resizable()
 
     def set_pos(self, rect: Rect, placement: Optional[Placement] = None):
-        '''
+        """
         Set the position, size and placement of the window
-        '''
+        """
         try:
             if self.is_resizable():
                 w, h = size_from_rect(rect)
@@ -356,8 +347,7 @@ class Window(WindowType):
             log.debug(f'move window {self.id}, X,Y:{rect[:2]!r}, W:{w}, H:{h}')
             self.refresh()
         except pywintypes.error as e:
-            log.error('err moving window %s : %s' %
-                      (win32gui.GetWindowText(self.id), e))
+            log.error('err moving window %s : %s' % (win32gui.GetWindowText(self.id), e))
 
 
 @dataclass(slots=True)
@@ -373,10 +363,10 @@ class Display(JSONType):
     resolution: XandY
     rect: Rect
     comparison_params: dict[str, str | list[str]] = field(default_factory=dict)
-    '''
+    """
     Optional member detailing how comparisons should be made between members of
     this class and members of another class
-    '''
+    """
 
     def matches(self, display: 'Display'):
         # check UIDs
@@ -424,20 +414,20 @@ class Snapshot(JSONType):
     rules: list[Rule] = field(default_factory=list)
     phony: str = ''
     comparison_params: dict[str, str | list[str]] = field(default_factory=dict)
-    '''
+    """
     Optional member detailing how comparisons should be made between members of
     this class and members of another class
-    '''
+    """
 
     def cleanup(self, prune=True, ttl=0, maximum=10):
-        '''
+        """
         Perform a variety of operations to clean up the window history
 
         Args:
             prune: remove windows that no longer exist
             ttl: remove captures older than this. Set to 0 to ignore
             maximum: max number of captures to keep
-        '''
+        """
         self.squash_history(prune)
         if ttl != 0:
             current = time.time()
@@ -447,19 +437,16 @@ class Snapshot(JSONType):
 
     @classmethod
     def from_json(cls, data: dict) -> Optional['Snapshot']:
-        '''
+        """
         Returns:
             A new snapshot, or None if `data` is falsey
-        '''
+        """
         if not data:
             return None
 
         if 'history' not in data:
             if 'windows' in data:
-                data['history'] = [{
-                    'time': time.time(),
-                    'windows': data.pop('windows')
-                }]
+                data['history'] = [{'time': time.time(), 'windows': data.pop('windows')}]
         if 'phony' in data:
             if data['phony'] is False:
                 data['phony'] = ''
@@ -501,13 +488,13 @@ class Snapshot(JSONType):
 
     # use union because `|` doesn't like string forward refs
     def matches_display_config(self, config: Union[list[Display], 'Snapshot']) -> bool:
-        '''
+        """
         Whether this snapshot is deemed compatible with a another snapshot/list
         of displays.
         Can operate in 2 modes depending on how `self.comparison_params` are set.
         If set to 'all' mode every display in this snapshot must find a match
         within `config`. Otherwise, only one match needs to be found.
-        '''
+        """
         if isinstance(config, Snapshot):
             config = config.displays
         matches, misses = 0, 0
@@ -523,13 +510,14 @@ class Snapshot(JSONType):
         return matches >= 1
 
     def squash_history(self, prune=True):
-        '''
+        """
         Squashes the window history by merging overlapping captures and
         removing duplicates.
 
         Args:
             prune: remove windows that no longer exist
-        '''
+        """
+
         def should_keep(window: Window) -> bool:
             try:
                 if prune:
@@ -541,8 +529,7 @@ class Snapshot(JSONType):
                     )
                 return (
                     # hwnd is not in use by another window
-                    window.id not in exe_by_id
-                    or window.executable == exe_by_id[window.id]
+                    window.id not in exe_by_id or window.executable == exe_by_id[window.id]
                 )
             except Exception:
                 return False
@@ -557,10 +544,8 @@ class Snapshot(JSONType):
                     except KeyError:
                         pass
 
-            current = self.history[index].windows = list(
-                filter(should_keep, self.history[index].windows))
-            previous = self.history[index - 1].windows = list(
-                filter(should_keep, self.history[index - 1].windows))
+            current = self.history[index].windows = list(filter(should_keep, self.history[index].windows))
+            previous = self.history[index - 1].windows = list(filter(should_keep, self.history[index - 1].windows))
 
             if len(current) > len(previous):
                 # if current is greater but contains all the items of previous

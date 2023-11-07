@@ -7,15 +7,14 @@ from typing import Callable, Optional
 
 
 @dataclass(slots=True)
-class ServiceCallback():
+class ServiceCallback:
     default: Callable
     shutdown: Optional[Callable] = None
 
 
 class Service(ABC):
     def __init__(self, callback: ServiceCallback | None, lock=None):
-        self.log = logging.getLogger(__name__).getChild(
-            self.__class__.__name__).getChild(str(id(self)))
+        self.log = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
         self._callback = callback
         self._lock = lock or threading.RLock()
         self._kill_signal = threading.Event()
@@ -24,17 +23,16 @@ class Service(ABC):
     def start(self, args=None):
         args = args or ()
         if self._thread is None:
-            self._thread = threading.Thread(
-                target=self._runner, args=args, daemon=True)
+            self._thread = threading.Thread(target=self._runner, args=args, daemon=True)
 
         self._thread.start()
         self.log.info('started thread')
 
     def stop(self, timeout=10) -> bool:
-        '''
+        """
         Returns:
             Whether stopping the thread was successful
-        '''
+        """
         self.log.info('send kill signal')
         self._kill_signal.set()
 
@@ -95,7 +93,6 @@ class Service(ABC):
             return
 
         if threaded:
-            threading.Thread(target=func, args=args,
-                             kwargs=kwargs, daemon=True).start()
+            threading.Thread(target=func, args=args, kwargs=kwargs, daemon=True).start()
         else:
             func(*args, **kwargs)

@@ -7,8 +7,7 @@ from typing import Iterator, Literal, Optional
 import pywintypes
 import win32api
 
-from common import (Display, JSONFile, Snapshot, WindowHistory, load_json,
-                    local_path, size_from_rect)
+from common import Display, JSONFile, Snapshot, WindowHistory, load_json, local_path, size_from_rect
 from services import Service
 from window import capture_snapshot, restore_snapshot
 
@@ -26,15 +25,13 @@ def enum_display_devices() -> list[Display]:
         dev_rect = info['Monitor']
         for adaptor_index in range(5):
             try:
-                device = win32api.EnumDisplayDevices(
-                    info['Device'], adaptor_index, 1)
+                device = win32api.EnumDisplayDevices(info['Device'], adaptor_index, 1)
                 dev_uid = re.findall(r'UID[0-9]+', device.DeviceID)[0]
                 dev_name = device.DeviceID.split('#')[1]
             except Exception:
                 pass
             else:
-                result.append(Display(uid=dev_uid, name=dev_name,
-                              resolution=size_from_rect(dev_rect), rect=dev_rect))
+                result.append(Display(uid=dev_uid, name=dev_name, resolution=size_from_rect(dev_rect), rect=dev_rect))
     return result
 
 
@@ -49,8 +46,7 @@ class SnapshotFile(JSONFile):
         super().load(default=[])
         g_phony_found = False
         for index in range(len(self.data)):
-            snapshot: Snapshot = Snapshot.from_json(
-                self.data[index]) or Snapshot()
+            snapshot: Snapshot = Snapshot.from_json(self.data[index]) or Snapshot()
             self.data[index] = snapshot
             snapshot.history.sort(key=lambda a: a.time)
 
@@ -84,8 +80,7 @@ class SnapshotFile(JSONFile):
 
             self._log.info(f'restore snapshot, timestamp={timestamp}')
             if timestamp == -1:
-                restore_snapshot(
-                    history[-1].windows, rules)
+                restore_snapshot(history[-1].windows, rules)
             elif timestamp:
                 restore_ts(timestamp)
             else:
@@ -93,10 +88,10 @@ class SnapshotFile(JSONFile):
                     restore_snapshot(history[-1].windows, rules)
 
     def capture(self):
-        '''
+        """
         Captures the info for a snapshot but does not update the history.
         Use `update` instead.
-        '''
+        """
         self._log.info('capture snapshot')
         return time.time(), enum_display_devices(), capture_snapshot()
 
@@ -152,11 +147,11 @@ class SnapshotFile(JSONFile):
                 snapshot.cleanup(
                     prune=settings.get('prune_history', True),
                     ttl=settings.get('window_history_ttl', 0),
-                    maximum=settings.get('max_snapshots', 10)
+                    maximum=settings.get('max_snapshots', 10),
                 )
 
     def update(self):
-        '''Captures a new snapshot, updates and prunes the history then saves to disk'''
+        """Captures a new snapshot, updates and prunes the history then saves to disk"""
         timestamp, displays, windows = self.capture()
 
         if not displays:
