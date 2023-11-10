@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # some basic types
 XandY = tuple[int, int]
 Rect = tuple[int, int, int, int]
-"""X, W, Y, H"""
+"""X, Y, X1, Y1"""
 Placement = tuple[int, int, XandY, XandY, Rect]
 """Flags, showCmd, min pos, max pos, normal pos"""
 
@@ -254,15 +254,7 @@ class Window(WindowType):
         w, h = self.get_size()
         x = coords[0] - (w // 2)
         y = coords[1] - (h // 2)
-        display = win32api.MonitorFromPoint(coords, win32con.MONITOR_DEFAULTTONEAREST)
-        # use working area rather than total monitor area so we don't move window into the taskbar
-        display_rect = win32api.GetMonitorInfo(display)['Work']
-        dx, dy, drx, dry = display_rect
-        # make sure bottom right corner is on-screen
-        x, y = min(drx - w, x), min(dry - h, y)
-        # make sure x, y >= top left corner of display
-        x, y = max(dx, x), max(dy, y)
-        self.move((x, y))
+        self.move(self.rebound((x, y)))
 
     def focus(self):
         """
@@ -318,6 +310,35 @@ class Window(WindowType):
         win32gui.MoveWindow(self.id, *coords, *size, False)
         self.refresh()
 
+    def rebound(self, coords: XandY | Rect) -> XandY:
+        '''
+        Takes a set of coordinates and moves them so that the window will not appear off-screen
+
+        Args:
+            coords: can be coordinates or a rect
+
+        Returns:
+            same type as input. Returned rects will also have the bottom right coord adjusted
+        '''
+        if len(coords) == 4:
+            # rect
+            x, w, y, h = coords
+        else:
+            # xandy
+            x, y = coords
+            w, h = self.get_size()
+
+        display = win32api.MonitorFromPoint((x, y), win32con.MONITOR_DEFAULTTONEAREST)
+        # use working area rather than total monitor area so we don't move window into the taskbar
+        display_rect = win32api.GetMonitorInfo(display)['Work']
+        dx, dy, drx, dry = display_rect
+        # make sure bottom right corner is on-screen
+        x, y = min(drx - w, x), min(dry - h, y)
+        # make sure x, y >= top left corner of display
+        x, y = max(dx, x), max(dy, y)
+
+        return x, y
+
     def refresh(self):
         """Re-fetch stale window information"""
         self.rect = self.get_rect()
@@ -331,14 +352,16 @@ class Window(WindowType):
         Set the position, size and placement of the window
         """
         try:
-            if self.is_resizable():
-                w, h = size_from_rect(rect)
-            else:
-                # if the window is not resizeable, make sure we don't resize it.
-                # includes 95 era system dialogs and the Outlook reminder window
-                w, h = self.get_size()
-                if placement:
-                    placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
+            x, y = self.rebound(rect)
+            resizable = self.is_resizable()
+            # if the window is not resizeable, make sure we don't resize it by preserving the w + h
+            # includes 95 era system dialogs and the Outlook reminder window
+            w, h = size_from_rect(rect) if resizable else self.get_size()
+            # remake rect with the bounds adjusted coords
+            rect = (x, y, x + w, y + h)
+            if placement and not self.is_resizable():
+                # override the placement for non-resizable windows to avoid setting wrong size for unminimised state
+                placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
 
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)
