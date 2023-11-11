@@ -311,7 +311,7 @@ class Window(WindowType):
         self.refresh()
 
     def rebound(self, coords: XandY | Rect) -> XandY:
-        '''
+        """
         Takes a set of coordinates and moves them so that the window will not appear off-screen
 
         Args:
@@ -319,7 +319,7 @@ class Window(WindowType):
 
         Returns:
             same type as input. Returned rects will also have the bottom right coord adjusted
-        '''
+        """
         if len(coords) == 4:
             # rect
             x, w, y, h = coords

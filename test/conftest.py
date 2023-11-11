@@ -1,4 +1,4 @@
-'''
+"""
 This file contains sample data used for testing. Much of the sample data is
 split for different display configurations, but grouped by numbering.
 
@@ -11,7 +11,7 @@ group 1.
 
 The generic lists (`DISPLAYS`, `RULES`, etc...) simply combine all groups into
 a single list
-'''
+"""
 import importlib.util
 import os
 import shutil
@@ -63,7 +63,7 @@ DISPLAYS2 = [
         'resolution': [1920, 1080],
         'rect': [-1920, 0, 0, 1080],
         'comparison_params': {},
-    },
+    }
 ]
 DISPLAYS = DISPLAYS1 + DISPLAYS2
 
@@ -97,13 +97,7 @@ WINDOWS1 = [
         # minimised windows often have wonky size and rect
         'size': [160, 28],
         'rect': [-32000, -32000, -31840, -31972],
-        'placement': [
-            2,
-            2,
-            [-32000, -32000],
-            [-1, -1],
-            [19, 203, 1239, 864],
-        ],
+        'placement': [2, 2, [-32000, -32000], [-1, -1], [19, 203, 1239, 864]],
         'id': 2,
         'name': 'Minimised window 1',
         'executable': 'C:\\Program Files\\MyProgram1\\minimised.exe',
@@ -222,23 +216,15 @@ def rule_cls(rule_json):
     return common.Rule.from_json(rule_json)
 
 
-@pytest.fixture(
-    params=(
-        (DISPLAYS1, WINDOWS1, RULES1),
-        (DISPLAYS2, WINDOWS2, RULES2),
-        (DISPLAYS, WINDOWS, RULES),
-    )
-)
+@pytest.fixture(params=((DISPLAYS1, WINDOWS1, RULES1), (DISPLAYS2, WINDOWS2, RULES2), (DISPLAYS, WINDOWS, RULES)))
 def snapshot_json(request: pytest.FixtureRequest):
-    '''
+    """
     Combines `DISPLAYS*` and both `WINDOWS*` and `RULES*` lists
-    '''
+    """
     displays, windows, rules = request.param
     return {
         'displays': deepcopy(displays),
-        'history': [
-            {'time': 1677924200, 'windows': deepcopy(windows)},
-        ],
+        'history': [{'time': 1677924200, 'windows': deepcopy(windows)}],
         'mru': None,
         'rules': deepcopy(rules),
         'phony': '',
@@ -253,18 +239,12 @@ def snapshot_cls(snapshot_json) -> common.Snapshot:
 @pytest.fixture
 def snapshots() -> list[common.Snapshot]:
     snapshots = []
-    for d, w, r in (
-        (DISPLAYS1, WINDOWS1, RULES1),
-        (DISPLAYS2, WINDOWS2, RULES2),
-        (DISPLAYS, WINDOWS, RULES),
-    ):
+    for d, w, r in ((DISPLAYS1, WINDOWS1, RULES1), (DISPLAYS2, WINDOWS2, RULES2), (DISPLAYS, WINDOWS, RULES)):
         snapshots.append(
             common.Snapshot.from_json(
                 {
                     'displays': deepcopy(d),
-                    'history': [
-                        {'time': 1677924200, 'windows': deepcopy(w)},
-                    ],
+                    'history': [{'time': 1677924200, 'windows': deepcopy(w)}],
                     'mru': None,
                     'rules': deepcopy(r),
                     'phony': '',

@@ -32,9 +32,7 @@ def test_local_path(monkeypatch: MonkeyPatch):
     monkeypatch.setattr(sys, 'frozen', True, raising=False)
     monkeypatch.setattr(sys, '_MEIPASS', str(base_dir / 'test'), raising=False)
 
-    assert (
-        lp('./') == Path(sys.executable).parent
-    ), 'base path should be executable when frozen'
+    assert lp('./') == Path(sys.executable).parent, 'base path should be executable when frozen'
     assert lp('./', asset=True) == base_dir / 'test'
 
 
@@ -97,13 +95,7 @@ def test_match():
 
 
 class TestStrToOp:
-    valid_ops = {
-        'lt': operator.lt,
-        'le': operator.le,
-        'eq': operator.eq,
-        'ge': operator.ge,
-        'gt': operator.gt,
-    }
+    valid_ops = {'lt': operator.lt, 'le': operator.le, 'eq': operator.eq, 'ge': operator.ge, 'gt': operator.gt}
 
     @pytest.mark.parametrize('name,func', valid_ops.items())
     def test_valid(self, name, func):
@@ -120,11 +112,7 @@ class TestStrToOp:
 
 @pytest.mark.parametrize(
     'input,expected',
-    (
-        ([1, 2, 3], (1, 2, 3)),
-        ([1, [2, 3]], (1, (2, 3))),
-        ([1, [2, [3, [4, 5], 6]]], (1, (2, (3, (4, 5), 6)))),
-    ),
+    (([1, 2, 3], (1, 2, 3)), ([1, [2, 3]], (1, (2, 3))), ([1, [2, [3, [4, 5], 6]]], (1, (2, (3, (4, 5), 6))))),
 )
 def test_tuple_convert(input, expected: tuple):
     from src.common import tuple_convert
@@ -179,11 +167,7 @@ class TestJSONType:
         return Sample
 
     @pytest.fixture(
-        params=[
-            {'a': 1, 'b': (2, '3', False)},
-            {'a': '4', 'b': [5, '6', True]},
-            {'a': 7, 'b': ['8', 9, 10]},
-        ],
+        params=[{'a': 1, 'b': (2, '3', False)}, {'a': '4', 'b': [5, '6', True]}, {'a': 7, 'b': ['8', 9, 10]}],
         ids=['standard', 'compliant-types', 'tuple-sub-types'],
     )
     def sample_json(self, request):
@@ -226,9 +210,7 @@ class TestWindowType(TestJSONType):
     def sample_cls(self, window_cls):
         return window_cls
 
-    def test_fits_display(
-        self, klass: WindowType, sample_json, display_json, expected=None
-    ):
+    def test_fits_display(self, klass: WindowType, sample_json, display_json, expected=None):
         if expected is None:
             expected = (sample_json in WINDOWS1 and display_json in DISPLAYS1) or (
                 sample_json in WINDOWS2 and display_json in DISPLAYS2
@@ -298,28 +280,41 @@ class TestSnapshot(TestJSONType):
             assert lkp is not other_window
 
         def test_returns_none_if_window_not_found(self, snapshots: list[Snapshot]):
-            assert snapshots[0].last_known_process_instance(
-                'does not exist') is None
+            assert snapshots[0].last_known_process_instance('does not exist') is None
 
         class TestMatchTitleKwarg:
             @pytest.fixture
             def sample(self) -> Snapshot:
-                snap = Snapshot.from_json({'history': [{'time': 0, 'windows': [
-                    {**WINDOWS1[0], 'name': 'Some Other Website - Web Browser',
-                        'executable': 'browser.exe'},
-                    {**WINDOWS1[1],
-                        'name': '12 Reminder(s)', 'executable': 'email.exe'},
-                ]},
-                    {'time': 1, 'windows': [
-                        {**WINDOWS1[0], 'name': 'Some Other Website - Web Browser',
-                         'executable': 'browser.exe'},
-                        {**WINDOWS1[2], 'name': 'My Website - Web Browser',
-                         'executable': 'browser.exe'},
-                        {**WINDOWS1[3], 'name': 'Appointment - Email Client',
-                         'executable': 'email.exe'},
-                        {**WINDOWS1[4], 'name': 'Inbox - Email Client',
-                         'executable': 'email.exe'},
-                    ]}]})
+                snap = Snapshot.from_json(
+                    {
+                        'history': [
+                            {
+                                'time': 0,
+                                'windows': [
+                                    {
+                                        **WINDOWS1[0],
+                                        'name': 'Some Other Website - Web Browser',
+                                        'executable': 'browser.exe',
+                                    },
+                                    {**WINDOWS1[1], 'name': '12 Reminder(s)', 'executable': 'email.exe'},
+                                ],
+                            },
+                            {
+                                'time': 1,
+                                'windows': [
+                                    {
+                                        **WINDOWS1[0],
+                                        'name': 'Some Other Website - Web Browser',
+                                        'executable': 'browser.exe',
+                                    },
+                                    {**WINDOWS1[2], 'name': 'My Website - Web Browser', 'executable': 'browser.exe'},
+                                    {**WINDOWS1[3], 'name': 'Appointment - Email Client', 'executable': 'email.exe'},
+                                    {**WINDOWS1[4], 'name': 'Inbox - Email Client', 'executable': 'email.exe'},
+                                ],
+                            },
+                        ]
+                    }
+                )
                 assert snap is not None
                 return snap
 
@@ -342,12 +337,20 @@ class TestSnapshot(TestJSONType):
         class TestMatchResizabilityKwarg:
             @pytest.fixture
             def sample(self) -> Snapshot:
-                snap = Snapshot.from_json({'history': [{'time': 0, 'windows': [
-                    {**WINDOWS1[0], 'name': 'My Document - My Program', 'resizable': True}
-                ]},
-                    {'time': 1, 'windows': [
-                        {**WINDOWS1[0], 'name': 'Splash Screen - My Program', 'resizable': False}
-                    ]}]})
+                snap = Snapshot.from_json(
+                    {
+                        'history': [
+                            {
+                                'time': 0,
+                                'windows': [{**WINDOWS1[0], 'name': 'My Document - My Program', 'resizable': True}],
+                            },
+                            {
+                                'time': 1,
+                                'windows': [{**WINDOWS1[0], 'name': 'Splash Screen - My Program', 'resizable': False}],
+                            },
+                        ]
+                    }
+                )
                 assert snap is not None
                 return snap
 
@@ -369,14 +372,12 @@ class TestSnapshot(TestJSONType):
 
         def test_config_param_types(self, snapshot_cls: Snapshot):
             assert snapshot_cls.matches_display_config(snapshot_cls) is True
-            assert snapshot_cls.matches_display_config(
-                snapshot_cls.displays) is True
+            assert snapshot_cls.matches_display_config(snapshot_cls.displays) is True
 
         @pytest.mark.parametrize('param,expected', (('any', True), ('all', False)))
         def test_comparison_params(self, snapshots: list[Snapshot], param, expected):
             snapshots[2].comparison_params['displays'] = param
-            assert snapshots[2].matches_display_config(
-                snapshots[0]) is expected
+            assert snapshots[2].matches_display_config(snapshots[0]) is expected
 
     class TestSquashHistory:
         @pytest.fixture
@@ -387,15 +388,9 @@ class TestSnapshot(TestJSONType):
             for i, window in enumerate(deepcopy(WINDOWS2)):
                 window['id'] = i + len(WINDOWS1)
                 windows2.append(window)
-            snap = Snapshot.from_json({
-                'history': [{
-                    'time': 0,
-                    'windows': WINDOWS1[1: -1]
-                }, {
-                    'time': 0,
-                    'windows': WINDOWS1
-                }]
-            })
+            snap = Snapshot.from_json(
+                {'history': [{'time': 0, 'windows': WINDOWS1[1:-1]}, {'time': 0, 'windows': WINDOWS1}]}
+            )
             assert snap is not None
             return snap
 
