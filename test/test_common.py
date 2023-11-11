@@ -274,13 +274,15 @@ class TestSnapshot(TestJSONType):
 
             window = snapshot.history[-1].windows[0]
             other_window = snapshot.history[0].windows[0]
-            lkp = snapshot.last_known_process_instance(window.executable)
+            lkp = snapshot.last_known_process_instance(window)
 
             assert lkp is window
             assert lkp is not other_window
 
         def test_returns_none_if_window_not_found(self, snapshots: list[Snapshot]):
-            assert snapshots[0].last_known_process_instance('does not exist') is None
+            window = deepcopy(snapshots[0].history[0].windows[0])
+            window.executable = 'does-not-exist.exe'
+            assert snapshots[0].last_known_process_instance(window) is None
 
         class TestMatchTitleKwarg:
             @pytest.fixture
