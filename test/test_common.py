@@ -284,8 +284,7 @@ class TestSnapshot(TestJSONType):
     class TestLastKnownProcessInstance:
         def test_basic(self, snapshots: list[Snapshot]):
             window = snapshots[0].history[-1].windows[0]
-            assert snapshots[0].last_known_process_instance(
-                window.executable) is window
+            assert snapshots[0].last_known_process_instance(window) is window
 
         def test_returns_most_recent_window(self, snapshots: list[Snapshot]):
             snapshot = deepcopy(snapshots[0])
@@ -302,7 +301,7 @@ class TestSnapshot(TestJSONType):
             assert snapshots[0].last_known_process_instance(
                 'does not exist') is None
 
-        class TestTitleKwarg:
+        class TestMatchTitleKwarg:
             @pytest.fixture
             def sample(self) -> Snapshot:
                 snap = Snapshot.from_json({'history': [{'time': 0, 'windows': [
@@ -326,13 +325,42 @@ class TestSnapshot(TestJSONType):
 
             @pytest.mark.parametrize('title', ['12 Reminder(s)', '1 Reminder(s)', 'Email Reminder(s)'])
             def test_returns_high_overlap_title_matches(self, sample: Snapshot, title: str):
-                lkp = sample.last_known_process_instance('email.exe', title)
+                window = deepcopy(sample.history[0].windows[0])
+                window.executable = 'email.exe'
+                window.name = title
+                lkp = sample.last_known_process_instance(window, match_title=True)
                 assert lkp is not None
                 assert lkp.id == WINDOWS1[1]['id']
 
             def test_still_filters_by_process(self, sample: Snapshot):
-                lkp = sample.last_known_process_instance('doodad.exe', '12 Reminder(s)')
+                window = deepcopy(sample.history[0].windows[0])
+                window.executable = 'doodad.exe'
+                window.name = '12 Reminder(s)'
+                lkp = sample.last_known_process_instance(window, match_title=True)
                 assert lkp is None
+
+        class TestMatchResizabilityKwarg:
+            @pytest.fixture
+            def sample(self) -> Snapshot:
+                snap = Snapshot.from_json({'history': [{'time': 0, 'windows': [
+                    {**WINDOWS1[0], 'name': 'My Document - My Program', 'resizable': True}
+                ]},
+                    {'time': 1, 'windows': [
+                        {**WINDOWS1[0], 'name': 'Splash Screen - My Program', 'resizable': False}
+                    ]}]})
+                assert snap is not None
+                return snap
+
+            def test_returns_windows_with_same_resizability(self, sample: Snapshot):
+                window = deepcopy(sample.history[0].windows[0])
+                window.resizable = False
+                lkp = sample.last_known_process_instance(window, match_resizability=True)
+                assert lkp is not None
+                assert 'Splash Screen' in lkp.name
+                window.resizable = True
+                lkp2 = sample.last_known_process_instance(window, match_resizability=True)
+                assert lkp2 is not None
+                assert 'Splash Screen' not in lkp2.name
 
     class TestMatchesDisplayConfig:
         def test_basic(self, snapshots: list[Snapshot]):
