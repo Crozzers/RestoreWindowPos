@@ -17,7 +17,11 @@ from window import WindowSpawnService, apply_rules, is_window_valid, restore_sna
 class LoggingFilter(logging.Filter):
     def filter(self, record):
         try:
-            return 'Release <POINTER(IApplicationView)' not in record.message
+            return not (
+                # sometimes the record has msg, sometimes its message. Just try to catch all of them
+                'Release ' in getattr(record, 'message', getattr(record, 'msg', ''))
+                and record.name == 'comtypes'
+            )
         except Exception:
             # sometimes (rarely) record doesn't have a `message` attr
             return True
