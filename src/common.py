@@ -322,7 +322,8 @@ class Window(WindowType):
         """
         if len(coords) == 4:
             # rect
-            x, w, y, h = coords
+            x, y = coords[:2]
+            w, h = size_from_rect(coords)
         else:
             # xandy
             x, y = coords
