@@ -113,8 +113,6 @@ def on_window_spawn(windows: list[Window]):
         if not last_instance:
             return False
         log.info(f'apply LKP: {window} -> {last_instance}')
-        orig_rect = window.rect
-        tries = 0
 
         # if the last known process instance was minimised then we need to override the placement here
         rect = last_instance.rect
@@ -126,10 +124,7 @@ def on_window_spawn(windows: list[Window]):
             rect = placement[4]
             placement = (placement[0], show_cmd, (-1, -1), (-1, -1), placement[4])
 
-        while window.get_rect() == orig_rect and tries < 3:
-            window.set_pos(rect, placement)
-            tries += 1
-            time.sleep(0.1)
+        window.set_pos(rect, placement)
         return True
 
     def mtm(window: Window) -> bool:

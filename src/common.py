@@ -301,13 +301,24 @@ class Window(WindowType):
     def is_resizable(self) -> bool:
         return win32gui.GetWindowLong(self.id, win32con.GWL_STYLE) & win32con.WS_THICKFRAME
 
-    def move(self, coords: XandY):
+    def move(self, coords: XandY, size: Optional[XandY] = None):
         """
-        Move the window to a new position. This does not resize the window or
-        adjust placement
+        Move the window to a new position. This does not adjust placement.
+
+        Args:
+            coords: the new coordinates to move do
+            size: if given, the window will be set to this size.
+                  Otherwise, current window size will be maintained
         """
-        size = size_from_rect(win32gui.GetWindowRect(self.id))
-        win32gui.MoveWindow(self.id, *coords, *size, False)
+        size = size or self.get_size()
+        target_rect: Rect = (*coords, coords[0] + size[0], coords[1] + size[1])
+        tries = 0
+        while self.get_rect() != target_rect and tries < 3:
+            # multi-monitor setups with different scaling often don't resize the window properly first try
+            # so we try multiple times and force repaints after the first one
+            win32gui.MoveWindow(self.id, *coords, *size, tries > 1)
+            tries += 1
+        log.debug(f'move window {self.id}, {target_rect=}, {self.get_rect()=}, {tries=}')
         self.refresh()
 
     def rebound(self, coords: XandY | Rect) -> XandY:
@@ -367,9 +378,7 @@ class Window(WindowType):
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)
 
-            win32gui.MoveWindow(self.id, *rect[:2], w, h, True)
-            log.debug(f'move window {self.id}, X,Y:{rect[:2]!r}, W:{w}, H:{h}')
-            self.refresh()
+            self.move(rect[:2], (w, h))
         except pywintypes.error as e:
             log.error('err moving window %s : %s' % (win32gui.GetWindowText(self.id), e))
 
