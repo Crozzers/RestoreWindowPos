@@ -203,25 +203,46 @@ class WindowType(JSONType):
     placement: Placement
 
     def fits_display(self, display: 'Display') -> bool:
-        rect = self.rect
-        if self.placement[1] == win32con.SW_SHOWMINIMIZED:
-            rect = self.placement[4]
-        if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
-            offset = 8
-        else:
+        """
+        Check whether `self` fits within the bounds of a display. This function uses
+        `fits_rect` internally along with additional logic for checking if `self` is
+        "snapped" to the display.
+        """
+        offset = None
+        if self.placement[1] not in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
             # check if a window might be snapped and give it a bit more room
             if (
                 abs(self.size[0] - (display.resolution[0] // 2)) <= 10
                 or abs(self.size[1] - (display.resolution[1] // 2)) <= 10
             ):
                 offset = 5
-            else:
-                offset = 0
+        return self.fits_rect(display.rect, offset)
+
+    def fits_rect(self, target_rect: Rect, offset: Optional[int] = None) -> bool:
+        """
+        Check whether `self` fits within a rect. This function takes into
+        account whether `self` is minimised, maximised or floating, and applies an
+        appropriate offset.
+
+        Args:
+            target_rect: the rect to check against `self`
+            offset: pixel offset override
+        """
+        rect = self.rect
+        if self.placement[1] == win32con.SW_SHOWMINIMIZED:
+            rect = self.placement[4]
+
+        if offset is None and self.placement[1] == win32con.SW_SHOWMAXIMIZED:
+            offset = 8
+
+        if offset is None:
+            offset = 0
+
         return (
-            rect[0] >= display.rect[0] - offset
-            and rect[1] >= display.rect[1] - offset
-            and rect[2] <= display.rect[2] + offset
-            and rect[3] <= display.rect[3] + offset
+            rect[0] >= target_rect[0] - offset
+            and rect[1] >= target_rect[1] - offset
+            and rect[2] <= target_rect[2] + offset
+            and rect[3] <= target_rect[3] + offset
         )
 
     def fits_display_config(self, displays: list['Display']) -> bool:
@@ -313,7 +334,7 @@ class Window(WindowType):
         size = size or self.get_size()
         target_rect: Rect = (*coords, coords[0] + size[0], coords[1] + size[1])
         tries = 0
-        while self.get_rect() != target_rect and tries < 3:
+        while not self.fits_rect(target_rect) and tries < 3:
             # multi-monitor setups with different scaling often don't resize the window properly first try
             # so we try multiple times and force repaints after the first one
             win32gui.MoveWindow(self.id, *coords, *size, tries > 1)
