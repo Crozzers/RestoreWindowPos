@@ -18,6 +18,7 @@ class OnSpawnSettings(TypedDict):
     capture_snapshot: bool | int  # 0/False: disable, 1/True: capture, 2: update
     skip_non_resizable: bool
     match_resizability: bool
+    fuzzy_mtm: bool
 
 
 class OnSpawnPage(wx.Panel):
@@ -34,19 +35,28 @@ class OnSpawnPage(wx.Panel):
             capture_snapshot=2,
             skip_non_resizable=False,
             match_resizability=True,
+            fuzzy_mtm=True,
         )
         self.settings.update(OnSpawnSettings(**self.settings_file.get('on_window_spawn', default={})))
+
+        def header(text: str):
+            txt = wx.StaticText(self.panel, label=text)
+            txt.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            return txt
 
         # create widgets
         enable_opt = wx.CheckBox(self, id=1, label='React to new windows being created')
         enable_opt.SetToolTip('It\'s recommended to disable "Prune window history" when this is enabled')
         self.panel = wx.Panel(self)
-        header1 = wx.StaticText(self.panel, label='When a new window is created:')
+        header1 = header('When a new window spawns:')
+
+        # reused later on in Misc settings.
+        mtm_opt_name = 'Center on current mouse position'
 
         option_mapping: dict[str, OnSpawnOperations] = {
             'Apply last known size and/or position': 'apply_lkp',
             'Apply compatible rules': 'apply_rules',
-            'Center on current mouse position': 'move_to_mouse',
+            mtm_opt_name: 'move_to_mouse',
         }
         self.rc_opt = RearrangeListCtrl(
             self.panel,
@@ -55,16 +65,20 @@ class OnSpawnPage(wx.Panel):
             label_mapping=option_mapping,
         )
 
-        ignore_children_opt = wx.CheckBox(self.panel, id=5, label='Ignore child windows')
-        ignore_children_opt.SetToolTip(
-            'Child windows are typically small popup windows and spawn near where the cursor is.'
-            '\nDisabling this means such windows will be moved to the top left corner of the parent window.'
-            # ^ this may not be accurate. TODO: remove or implement this
-        )
+        header2 = header('After a new window spawns:')
+
         update_snapshot_opt = wx.RadioButton(self.panel, id=6, label='Update the current snapshot', style=wx.RB_GROUP)
         capture_snapshot_opt = wx.RadioButton(self.panel, id=7, label='Capture a new snapshot')
         do_nothing_opt = wx.RadioButton(self.panel, id=8, label='Do nothing')
 
+        header3 = header('Window filtering controls:')
+
+        ignore_children_opt = wx.CheckBox(self.panel, id=5, label='Ignore child windows')
+        ignore_children_opt.SetToolTip(
+            'Child windows are typically small popup windows that spawn near the cursor.'
+            # '\nDisabling this means such windows will be moved to the top left corner of the parent window.'
+            # ^ this may not be accurate. TODO: remove or implement this
+        )
         skip_non_resizable_opt = wx.CheckBox(self.panel, id=9, label='Ignore non-resizable windows')
         skip_non_resizable_opt.SetToolTip(
             'Non resizable windows often include splash screens, alerts and notifications. Enable this to'
@@ -80,6 +94,12 @@ class OnSpawnPage(wx.Panel):
             '\nThis prevents splash screens from dictating the final window size.'
         )
 
+        header4 = header('Misc')
+
+        fuzzy_mtm_opt = wx.CheckBox(
+            self.panel, id=11, label=f'Disable "{mtm_opt_name}" when mouse is already within the window'
+        )
+
         # set state
         enable_opt.SetValue(self.settings['enabled'])
         if not self.settings['enabled']:
@@ -93,6 +113,7 @@ class OnSpawnPage(wx.Panel):
         [do_nothing_opt, capture_snapshot_opt, update_snapshot_opt][int(self.settings['capture_snapshot'])].SetValue(
             True
         )
+        fuzzy_mtm_opt.SetValue(self.settings['fuzzy_mtm'])
 
         skip_non_resizable_opt.SetValue(self.settings['skip_non_resizable'])
         match_resizability_opt.SetValue(self.settings['match_resizability'])
@@ -106,6 +127,7 @@ class OnSpawnPage(wx.Panel):
             do_nothing_opt,
             skip_non_resizable_opt,
             match_resizability_opt,
+            fuzzy_mtm_opt,
         ):
             widget.Bind(wx.EVT_CHECKBOX if isinstance(widget, wx.CheckBox) else wx.EVT_RADIOBUTTON, self.on_setting)
         self.rc_opt.Bind(EVT_REARRANGE_LIST_SELECT, self.on_setting)
@@ -116,12 +138,16 @@ class OnSpawnPage(wx.Panel):
             (
                 header1,
                 self.rc_opt,
-                ignore_children_opt,
+                header2,
                 update_snapshot_opt,
                 capture_snapshot_opt,
                 do_nothing_opt,
+                header3,
+                ignore_children_opt,
                 skip_non_resizable_opt,
                 match_resizability_opt,
+                header4,
+                fuzzy_mtm_opt,
             ),
             group_mode=wx.HORIZONTAL,
         )
@@ -143,6 +169,7 @@ class OnSpawnPage(wx.Panel):
                 5: 'ignore_children',
                 9: 'skip_non_resizable',
                 10: 'match_resizability',
+                11: 'fuzzy_mtm',
             }[event.Id]
             self.settings[key] = widget.GetValue()
             if event.Id == 1:  # enable/disable feature

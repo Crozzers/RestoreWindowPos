@@ -5,7 +5,7 @@ import time
 import win32con
 import win32gui
 
-from common import Window, load_json, local_path, single_call
+from common import Window, XandY, load_json, local_path, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
@@ -19,8 +19,7 @@ class LoggingFilter(logging.Filter):
         try:
             return not (
                 # sometimes the record has msg, sometimes its message. Just try to catch all of them
-                'Release ' in getattr(record, 'message', getattr(record, 'msg', ''))
-                and record.name == 'comtypes'
+                'Release ' in getattr(record, 'message', getattr(record, 'msg', '')) and record.name == 'comtypes'
             )
         except Exception:
             # sometimes (rarely) record doesn't have a `message` attr
@@ -103,6 +102,7 @@ def on_window_spawn(windows: list[Window]):
     rules = snap.get_rules(compatible_with=True, exclusive=True)
     ignore_children = on_spawn_settings.get('ignore_children', True)
     match_resizability = on_spawn_settings.get('match_resizability', True)
+    fuzzy_mtm = on_spawn_settings.get('fuzzy_mtm', True)
 
     # get all the operations and the order we run them
     operations = {
@@ -132,7 +132,12 @@ def on_window_spawn(windows: list[Window]):
         return True
 
     def mtm(window: Window) -> bool:
-        window.center_on(win32gui.GetCursorPos())
+        cursor_pos: XandY = win32gui.GetCursorPos()
+        if fuzzy_mtm:
+            # if cursor X between window X and X1, and cursor Y between window Y and Y1
+            if window.rect[0] <= cursor_pos[0] <= window.rect[2] and window.rect[1] <= cursor_pos[1] <= window.rect[3]:
+                return True
+        window.center_on(cursor_pos)
         return True
 
     for window in windows:
