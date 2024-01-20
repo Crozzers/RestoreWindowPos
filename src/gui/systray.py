@@ -43,7 +43,7 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         if callable(self._on_exit):
             self._on_exit()
         self.RemoveIcon()
-        WxApp().schedule_exit()
+        WxApp().ExitMainLoop()
 
     def __enter__(self):
         return self

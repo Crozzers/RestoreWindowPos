@@ -1,7 +1,10 @@
-from typing import Literal
+import logging
+from typing import Literal, Optional
+import psutil
 
 import wx
 import wx.adv
+from common import single_call
 
 from gui.layout_manager import LayoutPage
 from gui.on_spawn_manager import OnSpawnPage
@@ -12,6 +15,11 @@ from snapshot import SnapshotFile
 
 class WxApp(wx.App):
     __instance: 'WxApp'
+
+    @single_call  # mark as `single_call` so we don't re-call `OnInit` during shutdown
+    def __init__(self):
+        self._log = logging.getLogger(__name__).getChild(self.__class__.__name__ + '.' + str(id(self)))
+        super().__init__()
 
     def __new__(cls, *args, **kwargs):
         if not isinstance(getattr(cls, '__instance', None), cls):
@@ -26,18 +34,28 @@ class WxApp(wx.App):
         self.enable_sigterm()
         return True
 
-    def enable_sigterm(self):
+    def enable_sigterm(self, parent: Optional[psutil.Process] = None):
+        """
+        Allow the application to respond to external signals such as SIGTERM or SIGINT.
+        This is done by creating a wx timer that regularly returns control of the program
+        to the Python runtime, allowing it to process the signals.
+
+        Args:
+            parent: optional parent process. If provided, the lifetime of the application will
+                be tied to this process. When the parent exits, this app will follow suit
+        """
+        self._log.debug(f'enable sigterm, {parent=}')
+
+        def check_parent_alive():
+            if not parent or parent.is_running():
+                return
+            self._log.info('parent process no longer running. exiting mainloop...')
+            self.ExitMainLoop()
+
+        # enable sigterm by regularly returning control back to python
         self.timer = wx.Timer(self._top_frame)
-        self._top_frame.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        self._top_frame.Bind(wx.EVT_TIMER, lambda *_: check_parent_alive(), self.timer)
         self.timer.Start(1000)
-
-    def OnTimer(self, *_):
-        return
-
-    def schedule_exit(self):
-        self._top_frame.DestroyChildren()
-        self._top_frame.Destroy()
-        wx.CallAfter(self.Destroy)
 
 
 def spawn_gui(snapshot: SnapshotFile, start_page: Literal['rules', 'settings'] = 'rules'):

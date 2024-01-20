@@ -1,4 +1,6 @@
 import logging
+import os
+import psutil
 import signal
 import time
 
@@ -161,6 +163,19 @@ def on_window_spawn(windows: list[Window]):
         snap.update()
 
 
+@single_call
+def shutdown(*_):
+    log.info('begin shutdown process')
+    app.ExitMainLoop()
+    monitor_thread.stop()
+    snapshot_service.stop()
+    log.debug('destroy WxApp')
+    app.Destroy()
+    log.info('save snapshot before shutting down')
+    snap.save()
+    log.info('end shutdown process')
+
+
 if __name__ == '__main__':
     logging.basicConfig(
         filename=local_path('log.txt'), filemode='w', format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
@@ -216,18 +231,21 @@ if __name__ == '__main__':
         ['About', lambda *_: about_dialog()],
     ]
 
-    @single_call
-    def shutdown(*_):
-        log.info('begin shutdown process')
-        app.ExitMainLoop()
-        monitor_thread.stop()
-        snapshot_service.stop()
-        log.info('save snapshot before shutting down')
-        snap.save()
-        log.info('exit')
-
+    # register termination signals so we can do graceful shutdown
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGABRT):
         signal.signal(sig, shutdown)
+
+    # detect if we are running as a single exe file (pyinstaller --onefile mode)
+    current_process = psutil.Process(os.getpid())
+    log.debug(f'PID: {current_process.pid}')
+    parent_process = current_process.parent()
+    if (
+        parent_process is not None
+        and current_process.exe() == parent_process.exe()
+        and current_process.name() == parent_process.name()
+    ):
+        log.debug(f'parent detected. PPID: {parent_process.pid}')
+        app.enable_sigterm(parent_process)
 
     with TaskbarIcon(menu_options, on_click=update_systray_options, on_exit=shutdown):
         monitor_thread = DeviceChangeService(DeviceChangeCallback(snap.restore, shutdown, snap.update), snap.lock)
@@ -242,4 +260,6 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         finally:
+            log.info('app mainloop closed')
             shutdown()
+    log.debug('fin')
