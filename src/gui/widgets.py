@@ -1,5 +1,5 @@
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Optional
-from collections.abc import Sequence, Iterable, Callable, Mapping
 
 import wx
 from wx.lib.mixins.listctrl import TextEditMixin

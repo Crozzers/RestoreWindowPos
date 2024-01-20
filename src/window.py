@@ -1,4 +1,3 @@
-import pywintypes
 import ctypes
 import ctypes.wintypes
 import logging
@@ -6,6 +5,7 @@ import time
 from typing import Iterator, Optional
 
 import pyvda
+import pywintypes
 import win32con
 import win32gui
 from comtypes import GUID

@@ -8,3 +8,4 @@ pytest
 pytest-mock
 # lint/formatting
 ruff
+isort

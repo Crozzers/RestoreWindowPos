@@ -1,11 +1,11 @@
 import logging
 from typing import Literal, Optional
-import psutil
 
+import psutil
 import wx
 import wx.adv
-from common import single_call
 
+from common import single_call
 from gui.layout_manager import LayoutPage
 from gui.on_spawn_manager import OnSpawnPage
 from gui.settings import SettingsPanel

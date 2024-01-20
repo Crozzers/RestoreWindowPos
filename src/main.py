@@ -1,9 +1,9 @@
 import logging
 import os
-import psutil
 import signal
 import time
 
+import psutil
 import win32con
 import win32gui
 
