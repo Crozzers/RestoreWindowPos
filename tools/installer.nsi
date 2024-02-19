@@ -21,7 +21,7 @@ BrandingText "RestoreWindowPos By Crozzers"
 VIAddVersionKey "ProductName" "${PRODUCT} Installer"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "Install ${PRODUCT} ${VERSION}"
-VIAddVersionKey "LegalCopyright" "© Crozzers (github.com/Crozzers) 2023"
+VIAddVersionKey "LegalCopyright" "© Crozzers (github.com/Crozzers) 2024"
 
 ; use the version thing pyinstaller in the future
 ; https://stackoverflow.com/questions/14624245/what-does-a-version-file-look-like

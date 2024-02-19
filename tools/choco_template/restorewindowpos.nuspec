@@ -5,7 +5,7 @@
     <version>@@PackageVersion@@</version>
 
     <authors>Crozzers</authors>
-    <copyright>2023 Crozzers</copyright>
+    <copyright>2024 Crozzers</copyright>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <summary>Restore window positions when displays are connected and disconnected</summary>
     <id>restorewindowpos</id>

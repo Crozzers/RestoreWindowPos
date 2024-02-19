@@ -29,6 +29,6 @@ pyinstaller_versionfile.create_versionfile(
     output_file=OUTPUT_FILE,
     version=f'{__basic_version__}.{build}',
     file_description='RestoreWindowPos',
-    legal_copyright='© Crozzers (github.com/Crozzers) 2023',
+    legal_copyright='© Crozzers (github.com/Crozzers) 2024',
     product_name='RestoreWindowPos'
 )
