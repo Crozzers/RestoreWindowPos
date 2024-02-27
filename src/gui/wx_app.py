@@ -22,9 +22,9 @@ class WxApp(wx.App):
         super().__init__()
 
     def __new__(cls, *args, **kwargs):
-        if not isinstance(getattr(cls, '__instance', None), cls):
-            cls.__instance = wx.App.__new__(cls, *args, **kwargs)
-        return cls.__instance
+        if not isinstance(getattr(cls, '_WxApp__instance', None), cls):
+            cls._WxApp__instance = wx.App.__new__(cls, *args, **kwargs)
+        return cls._WxApp__instance
 
     def OnInit(self):
         if isinstance(getattr(self, '_top_frame', None), wx.Frame):

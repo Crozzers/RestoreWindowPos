@@ -2,10 +2,9 @@ import logging
 from typing import Any, Callable, Optional
 
 import wx
+import wx.adv
 
 from common import local_path
-
-from .wx_app import WxApp
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +42,6 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         if callable(self._on_exit):
             self._on_exit()
         self.RemoveIcon()
-        WxApp().ExitMainLoop()
 
     def __enter__(self):
         return self
