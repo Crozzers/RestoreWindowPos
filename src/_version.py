@@ -2,7 +2,7 @@ import sys
 
 import win32api
 
-__version__ = '0.20.2'
+__version__ = '0.20.3'
 __build__ = None
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
