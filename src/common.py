@@ -334,11 +334,21 @@ class Window(WindowType):
         size = size or self.get_size()
         target_rect: Rect = (*coords, coords[0] + size[0], coords[1] + size[1])
         tries = 0
-        while not self.fits_rect(target_rect) and tries < 3:
+        while tries < 3:
             # multi-monitor setups with different scaling often don't resize the window properly first try
             # so we try multiple times and force repaints after the first one
             win32gui.MoveWindow(self.id, *coords, *size, tries > 1)
+            if self.fits_rect(target_rect):
+                break
             tries += 1
+        else:
+            # sometimes we move a window to a place and it decides to display as minimised but tell Windows it isn't
+            # so you have to click the taskbar icon to focus, click again to "minimise" and click AGAIN to get it to
+            # actually show up. For some reason, generating a bit more churn when moving it fixes the issue
+            win32gui.MoveWindow(self.id, *size, *size, tries > 1)
+            time.sleep(0.05)
+            win32gui.MoveWindow(self.id, *coords, *size, tries > 1)
+
         log.debug(f'move window {self.id}, {target_rect=}, {self.get_rect()=}, {tries=}')
         self.refresh()
 
