@@ -131,8 +131,15 @@ class OnSpawnPanel(wx.Panel):
             window_name = wx.TextCtrl(self.panel, id=12)
             window_exe_label = wx.StaticText(self.panel, label='Window executable (regex) (leave empty to match all windows):')
             window_exe = wx.TextCtrl(self.panel, id=13)
+            apply_to = self.profile.get('apply_to', {})
+            if apply_to:
+                window_name.SetValue(apply_to.get('name', ''))
+                window_exe.SetValue(apply_to.get('executable', ''))
             window_name.Bind(wx.EVT_KEY_UP, self.on_setting)
             window_exe.Bind(wx.EVT_KEY_UP, self.on_setting)
+
+            ### TODO: add note here explaining why one must be filled
+
             apply_to_widgets = (header5, window_name_label, window_name, window_exe_label, window_exe)
 
         # set state

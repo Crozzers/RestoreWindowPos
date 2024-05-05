@@ -1,13 +1,15 @@
 import logging
 import os
+import re
 import signal
 import time
+from typing import Optional
 
 import psutil
 import win32con
 import win32gui
 
-from common import Window, XandY, load_json, local_path, single_call
+from common import Window, XandY, load_json, local_path, match, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
 from gui.wx_app import spawn_gui
@@ -102,17 +104,8 @@ def on_window_spawn(windows: list[Window]):
     time.sleep(0.05)
     current_snap = snap.get_current_snapshot()
     rules = snap.get_rules(compatible_with=True, exclusive=True)
-    ignore_children = on_spawn_settings.get('ignore_children', True)
-    match_resizability = on_spawn_settings.get('match_resizability', True)
-    fuzzy_mtm = on_spawn_settings.get('fuzzy_mtm', True)
 
-    # get all the operations and the order we run them
-    operations = {
-        k: on_spawn_settings.get(k, True)
-        for k in on_spawn_settings.get('operation_order', ['apply_lkp', 'apply_rules', 'move_to_mouse'])
-    }
-
-    def lkp(window: Window) -> bool:
+    def lkp(window: Window, match_resizability: bool) -> bool:
         last_instance = current_snap.last_known_process_instance(
             window, match_title=True, match_resizability=match_resizability
         )
@@ -133,7 +126,7 @@ def on_window_spawn(windows: list[Window]):
         window.set_pos(rect, placement)
         return True
 
-    def mtm(window: Window) -> bool:
+    def mtm(window: Window, fuzzy_mtm: bool) -> bool:
         cursor_pos: XandY = win32gui.GetCursorPos()
         if fuzzy_mtm:
             # if cursor X between window X and X1, and cursor Y between window Y and Y1
@@ -142,20 +135,45 @@ def on_window_spawn(windows: list[Window]):
         window.center_on(cursor_pos)
         return True
 
+    def find_matching_profile(window: Window) -> Optional[dict]:
+        matches = []
+        for profile in on_spawn_settings.get('profiles', []):
+            if not profile.get('enabled', False):
+                continue
+            apply_to = profile.get('apply_to', {})
+            if not apply_to:
+                continue
+            score = (
+                match(apply_to.get('name', '') or None, window.name)
+                + match(apply_to.get('executable', '') or None, window.executable)
+            )
+            matches.append((score, profile))
+        if not matches:
+            return None
+        return sorted(matches, key=lambda x: x[0])[0][1]
+
+    capture_snapshot = 0
     for window in windows:
-        if window.parent is not None and ignore_children:
+        profile = find_matching_profile(window) or on_spawn_settings
+        log.debug(f'OWS profile {profile["name"]!r} matches window {window}')
+        if window.parent is not None and profile.get('ignore_children', True):
             continue
+        # get all the operations and the order we run them
+        operations = {
+            k: profile.get(k, True)
+            for k in profile.get('operation_order', ['apply_lkp', 'apply_rules', 'move_to_mouse'])
+        }
         for op_name, state in operations.items():
             if not state:
                 continue
-            if op_name == 'apply_lkp' and lkp(window):
+            if op_name == 'apply_lkp' and lkp(window, profile.get('match_resizability', True)):
                 break
-            elif op_name == 'move_to_mouse' and mtm(window):
+            elif op_name == 'move_to_mouse' and mtm(window, profile.get('fuzzy_mtm', True)):
                 break
             elif op_name == 'apply_rules' and apply_rules(rules, window):
                 break
+        capture_snapshot = max(capture_snapshot, profile.get('capture_snapshot', 2))
 
-    capture_snapshot = on_spawn_settings.get('capture_snapshot', 2)
     if capture_snapshot == 2:
         # these are all newly spawned windows so we don't have to worry about merging them into the history
         current_snap.history[-1].windows.extend(windows)
