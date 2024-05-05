@@ -143,9 +143,13 @@ def on_window_spawn(windows: list[Window]):
             apply_to = profile.get('apply_to', {})
             if not apply_to:
                 continue
+            name = apply_to.get('name', '') or None
+            exe = apply_to.get('executable', '') or None
+            if not name and not exe:
+                continue
             score = (
-                match(apply_to.get('name', '') or None, window.name)
-                + match(apply_to.get('executable', '') or None, window.executable)
+                match(name, window.name)
+                + match(exe, window.executable)
             )
             matches.append((score, profile))
         if not matches:

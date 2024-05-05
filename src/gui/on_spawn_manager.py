@@ -67,10 +67,12 @@ class OnSpawnPanel(wx.Panel):
             txt.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             return txt
 
+        sizer = wx.StaticBoxSizer(wx.VERTICAL, self, label=f'{profile["name"]!r} profile')
+
         # create widgets
-        enable_opt = wx.CheckBox(self, id=1, label='React to new windows being created')
+        enable_opt = wx.CheckBox(sizer.GetStaticBox(), id=1, label='React to new windows being created')
         enable_opt.SetToolTip('It\'s recommended to disable "Prune window history" when this is enabled')
-        self.panel = wx.Panel(self)
+        self.panel = wx.Panel(sizer.GetStaticBox())
         header1 = header('When a new window spawns:')
 
         # reused later on in Misc settings.
@@ -127,6 +129,16 @@ class OnSpawnPanel(wx.Panel):
             apply_to_widgets = ()
         else:
             header5 = header('Apply to:')
+            explainer_box = wx.StaticText(
+                self.panel,
+                label=(
+                    'These boxes control which windows this profile will be applied against.'
+                    ' If you leave one box empty, it will be ignored. If both are empty, the profile is ignored.'
+                    ' Profiles are matched against windows based on the closest and most specific match.'
+                    ' If no specific match is found, the "Global" profile is used.'
+                )
+            )
+            explainer_box.Wrap(700)
             window_name_label = wx.StaticText(self.panel, label='Window name (regex) (leave empty to match all windows):')
             window_name = wx.TextCtrl(self.panel, id=12)
             window_exe_label = wx.StaticText(self.panel, label='Window executable (regex) (leave empty to match all windows):')
@@ -138,9 +150,7 @@ class OnSpawnPanel(wx.Panel):
             window_name.Bind(wx.EVT_KEY_UP, self.on_setting)
             window_exe.Bind(wx.EVT_KEY_UP, self.on_setting)
 
-            ### TODO: add note here explaining why one must be filled
-
-            apply_to_widgets = (header5, window_name_label, window_name, window_exe_label, window_exe)
+            apply_to_widgets = (header5, explainer_box, window_name_label, window_name, window_exe_label, window_exe)
 
         # set state
         enable_opt.SetValue(self.profile['enabled'])
@@ -178,6 +188,7 @@ class OnSpawnPanel(wx.Panel):
         simple_box_sizer(
             self.panel,
             (
+                *apply_to_widgets,
                 header1,
                 self.rc_opt,
                 header2,
@@ -189,16 +200,14 @@ class OnSpawnPanel(wx.Panel):
                 skip_non_resizable_opt,
                 match_resizability_opt,
                 header4,
-                fuzzy_mtm_opt,
-                *apply_to_widgets
+                fuzzy_mtm_opt
             ),
             group_mode=wx.HORIZONTAL,
         )
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
         for widget in (enable_opt, self.panel):
             # panel does its own padding
-            sizer.Add(widget, 0, wx.ALL, 5 if widget != self.panel else 0)
+            sizer.Add(widget, 0, wx.ALL | wx.EXPAND, 5 if widget != self.panel else 0)
         self.SetSizerAndFit(sizer)
 
     def on_setting(self, event: wx.Event):
@@ -254,13 +263,13 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         if (ows := self.settings_file.get('on_window_spawn')) is not None:
             self.settings.update(ows)
 
-        self.profile_box = wx.StaticBox(self, label='Profiles')
-        action_panel = wx.Panel(self.profile_box)
+        profile_box_sizer = wx.StaticBoxSizer(wx.VERTICAL, self, label='Profiles')
+        action_panel = wx.Panel(profile_box_sizer.GetStaticBox())
         add_profile_btn = wx.Button(action_panel, label='Add profile')
         del_profile_btn = wx.Button(action_panel, label='Delete profile')
 
         self.profiles_list = EditableListCtrl(
-            self.profile_box,
+            profile_box_sizer.GetStaticBox(),
             post_edit=self.rename_profile,
             style=wx.LC_REPORT | wx.LC_EDIT_LABELS | wx.LC_SINGLE_SEL
         )
@@ -278,19 +287,16 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         action_sizer.Add(del_profile_btn)
         action_panel.SetSizerAndFit(action_sizer)
 
-        profile_sizer = wx.BoxSizer(wx.VERTICAL)
-        profile_sizer.Add(action_panel)
-        profile_sizer.Add(self.profiles_list)
-        self.profile_box.SetSizerAndFit(profile_sizer)
+
+        profile_box_sizer.Add(action_panel, 0, wx.ALL, 5)
+        profile_box_sizer.Add(self.profiles_list, 0, wx.ALL, 5)
 
         self.profile_panel = OnSpawnPanel(self, self.settings, self.on_save)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.profile_box)
-        self.sizer.Add(self.profile_panel)
+        self.sizer.Add(profile_box_sizer, 0, wx.ALL | wx.EXPAND, 5)
+        self.sizer.Add(self.profile_panel, 0, wx.ALL | wx.EXPAND, 5)
         self.SetSizerAndFit(self.sizer)
-
-        self.SetupScrolling()
 
     def add_profile(self, event: wx.Event):
         new = default_spawn_settings()
@@ -343,7 +349,7 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         else:
             profile = self.settings['profiles'][selected - 1]
         self.profile_panel = OnSpawnPanel(self, profile, self.on_save)
-        self.sizer.Add(self.profile_panel, 0, wx.ALL | wx.EXPAND, 0)
+        self.sizer.Add(self.profile_panel, 0, wx.ALL | wx.EXPAND, 5)
         self.sizer.Layout()
         self.profile_panel.Update()
         self.SetupScrolling()
