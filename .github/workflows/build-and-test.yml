@@ -41,10 +41,10 @@ jobs:
   build-and-test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.gitRef }}
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install Python dependencies
@@ -63,7 +63,7 @@ jobs:
           tools\test-installer.ps1 -confirm y
       - name: Publish artifact
         if: ${{ inputs.doArtifact }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: RWP-dist
           path: dist/
