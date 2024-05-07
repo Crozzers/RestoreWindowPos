@@ -46,7 +46,7 @@ def default_spawn_settings():
             operation_order=['apply_lkp', 'apply_rules', 'move_to_mouse'],
             ignore_children=True,
             capture_snapshot=2,
-            skip_non_resizable=False,
+            skip_non_resizable=True,
             match_resizability=True,
             fuzzy_mtm=True,
             apply_to=None
