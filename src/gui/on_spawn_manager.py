@@ -298,6 +298,8 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         self.sizer.Add(self.profile_panel, 0, wx.ALL | wx.EXPAND, 5)
         self.SetSizerAndFit(self.sizer)
 
+        self.SetupScrolling()
+
     def add_profile(self, event: wx.Event):
         new = default_spawn_settings()
         self.profiles_list.Append((new['name'],))
