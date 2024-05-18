@@ -312,6 +312,8 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
                 continue
             self.profiles_list.DeleteItem(index)
             self.settings['profiles'].pop(index - 1)
+        self.profiles_list.Select(0)
+        self.set_state(0)
 
     def rename_profile(self, col, row):
         for index, profile in enumerate(self.get_all_profiles()):
@@ -342,7 +344,7 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         self.profiles_list.Select(row)
         self.set_state(row)
 
-    def set_state(self, selected = None):
+    def set_state(self, selected: Optional[int] = None):
         self.sizer.Remove(1)
         self.profile_panel.Destroy()
         selected = self.profiles_list.GetFirstSelected() if selected is None else selected
