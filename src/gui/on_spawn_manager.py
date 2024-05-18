@@ -304,16 +304,20 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
         new = default_spawn_settings()
         self.profiles_list.Append((new['name'],))
         self.settings['profiles'].append(new)
+        self.on_save()
         event.Skip()
 
     def del_profile(self, event: wx.Event):
+        # get index of item just before selection
+        first = max(min(self.profiles_list.GetAllSelected()) - 1, 0)
         for index in reversed(sorted(self.profiles_list.GetAllSelected())):
             if index == 0:
                 continue
             self.profiles_list.DeleteItem(index)
             self.settings['profiles'].pop(index - 1)
-        self.profiles_list.Select(0)
-        self.set_state(0)
+        self.on_save()
+        self.profiles_list.Select(first)
+        self.set_state(first)
 
     def rename_profile(self, col, row):
         for index, profile in enumerate(self.get_all_profiles()):
@@ -325,6 +329,8 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
                     self.profiles_list.SetItemText(index, profile['name'])
                 else:
                     profile['name'] = self.profiles_list.GetItemText(index)
+
+        self.on_save()
 
     def populate_profiles(self):
         for index in range(self.profiles_list.GetItemCount()):
@@ -360,3 +366,4 @@ class OnSpawnPage(wx.lib.scrolledpanel.ScrolledPanel):
 
     def on_save(self, event = None):
         self.settings_file.set('on_window_spawn', self.settings)
+        self.settings_file.save()
