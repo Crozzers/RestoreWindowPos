@@ -6,8 +6,9 @@ import re
 import sys
 import threading
 import time
+from types import UnionType
 import typing
-from dataclasses import asdict, dataclass, field, is_dataclass, replace
+from dataclasses import asdict, dataclass, field, is_dataclass
 from functools import lru_cache
 from typing import Any, Callable, Iterable, Literal, Optional, Self, Union, overload
 
@@ -162,7 +163,7 @@ def load_json(file: Literal['settings', 'history']):
     return json_file
 
 
-def tuple_convert(item: Iterable, to=tuple, from_: type = list):
+def tuple_convert(item: Iterable, to=tuple, from_: type | UnionType = list):
     if isinstance(item, from_):
         item = to(tuple_convert(sub, to=to, from_=from_) for sub in item)
     return item
@@ -170,9 +171,17 @@ def tuple_convert(item: Iterable, to=tuple, from_: type = list):
 
 class JSONType:
     @classmethod
-    def from_json(cls, data: dict):
+    def from_json(cls, data: dict) -> Self | None:
         if is_dataclass(data):
-            return data
+            if isinstance(data, type):
+                # check if just the type itself, not an actual instance
+                # (should never happen but needed for type checker)
+                return None
+            if isinstance(data, cls):
+                # if the dataclass is an instance of this class, return it
+                return data
+            # convert to an instance of this class
+            return cls(**asdict(data))
 
         init_data = {}
         hints = typing.get_type_hints(cls)
