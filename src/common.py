@@ -7,9 +7,9 @@ import sys
 import threading
 import time
 import typing
-from dataclasses import dataclass, field, is_dataclass
+from dataclasses import asdict, dataclass, field, is_dataclass, replace
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Literal, Optional, Union
+from typing import Any, Callable, Iterable, Literal, Optional, Self, Union, overload
 
 import pythoncom
 import pywintypes
@@ -97,6 +97,17 @@ def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
     if op_name in ('lt', 'le', 'eq', 'ge', 'gt'):
         return getattr(operator, op_name)
     raise ValueError(f'invalid operation {op_name!r}')
+
+
+def get_border_and_shadow_thickness() -> int:
+    '''Get the size of the window's resizable border and drop shadow in pixels'''
+    # defined as function because in theory this could change at any time, depending on user's DPI settings
+    return max(
+        win32api.GetSystemMetrics(win32con.SM_CXSIZEFRAME),
+        win32api.GetSystemMetrics(win32con.SM_CYSIZEFRAME)
+    # on my system, the total window border offset is 8px and CXSIZEFRAME is 4px. 2x seems to line up
+    # TODO: find a better way of getting this
+    ) * 2
 
 
 class JSONFile:
@@ -205,18 +216,11 @@ class WindowType(JSONType):
     def fits_display(self, display: 'Display') -> bool:
         """
         Check whether `self` fits within the bounds of a display. This function uses
-        `fits_rect` internally along with additional logic for checking if `self` is
-        "snapped" to the display.
+        `fits_rect` internally.
         """
-        offset = None
-        if self.placement[1] not in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
-            # check if a window might be snapped and give it a bit more room
-            if (
-                abs(self.size[0] - (display.resolution[0] // 2)) <= 10
-                or abs(self.size[1] - (display.resolution[1] // 2)) <= 10
-            ):
-                offset = 5
-        return self.fits_rect(display.rect, offset)
+        # define constant offset because window rects include the drop shadow, but
+        # display rects don't.
+        return self.fits_rect(display.rect, offset=get_border_and_shadow_thickness())
 
     def fits_rect(self, target_rect: Rect, offset: Optional[int] = None) -> bool:
         """
@@ -228,25 +232,35 @@ class WindowType(JSONType):
             target_rect: the rect to check against `self`
             offset: pixel offset override
         """
-        rect = self.rect
         if self.placement[1] == win32con.SW_SHOWMINIMIZED:
-            rect = self.placement[4]
-
-        if offset is None and self.placement[1] == win32con.SW_SHOWMAXIMIZED:
-            offset = 8
+            self.rect = self.placement[4]
 
         if offset is None:
-            offset = 0
+            if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
+                offset = get_border_and_shadow_thickness()
+            else:
+                offset = 0
 
         return (
-            rect[0] >= target_rect[0] - offset
-            and rect[1] >= target_rect[1] - offset
-            and rect[2] <= target_rect[2] + offset
-            and rect[3] <= target_rect[3] + offset
+            self.rect[0] >= target_rect[0] - offset
+            and self.rect[1] >= target_rect[1] - offset
+            and self.rect[2] <= target_rect[2] + offset
+            and self.rect[3] <= target_rect[3] + offset
         )
 
     def fits_display_config(self, displays: list['Display']) -> bool:
         return any(self.fits_display(d) for d in displays)
+
+    def get_closest_display_rect(self, coords: XandY) -> Rect:
+        '''
+        Get the `Rect` of the display that contains (or is closest to) a set of coordinates.
+
+        Returns:
+            A rect of the display, excluding the Windows taskbar.
+        '''
+        display = win32api.MonitorFromPoint(coords, win32con.MONITOR_DEFAULTTONEAREST)
+        # use working area rather than total monitor area so we don't move window into the taskbar
+        return win32api.GetMonitorInfo(display)['Work']
 
 
 @dataclass(slots=True)
@@ -352,33 +366,47 @@ class Window(WindowType):
         log.debug(f'move window {self.id}, {target_rect=}, {self.get_rect()=}, {tries=}')
         self.refresh()
 
-    def rebound(self, coords: XandY | Rect) -> XandY:
+    @overload
+    def rebound(self, coords: XandY, to_rect: Optional[Rect] = None, offset: int = 0) -> XandY:
+        ...
+
+    @overload
+    def rebound(self, coords: Rect, to_rect: Optional[Rect] = None, offset: int = 0) -> Rect:
+        ...
+
+    def rebound(self, coords: XandY | Rect, to_rect: Optional[Rect] = None, offset: int = 0) -> XandY | Rect:
         """
         Takes a set of coordinates and moves them so that the window will not appear off-screen
 
         Args:
-            coords: can be coordinates or a rect
+            coords: can be coordinates (top left) or a rect
 
         Returns:
             same type as input. Returned rects will also have the bottom right coord adjusted
         """
         if len(coords) == 4:
             # rect
-            x, y = coords[:2]
+            x, y, rx, ry = coords
             w, h = size_from_rect(coords)
         else:
             # xandy
             x, y = coords
             w, h = self.get_size()
+            rx, ry = x + w, y + h
 
-        display = win32api.MonitorFromPoint((x, y), win32con.MONITOR_DEFAULTTONEAREST)
-        # use working area rather than total monitor area so we don't move window into the taskbar
-        display_rect = win32api.GetMonitorInfo(display)['Work']
+        display_rect = to_rect or self.get_closest_display_rect((x, y))
         dx, dy, drx, dry = display_rect
+
+        # adjust top left
         # make sure bottom right corner is on-screen
-        x, y = min(drx - w, x), min(dry - h, y)
+        x, y = min(drx - w + offset, x), min(dry - h + offset, y)
         # make sure x, y >= top left corner of display
-        x, y = max(dx, x), max(dy, y)
+        x, y = max(dx - offset, x), max(dy - offset, y)
+
+        if len(coords) == 4:
+            # adjust bottom right
+            rx, ry = min(drx + offset, rx), min(dry + offset, ry)
+            return (x, y, rx, ry)
 
         return x, y
 
@@ -395,14 +423,20 @@ class Window(WindowType):
         Set the position, size and placement of the window
         """
         try:
-            x, y = self.rebound(rect)
+            # check if Window will fit on the Display it's being moved to. If not, adjust the rect to fit
+            rect = self.rebound(
+                rect,
+                to_rect=self.get_closest_display_rect(rect[:2]),
+                offset=get_border_and_shadow_thickness()
+            )
+
             resizable = self.is_resizable()
             # if the window is not resizeable, make sure we don't resize it by preserving the w + h
             # includes 95 era system dialogs and the Outlook reminder window
             w, h = size_from_rect(rect) if resizable else self.get_size()
             # remake rect with the bounds adjusted coords
-            rect = (x, y, x + w, y + h)
-            if placement and not self.is_resizable():
+            rect = (*rect[:2], rect[0] + w, rect[1] + h)
+            if placement and not resizable:
                 # override the placement for non-resizable windows to avoid setting wrong size for unminimised state
                 placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
 
