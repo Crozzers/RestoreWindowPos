@@ -147,11 +147,13 @@ def on_window_spawn(windows: list[Window]):
             exe = apply_to.get('executable', '') or None
             if not name and not exe:
                 continue
-            score = (
-                match(name, window.name)
-                + match(exe, window.executable)
-            )
-            matches.append((score, profile))
+            score = 0
+            if name:
+                score += match(name, window.name)
+            if exe:
+                score += match(exe, window.executable)
+            if score:
+                matches.append((score, profile))
         if not matches:
             return None
         return sorted(matches, key=lambda x: x[0])[0][1]
