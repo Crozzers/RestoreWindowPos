@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import os
 import re
@@ -201,6 +202,7 @@ def shutdown(*_):
 
 
 if __name__ == '__main__':
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
     logging.basicConfig(
         filename=local_path('log.txt'), filemode='w', format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
     )

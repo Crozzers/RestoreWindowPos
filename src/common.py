@@ -20,6 +20,8 @@ import win32gui
 import win32process
 import wmi
 
+from win32_extras import DwmGetWindowAttribute, GetDpiForMonitor
+
 log = logging.getLogger(__name__)
 
 # some basic types
@@ -98,17 +100,6 @@ def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
     if op_name in ('lt', 'le', 'eq', 'ge', 'gt'):
         return getattr(operator, op_name)
     raise ValueError(f'invalid operation {op_name!r}')
-
-
-def get_border_and_shadow_thickness() -> int:
-    '''Get the size of the window's resizable border and drop shadow in pixels'''
-    # defined as function because in theory this could change at any time, depending on user's DPI settings
-    return max(
-        win32api.GetSystemMetrics(win32con.SM_CXSIZEFRAME),
-        win32api.GetSystemMetrics(win32con.SM_CYSIZEFRAME)
-    # on my system, the total window border offset is 8px and CXSIZEFRAME is 4px. 2x seems to line up
-    # TODO: find a better way of getting this
-    ) * 2
 
 
 class JSONFile:
@@ -229,7 +220,7 @@ class WindowType(JSONType):
         """
         # define constant offset because window rects include the drop shadow, but
         # display rects don't.
-        return self.fits_rect(display.rect, offset=get_border_and_shadow_thickness())
+        return self.fits_rect(display.rect, offset=self.get_border_and_shadow_thickness())
 
     def fits_rect(self, target_rect: Rect, offset: Optional[int] = None) -> bool:
         """
@@ -246,7 +237,7 @@ class WindowType(JSONType):
 
         if offset is None:
             if self.placement[1] == win32con.SW_SHOWMAXIMIZED:
-                offset = get_border_and_shadow_thickness()
+                offset = self.get_border_and_shadow_thickness()
             else:
                 offset = 0
 
@@ -261,15 +252,32 @@ class WindowType(JSONType):
         return any(self.fits_display(d) for d in displays)
 
     def get_closest_display_rect(self, coords: XandY) -> Rect:
-        '''
+        """
         Get the `Rect` of the display that contains (or is closest to) a set of coordinates.
 
         Returns:
             A rect of the display, excluding the Windows taskbar.
-        '''
+        """
         display = win32api.MonitorFromPoint(coords, win32con.MONITOR_DEFAULTTONEAREST)
         # use working area rather than total monitor area so we don't move window into the taskbar
         return win32api.GetMonitorInfo(display)['Work']
+
+    def get_border_and_shadow_thickness(self):
+        """
+        Get the size of the window's resizable border and drop shadow in pixels.
+
+        For `WindowType` objects, this is based on system metrics, not on the window itself.
+        See also: `Window.get_border_and_shadow_thickness`
+        """
+        return (
+            max(
+                win32api.GetSystemMetrics(win32con.SM_CXSIZEFRAME),
+                win32api.GetSystemMetrics(win32con.SM_CYSIZEFRAME),
+                # on my system, the total window border offset is 8px and CXSIZEFRAME is 4px. 2x seems to line up
+                # TODO: find a better way of getting this
+            )
+            * 2
+        )
 
 
 @dataclass(slots=True)
@@ -434,12 +442,19 @@ class Window(WindowType):
         Set the position, size and placement of the window
         """
         try:
-            # check if Window will fit on the Display it's being moved to. If not, adjust the rect to fit
-            rect = self.rebound(
-                rect,
-                to_rect=self.get_closest_display_rect(rect[:2]),
-                offset=get_border_and_shadow_thickness()
+            # adjust the offset for the monitor that the window is going to end up on, since it might change
+            # if that monitor's DPI is different
+            offset = int(
+                self.get_border_and_shadow_thickness()
+                # get scaling factor
+                / (
+                    # DPI / standard DPI = scaling factor, eg: 144 / 96 = 1.5 = 150% in windows settings
+                    GetDpiForMonitor(win32api.MonitorFromPoint(rect[:2], win32con.MONITOR_DEFAULTTONEAREST).handle)[0]
+                    / 96
+                )
             )
+            # check if Window will fit on the Display it's being moved to. If not, adjust the rect to fit
+            rect = self.rebound(rect, to_rect=self.get_closest_display_rect(rect[:2]), offset=offset)
 
             resizable = self.is_resizable()
             # if the window is not resizeable, make sure we don't resize it by preserving the w + h
@@ -457,6 +472,22 @@ class Window(WindowType):
             self.move(rect[:2], (w, h))
         except pywintypes.error as e:
             log.error('err moving window %s : %s' % (win32gui.GetWindowText(self.id), e))
+
+    def get_border_and_shadow_thickness(self):
+        '''
+        Get the size of the window's resizable border and drop shadow in pixels.
+
+        Unlike `WindowType.get_border_and_shadow_thickness`, this function is based on the actual
+        shadow size of the window subject to the DPI of the monitor the window is on.
+        '''
+        # DWMWA_EXTENDED_FRAME_BOUNDS = 9 says every StackOverflow answer, and it's the 9th item in this enum:
+        # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
+        efb = DwmGetWindowAttribute(self.id, 9)
+        # usually we would have to scale the extended frame bounds for DPI, however, this application is set as
+        # "per-monitor DPI aware", so the results from EFB should be directly comparable to GWR.
+        # Testing on my machine with various scaling settings seems to back this up.
+        efb_rect = (efb.left, efb.top, efb.right, efb.bottom)
+        return abs(max(efb_rect[i] - win32gui.GetWindowRect(self.id)[i] for i in range(4)))
 
 
 @dataclass(slots=True)
