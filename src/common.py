@@ -102,6 +102,12 @@ def str_to_op(op_name: str) -> Callable[[Any, Any], bool]:
     raise ValueError(f'invalid operation {op_name!r}')
 
 
+def dpi_scale(x: int, dpi: int) -> int:
+    """Scale a number according to a DPI"""
+    # DPI / standard DPI = scaling factor, eg: 144 / 96 = 1.5 = 150% in windows settings
+    return int(x / (dpi / 96))
+
+
 class JSONFile:
     def __init__(self, file: str, *a, **kw):
         self._log = logging.getLogger(__name__).getChild(self.__class__.__name__ + '.' + str(id(self)))
@@ -444,17 +450,14 @@ class Window(WindowType):
         try:
             # adjust the offset for the monitor that the window is going to end up on, since it might change
             # if that monitor's DPI is different
-            offset = int(
-                self.get_border_and_shadow_thickness()
-                # get scaling factor
-                / (
-                    # DPI / standard DPI = scaling factor, eg: 144 / 96 = 1.5 = 150% in windows settings
-                    GetDpiForMonitor(win32api.MonitorFromPoint(rect[:2], win32con.MONITOR_DEFAULTTONEAREST).handle)[0]
-                    / 96
-                )
+            target_display_dpi = GetDpiForMonitor(
+                win32api.MonitorFromPoint(rect[:2], win32con.MONITOR_DEFAULTTONEAREST).handle  # type: ignore
             )
+            offset = dpi_scale(self.get_border_and_shadow_thickness(), target_display_dpi)
+
             # check if Window will fit on the Display it's being moved to. If not, adjust the rect to fit
-            rect = self.rebound(rect, to_rect=self.get_closest_display_rect(rect[:2]), offset=offset)
+            target_display_rect = self.get_closest_display_rect(rect[:2])
+            rect = self.rebound(rect, to_rect=target_display_rect, offset=offset)
 
             resizable = self.is_resizable()
             # if the window is not resizeable, make sure we don't resize it by preserving the w + h
@@ -462,9 +465,17 @@ class Window(WindowType):
             w, h = size_from_rect(rect) if resizable else self.get_size()
             # remake rect with the bounds adjusted coords
             rect = (*rect[:2], rect[0] + w, rect[1] + h)
-            if placement and not resizable:
-                # override the placement for non-resizable windows to avoid setting wrong size for unminimised state
-                placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
+            if placement:
+                if not resizable:
+                    # override the placement for non-resizable windows to avoid setting wrong size for unminimised state
+                    placement = (*placement[:-1], (*rect[:2], rect[0] + w, rect[1] + h))
+                elif placement[1] == win32con.SW_SHOWMAXIMIZED:
+                    # rebound placement rect so that when user drags window away from maximised position it doesn't
+                    # suddenly expand to some silly size
+                    np_rect = self.rebound(placement[4], to_rect=target_display_rect, offset=offset)
+                    # DPI scale it. From experimentation this worked best but I don't have any docs to back it up
+                    np_rect = Rect(dpi_scale(i, target_display_dpi) for i in np_rect)
+                    placement = (*placement[:-1], np_rect)
 
             if placement:
                 win32gui.SetWindowPlacement(self.id, placement)
@@ -474,12 +485,12 @@ class Window(WindowType):
             log.error('err moving window %s : %s' % (win32gui.GetWindowText(self.id), e))
 
     def get_border_and_shadow_thickness(self):
-        '''
+        """
         Get the size of the window's resizable border and drop shadow in pixels.
 
         Unlike `WindowType.get_border_and_shadow_thickness`, this function is based on the actual
         shadow size of the window subject to the DPI of the monitor the window is on.
-        '''
+        """
         # DWMWA_EXTENDED_FRAME_BOUNDS = 9 says every StackOverflow answer, and it's the 9th item in this enum:
         # https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
         efb = DwmGetWindowAttribute(self.id, 9)

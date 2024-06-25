@@ -21,15 +21,16 @@ def DwmGetWindowAttribute(hwnd: int, attr: int):
 shcore = ctypes.WinDLL('shcore')
 
 
-def GetDpiForMonitor(monitor: int):
+def GetDpiForMonitor(monitor: int) -> int:
     '''
     Exposes the `shcore.GetDpiForMonitor` function but takes care of the ctypes noise.
 
     See: https://learn.microsoft.com/en-gb/windows/win32/api/shellscalingapi/nf-shellscalingapi-getdpiformonitor
     '''
     dpi_x = ctypes.c_uint()
-    dpi_y = ctypes.c_uint()
-    shcore.GetDpiForMonitor(monitor, 0, ctypes.byref(dpi_x), ctypes.byref(dpi_y))  # MDT_EFFECTIVE_DPI
-    return dpi_x.value, dpi_y.value
+    shcore.GetDpiForMonitor(monitor, 0, ctypes.byref(dpi_x), ctypes.byref(ctypes.c_uint()))  # MDT_EFFECTIVE_DPI
+    # from MSDocs: "The values of *dpiX and *dpiY are identical"
+    return dpi_x.value
+
 
 __all__ = ['DwmGetWindowAttribute', 'GetDpiForMonitor']
