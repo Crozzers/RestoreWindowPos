@@ -24,6 +24,8 @@ import pytest
 __pyvda_utils = Path(importlib.util.find_spec('pyvda').origin).parent / 'utils.py'
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
+# allow internal imports like win32_extras
+sys.path.insert(0, str((Path(__file__).parent / '../src').resolve()))
 from src import common  # noqa:E402
 
 

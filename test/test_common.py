@@ -9,6 +9,7 @@ from dataclasses import dataclass, is_dataclass
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from pytest_mock import MockerFixture
 import win32gui
 from test.conftest import DISPLAYS1, DISPLAYS2, RULES1, RULES2, WINDOWS1, WINDOWS2
 
@@ -210,16 +211,18 @@ class TestWindowType(TestJSONType):
     def sample_cls(self, window_cls):
         return window_cls
 
-    def test_fits_display(self, klass: WindowType, sample_json, display_json, expected=None):
+    def test_fits_display(self, klass: WindowType, mocker: MockerFixture, sample_json, display_json, expected=None):
         if expected is None:
             expected = (sample_json in WINDOWS1 and display_json in DISPLAYS1) or (
                 sample_json in WINDOWS2 and display_json in DISPLAYS2
             )
         instance = klass.from_json(sample_json)
+        mocker.patch.object(instance, 'get_border_and_shadow_thickness', Mock(spec=True, return_value=8))
         display_json = Display.from_json(display_json)
         assert instance.fits_display(display_json) is expected
 
-    def test_fits_display_config(self, sample_cls: WindowType, displays: list[Display]):
+    def test_fits_display_config(self, sample_cls: WindowType, mocker: MockerFixture, displays: list[Display]):
+        mocker.patch.object(sample_cls, 'get_border_and_shadow_thickness', Mock(spec=True, return_value=8))
         assert sample_cls.fits_display_config(displays) is True
 
 
@@ -243,11 +246,11 @@ class TestRule(TestWindowType):
         assert instance.name is not None
         assert isinstance(instance.name, str)
 
-    def test_fits_display(self, klass: Rule, sample_json, display_json):
+    def test_fits_display(self, klass: Rule, mocker: MockerFixture, sample_json, display_json):
         expected = (sample_json in RULES1 and display_json in DISPLAYS1) or (
             sample_json in RULES2 and display_json in DISPLAYS2
         )
-        return super().test_fits_display(klass, sample_json, display_json, expected)
+        return super().test_fits_display(klass, mocker, sample_json, display_json, expected)
 
 
 class TestSnapshot(TestJSONType):
