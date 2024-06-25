@@ -361,6 +361,8 @@ class Window(WindowType):
             # multi-monitor setups with different scaling often don't resize the window properly first try
             # so we try multiple times and force repaints after the first one
             win32gui.MoveWindow(self.id, *coords, *size, tries > 1)
+            # refresh current rect for fit check
+            self.rect = self.get_rect()
             if self.fits_rect(target_rect):
                 break
             tries += 1
