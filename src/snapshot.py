@@ -188,6 +188,6 @@ class SnapshotService(Service):
 
             sleep_start = time.time()
             while time.time() - sleep_start < settings.get('snapshot_freq', 30):
-                time.sleep(1)
+                time.sleep(0.5)
                 if self._kill_signal.is_set():
                     return

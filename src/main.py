@@ -8,7 +8,7 @@ from typing import Optional
 import psutil
 import win32con
 import win32gui
-
+import wx
 from common import Window, XandY, load_json, local_path, match, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
@@ -190,14 +190,16 @@ def on_window_spawn(windows: list[Window]):
 @single_call
 def shutdown(*_):
     log.info('begin shutdown process')
-    app.ExitMainLoop()
     monitor_thread.stop()
     snapshot_service.stop()
-    log.debug('destroy WxApp')
-    app.Destroy()
+    window_spawn_thread.stop()
     log.info('save snapshot before shutting down')
     snap.save()
+    log.debug('destroy WxApp')
+    app.ExitMainLoop()
+    app.Destroy()
     log.info('end shutdown process')
+    wx.Exit()
 
 
 if __name__ == '__main__':
@@ -288,3 +290,4 @@ if __name__ == '__main__':
             log.info('app mainloop closed')
             shutdown()
     log.debug('fin')
+    wx.Exit()

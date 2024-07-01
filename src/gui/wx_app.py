@@ -20,6 +20,7 @@ class WxApp(wx.App):
     def __init__(self):
         self._log = logging.getLogger(__name__).getChild(self.__class__.__name__ + '.' + str(id(self)))
         super().__init__()
+        self.SetExitOnFrameDelete(False)
 
     def __new__(cls, *args, **kwargs):
         if not isinstance(getattr(cls, '_WxApp__instance', None), cls):
@@ -50,12 +51,26 @@ class WxApp(wx.App):
             if not parent or parent.is_running():
                 return
             self._log.info('parent process no longer running. exiting mainloop...')
+            if self.timer.IsRunning():
+                self.timer.Stop()
             self.ExitMainLoop()
 
         # enable sigterm by regularly returning control back to python
         self.timer = wx.Timer(self._top_frame)
         self._top_frame.Bind(wx.EVT_TIMER, lambda *_: check_parent_alive(), self.timer)
         self.timer.Start(1000)
+
+    def Destroy(self):
+        if self.timer.IsRunning():
+            self.timer.Stop()
+            self.timer.Destroy()
+        if self._top_frame:
+            self._top_frame.Destroy()
+        if top := self.GetTopWindow():
+            top.Destroy()
+        if top := self.GetMainTopWindow():
+            top.Destroy()
+        return super().Destroy()
 
 
 def spawn_gui(snapshot: SnapshotFile, start_page: Literal['rules', 'settings'] = 'rules'):

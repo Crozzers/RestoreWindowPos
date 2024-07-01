@@ -39,9 +39,9 @@ class TaskbarIcon(wx.adv.TaskBarIcon):
         return menu
 
     def exit(self):
+        self.RemoveIcon()
         if callable(self._on_exit):
             self._on_exit()
-        self.RemoveIcon()
 
     def __enter__(self):
         return self
