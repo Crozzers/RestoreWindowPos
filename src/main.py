@@ -161,7 +161,7 @@ def on_window_spawn(windows: list[Window]):
     capture_snapshot = 0
     for window in windows:
         profile = find_matching_profile(window) or on_spawn_settings
-        log.debug(f'OWS profile {profile["name"]!r} matches window {window}')
+        log.debug(f'OWS profile {profile.get("name")!r} matches window {window}')
         if window.parent is not None and profile.get('ignore_children', True):
             continue
         # get all the operations and the order we run them
