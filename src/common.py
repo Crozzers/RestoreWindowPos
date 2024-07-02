@@ -458,7 +458,10 @@ class Window(WindowType):
             # check if Window will fit on the Display it's being moved to. If not, adjust the rect to fit
             # use center point because top left might be out of bounds due to drop shadow and offset, which may
             # lead to `MONITOR_DEFAULTTONEAREST` picking the wrong display
-            target_display_rect = self.get_closest_display_rect((rect[2] - rect[0], rect[3] - rect[1]))
+            target_display_rect = self.get_closest_display_rect((
+                rect[0] + (size_from_rect(rect)[0] // 2),
+                rect[1] + (size_from_rect(rect)[1] // 2)
+            ))
             rect = self.rebound(rect, to_rect=target_display_rect, offset=offset)
 
             resizable = self.is_resizable()
