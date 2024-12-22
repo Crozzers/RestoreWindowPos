@@ -12,41 +12,21 @@ group 1.
 The generic lists (`DISPLAYS`, `RULES`, etc...) simply combine all groups into
 a single list
 """
-import importlib.util
 import os
-import shutil
 import sys
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
-__pyvda_utils = Path(importlib.util.find_spec('pyvda').origin).parent / 'utils.py'
+if os.getenv('GITHUB_ACTIONS') == 'true':
+    # mock pyvda since it's not supported in windows server/GH actions runners
+    sys.modules['pyvda'] = type(os)('pyvda')
 
 sys.path.insert(0, str((Path(__file__).parent / '../').resolve()))
 # allow internal imports like win32_extras
 sys.path.insert(0, str((Path(__file__).parent / '../src').resolve()))
 from src import common  # noqa:E402
-
-
-if os.getenv('GITHUB_ACTIONS') == 'true':
-
-    def pytest_sessionstart():
-        shutil.copyfile(__pyvda_utils, __pyvda_utils.parent / 'utils-old.py')
-
-        with open(__pyvda_utils, 'r') as f:
-            contents = f.read().replace(
-                'def get_vd_manager_internal2():',
-                'def get_vd_manager_internal2():\n    return get_vd_manager_internal()',
-            )
-
-        with open(__pyvda_utils, 'w') as f:
-            f.write(contents)
-
-    def pytest_sessionfinish():
-        utils_old = __pyvda_utils.parent / 'utils-old.py'
-        shutil.copyfile(utils_old, __pyvda_utils)
-        os.remove(utils_old)
 
 
 DISPLAYS1 = [
