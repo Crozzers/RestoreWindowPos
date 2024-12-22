@@ -18,17 +18,27 @@
     <packageSourceUrl>https://github.com/Crozzers/RestoreWindowPos/tree/main/tools/choco_template</packageSourceUrl>
     <tags>restorewindowpos system-tweak window-management</tags>
     <description>
-      Whenever I connect/disconnect a monitor, all of my windows jump around, resize and teleport to places they are not meant to be in.
+Whenever I connect/disconnect a monitor, all of my windows jump around, resize and teleport to places they are not meant to be in.
 
-      This project aims to fix this behaviour by taking regular snapshots of window positions. Once it detects a display being connected/disconnected, it will restore windows to their last known positions on that display.
+This project aims to fix this behaviour by taking regular snapshots of window positions. Once it detects a display being connected/disconnected, it will restore windows to their last known positions on that display.
 
-      You can also define rules for windows with specific titles and/or created by specific programs. Rules will be automatically applied to matching windows that are not part of your current snapshot (eg: windows that have been created since a snapshot was last taken). You can also give these rules memorable names, and apply any and/or all of them at any time
+You can also define rules for windows with specific titles and/or created by specific programs. Rules will be automatically applied to matching windows that are not part of your current snapshot (eg: windows that have been created since a snapshot was last taken).
+You can also give these rules memorable names, and apply any and/or all of them at any time
 
-      ## Package Parameters
+Chocolatey packages are auto-generated each release using [GitHub actions](https://github.com/Crozzers/RestoreWindowPos/actions). The packages are then submitted to Chocolatey for review and to be published. This process does take time, so the Chocolatey version of the package may lag behind the latest GitHub release.
 
-      You can supply a parameter to this package to have it run RestoreWindowPos immediately after it has
-      been installed/upgraded. For example:
-      `choco install restorewindowpos --params '"/StartAfterInstall"'`
+#### Package Parameters
+
+| Parameter            | Descrption                                        |
+|----------------------|---------------------------------------------------|
+| `/StartAfterInstall` | Launch the program after installation is finished |
+| `/DesktopShortcut`   | Create a desktop shortcut for the program         |
+| `/StartMenuShortcut` | Create a start menu shortcut for the program      |
+
+Example:
+```
+choco install restorewindowpos --params '"/StartAfterInstall /DesktopShortcut /StartMenuShortcut"'
+```
     </description>
     <releaseNotes>https://github.com/Crozzers/RestoreWindowPos/releases</releaseNotes>
   </metadata>

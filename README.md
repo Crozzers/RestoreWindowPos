@@ -11,15 +11,25 @@ You can also give these rules memorable names, and apply any and/or all of them 
 
 ### Chocolatey
 
-As of v0.10.0, we now have a [Chocolatey package](https://community.chocolatey.org/packages/restorewindowpos/) available. You can install it with:
+The [RestoreWindowPos Chocolatey package](https://community.chocolatey.org/packages/restorewindowpos/) can be installed with this command:
 ```
 choco install restorewindowpos
 ```
-If you want to immediately start the program after install:
+
+Chocolatey packages are auto-generated each release using [GitHub actions](https://github.com/Crozzers/RestoreWindowPos/actions). The packages are then submitted to Chocolatey for review and to be published. This process does take time, so the Chocolatey version of the package may lag behind the latest GitHub release.
+
+#### Package Parameters
+
+| Parameter            | Descrption                                        |
+|----------------------|---------------------------------------------------|
+| `/StartAfterInstall` | Launch the program after installation is finished |
+| `/DesktopShortcut`   | Create a desktop shortcut for the program         |
+| `/StartMenuShortcut` | Create a start menu shortcut for the program      |
+
+Example:
 ```
-choco install restorewindowpos --params '"/StartAfterInstall"'
+choco install restorewindowpos --params '"/StartAfterInstall /DesktopShortcut /StartMenuShortcut"'
 ```
-Chocolatey packages are generated upon a new release using [GitHub actions](https://github.com/Crozzers/RestoreWindowPos/actions). The packages are then submitted to Chocolatey for review and to be published. This process does take time, so the Chocolatey version of the package may lag behind the latest GitHub release.
 
 ### Manual install
 
@@ -56,17 +66,11 @@ Check the [contribution guidelines](CONTRIBUTING.md) for instructions on how con
 
 ## Features
 
-* Snapshots taken every minute (with options for various different intervals)
+* Regular snapshots of current window layout (with options for various different intervals)
 * Remembers window sizes and positions and restores them when monitors are connected/disconnected
 * Can restore snapped windows
-* Can restore past snapshots (remembers up to 10 unique layouts)
+* Can restore past snapshots
 * Easy to use installer that registers the program as a startup task
-* Can pause and resume taking snapshots
 * Create and apply rules for specific windows
 * Create and apply rules for specific display configurations
-
-## TODO
-
-* Test on Windows 11
-* Create wiki with usage instructions
-* Add behaviour methods to dataclasses. EG: `Rule` should have method `Rule.apply` to apply the rule
+* React to new windows spawning and take some predefined action
