@@ -177,5 +177,5 @@ Section "Uninstall"
   DeleteRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
   Delete "$INSTDIR\${PRODUCT}_uninstall.exe"
 
-  RMDir "$INSTDIR"
+  RMDir /r "$INSTDIR"
 SectionEnd
