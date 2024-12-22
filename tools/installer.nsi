@@ -90,7 +90,7 @@ FunctionEnd
 
 Function checkLaunchParam
   Call getParams
-  ${GetOptions} $0 "/StartAfterInstall" $1
+  ${GetOptions} $Parameters "/StartAfterInstall" $1
   ${IfNot} ${Errors}
       Exec "$INSTDIR\${PRODUCT}.exe"
   ${EndIf}
