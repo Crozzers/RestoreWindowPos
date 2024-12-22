@@ -6,6 +6,7 @@ Unicode true
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 !include "LogicLib.nsh"
+!include "nsDialogs.nsh"
 
 RequestExecutionLevel user
 ShowInstDetails show
@@ -43,6 +44,7 @@ InstallDirRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\${PRO
 
 ; Installer pages
 !insertmacro MUI_PAGE_DIRECTORY
+Page custom ShortcutPage ShortcutPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT}"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch ${PRODUCT}"
@@ -51,6 +53,32 @@ InstallDirRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\${PRO
 ; Uninstaller pages
 UninstPage uninstConfirm
 UninstPage instfiles
+
+
+Var StartMenuShortcut
+Var DesktopShortcut
+
+Function ShortcutPage
+  nsDialogs::Create 1018
+  Pop $0
+
+  # create checkboxes and set default state to checked
+  ${NSD_CreateCheckbox} 10u 10u 200u 12u "Create Start-Menu Shortcut"
+  Pop $1
+  ${NSD_Check} $1
+  ${NSD_CreateCheckbox} 10u 30u 200u 12u "Create Desktop Shortcut"
+  Pop $2
+
+  # Show the dialog
+  nsDialogs::Show
+FunctionEnd
+
+
+Function ShortcutPageLeave
+  # store checkbox states in vars
+  ${NSD_GetState} $1 $StartMenuShortcut
+  ${NSD_GetState} $2 $DesktopShortcut
+FunctionEnd
 
 
 Function checkLaunchParam
@@ -94,6 +122,15 @@ Section "Installer"
   ; Run on startup
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "RestoreWindowPos" '"$InstDir\${PRODUCT}.exe"'
 
+  ; Add start menu shortcut if option enabled
+  ${IF} $StartMenuShortcut <> 0
+    createShortCut "$SMPROGRAMS\${PRODUCT}.lnk" "$INSTDIR\${PRODUCT}.exe" "--open-gui" "" "" SW_SHOWNORMAL
+  ${ENDIF}
+
+  ${IF} $DesktopShortcut <> 0
+    createShortCut "$DESKTOP\${PRODUCT}.lnk" "$INSTDIR\${PRODUCT}.exe" "--open-gui" "" "" SW_SHOWNORMAL
+  ${ENDIF}
+
   ; Install the uninstaller
   WriteUninstaller "${PRODUCT}_uninstall.exe"
 
@@ -124,6 +161,10 @@ SectionEnd
 Section "Uninstall"
   ; Remove program
   Delete "$INSTDIR\${PRODUCT}.exe"
+
+  ; Remove shortcuts
+  Delete "$SMPROGRAMS\${PRODUCT}.lnk"
+  Delete "$DESKTOP\${PRODUCT}.lnk"
 
   ; Remove registry keys
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\${PRODUCT}"
