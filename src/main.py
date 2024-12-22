@@ -2,9 +2,11 @@ import ctypes
 import logging
 import os
 import signal
+import sys
 import time
 from typing import Optional
 
+import named_pipe
 import psutil
 import win32con
 import win32gui
@@ -187,6 +189,13 @@ def on_window_spawn(windows: list[Window]):
         snap.update()
 
 
+def interpret_pipe_signals(message: named_pipe.Messages):
+    match message:
+        case named_pipe.Messages.PING:
+            pass
+        case named_pipe.Messages.GUI:
+            wx.CallAfter(lambda: spawn_gui(snap, 'rules'))
+
 @single_call
 def shutdown(*_):
     log.info('begin shutdown process')
@@ -205,12 +214,27 @@ def shutdown(*_):
 if __name__ == '__main__':
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
     logging.basicConfig(
-        filename=local_path('log.txt'), filemode='w', format='%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+        filename=local_path('log.txt'), filemode='w',
+        format='[%(process)d] %(asctime)s:%(levelname)s:%(name)s:%(message)s'
     )
     # filter the excessive comtypes logs
     logging.getLogger('comtypes').addFilter(LoggingFilter())
     log = logging.getLogger(__name__)
     log.info('start')
+
+    log.info('check for existing process')
+    if named_pipe.is_proc_alive():
+        # use ctypes rather than wx because wxapp isn't created yet
+        log.info('existing RWP process found. Exiting')
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            "An instance of RestoreWindowPos is already running. Please close it before launching another",
+            "RestoreWindowPos",
+            win32con.MB_OK
+        )
+        sys.exit(0)
+
+    named_pipe.PipeServer(ServiceCallback(interpret_pipe_signals)).start()
 
     SETTINGS = load_json('settings')
     SETTINGS.set('pause_snapshots', False)  # reset this key
