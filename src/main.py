@@ -224,14 +224,20 @@ if __name__ == '__main__':
 
     log.info('check for existing process')
     if named_pipe.is_proc_alive():
-        # use ctypes rather than wx because wxapp isn't created yet
-        log.info('existing RWP process found. Exiting')
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            "An instance of RestoreWindowPos is already running. Please close it before launching another",
-            "RestoreWindowPos",
-            win32con.MB_OK
-        )
+        if '--open-gui' in sys.argv:
+            log.info('existing RWP instance found. Requesting GUI')
+            if not named_pipe.send_message(named_pipe.Messages.GUI):
+                log.error('GUI request failed: proper acknowledgment not received')
+                sys.exit(1)
+        else:
+            # use ctypes rather than wx because wxapp isn't created yet
+            log.info('existing RWP process found. Exiting')
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "An instance of RestoreWindowPos is already running. Please close it before launching another",
+                "RestoreWindowPos",
+                win32con.MB_OK
+            )
         sys.exit(0)
 
     named_pipe.PipeServer(ServiceCallback(interpret_pipe_signals)).start()

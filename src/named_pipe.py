@@ -2,6 +2,7 @@ import logging
 import struct
 import time
 from enum import StrEnum
+from typing import cast
 
 import pywintypes
 import win32file
@@ -84,7 +85,7 @@ def readpipe(handle: int) -> str:
     return win32file.ReadFile(handle, msg_len)[1].decode()
 
 
-def writepipe(handle, message: Messages | str):
+def writepipe(handle: int, message: Messages | str):
     '''Write data to a named pipe'''
     # write data len so that `readpipe` knows how much to read
     data = struct.pack('I', len(message))
@@ -101,6 +102,8 @@ def send_message(message: Messages):
         handle = win32file.CreateFile(
             PIPE, win32file.GENERIC_READ | win32file.GENERIC_WRITE, 0, None, win32file.OPEN_EXISTING, 0, None
         )
+        # handle here is pyhandle. Consumer functions have `int` as the type hint. That is incorrect and can be ignored
+        handle = cast(int, handle)
     except pywintypes.error as e:
         log.error(f'failed to connect to pipe: {e!r}')
         return False
@@ -113,7 +116,7 @@ def send_message(message: Messages):
     except Exception as e:
         log.error(f'failed to write message {message!r} to pipe {PIPE!r}: {e!r}')
     finally:
-        win32file.CloseHandle(handle.handle)
+        win32file.CloseHandle(handle)
 
     return response == Messages.ACK + message
 
