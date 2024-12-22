@@ -1,16 +1,18 @@
 import ctypes
 import logging
+import logging.handlers
 import os
 import signal
 import sys
 import time
 from typing import Optional
 
-import named_pipe
 import psutil
 import win32con
 import win32gui
 import wx
+
+import named_pipe
 from common import Window, XandY, load_json, local_path, match, single_call
 from device import DeviceChangeCallback, DeviceChangeService
 from gui import TaskbarIcon, WxApp, about_dialog, radio_menu
@@ -25,7 +27,7 @@ class LoggingFilter(logging.Filter):
         try:
             return not (
                 # sometimes the record has msg, sometimes its message. Just try to catch all of them
-                'Release ' in getattr(record, 'message', getattr(record, 'msg', '')) and record.name == 'comtypes'
+                'Release ' in getattr(record, 'message', getattr(record, 'msg', '')) and record.name.startswith('comtypes')
             )
         except Exception:
             # sometimes (rarely) record doesn't have a `message` attr
@@ -213,12 +215,16 @@ def shutdown(*_):
 
 if __name__ == '__main__':
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
-    logging.basicConfig(
-        filename=local_path('log.txt'), filemode='w',
-        format='[%(process)d] %(asctime)s:%(levelname)s:%(name)s:%(message)s'
+    log_handler = logging.handlers.RotatingFileHandler(
+        local_path('log.txt'), mode='a', maxBytes=1 * 1024 * 1024, backupCount=2, encoding='utf-8', delay=False
     )
     # filter the excessive comtypes logs
-    logging.getLogger('comtypes').addFilter(LoggingFilter())
+    log_handler.addFilter(LoggingFilter())
+    logging.basicConfig(
+        format='[%(process)d] %(asctime)s:%(levelname)s:%(name)s:%(message)s',
+        handlers=[log_handler],
+        level=logging.INFO
+    )
     log = logging.getLogger(__name__)
     log.info('start')
 
