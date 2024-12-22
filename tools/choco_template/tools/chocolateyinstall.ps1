@@ -7,6 +7,12 @@ $pp = Get-PackageParameters
 if ($pp['StartAfterInstall']) {
   $silentArgs += ' /StartAfterInstall'
 }
+if ($pp['DesktopShortcut']) {
+  $silentArgs += ' /DesktopShortcut'
+}
+if ($pp['StartMenuShortcut']) {
+  $silentArgs += ' /StartMenuShortcut'
+}
 
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName

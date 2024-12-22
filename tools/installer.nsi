@@ -55,6 +55,7 @@ UninstPage uninstConfirm
 UninstPage instfiles
 
 
+Var Parameters
 Var StartMenuShortcut
 Var DesktopShortcut
 
@@ -81,9 +82,14 @@ Function ShortcutPageLeave
 FunctionEnd
 
 
-Function checkLaunchParam
-  ${GetParameters} $0
+Function getParams
+  ${GetParameters} $Parameters
   ClearErrors
+FunctionEnd
+
+
+Function checkLaunchParam
+  Call getParams
   ${GetOptions} $0 "/StartAfterInstall" $1
   ${IfNot} ${Errors}
       Exec "$INSTDIR\${PRODUCT}.exe"
@@ -122,12 +128,18 @@ Section "Installer"
   ; Run on startup
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "RestoreWindowPos" '"$InstDir\${PRODUCT}.exe"'
 
+  Call getParams
+
   ; Add start menu shortcut if option enabled
+  ${GetOptions} $Parameters "/StartMenuShortcut" $1
   ${IF} $StartMenuShortcut <> 0
+  ${OrIfNot} ${Errors}
     createShortCut "$SMPROGRAMS\${PRODUCT}.lnk" "$INSTDIR\${PRODUCT}.exe" "--open-gui" "" "" SW_SHOWNORMAL
   ${ENDIF}
 
+  ${GetOptions} $Parameters "/DesktopShortcut" $1
   ${IF} $DesktopShortcut <> 0
+  ${OrIfNot} ${Errors}
     createShortCut "$DESKTOP\${PRODUCT}.lnk" "$INSTDIR\${PRODUCT}.exe" "--open-gui" "" "" SW_SHOWNORMAL
   ${ENDIF}
 
