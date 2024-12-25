@@ -48,7 +48,7 @@ And if you want to immediately restart the program after upgrading:
 ```
 choco upgrade restorewindowpos --params '"/StartAfterInstall"'
 ```
-This should handle exiting any currently running instances and installing the new version.
+This should handle exiting any currently running instances and installing the new version. If it doesn't work, or if the new files aren't properly copied across, try manually shutting down any running instances and upgrading after that.
 
 ### Manual
 
@@ -56,8 +56,8 @@ To update to the latest version, download the latest installer from the [release
 
 To shutdown RestoreWindowPos, simply right click the system tray icon and click "Quit". Wait a couple of seconds for the program to shut itself down properly then launch the latest installer.
 
-If the newly installed update throws an error on launch, try deleting your snapshot history file.
-Hit <kbd>Win</kbd> + <kbd>R</kbd> and enter `%appdata%\..\Local\Programs\RestoreWindowPos`. Delete the `history.json` file.
+If the newly installed update throws an error on launch, try moving your snapshot history file.
+Hit <kbd>Win</kbd> + <kbd>R</kbd> and enter `%localappdata%\Programs\RestoreWindowPos`. Rename `history.json` to `history.json.old`.
 If this does not resolve your issue, please [report the issue](https://github.com/Crozzers/RestoreWindowPos/issues).
 
 ## Contributing
