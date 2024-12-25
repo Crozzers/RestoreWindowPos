@@ -1,8 +1,11 @@
+import json
 import logging
 import os
+import urllib.request
 
 import wx
 
+from _version import __version__
 from common import load_json, local_path, reverse_dict_lookup
 from gui.widgets import EVT_TIME_SPAN_SELECT, TimeSpanSelector, simple_box_sizer
 
@@ -57,6 +60,7 @@ class SettingsPanel(wx.Panel):
 
         open_install_btn = wx.Button(panel, label='Open install directory')
         open_github_btn = wx.Button(panel, label='Open GitHub page')
+        check_updates_btn = wx.Button(panel, label='Check for updates')
         # place
         simple_box_sizer(
             panel,
@@ -72,6 +76,7 @@ class SettingsPanel(wx.Panel):
                 (log_level_txt, log_level_opt),
                 open_install_btn,
                 open_github_btn,
+                check_updates_btn,
             ),
         )
 
@@ -98,10 +103,13 @@ class SettingsPanel(wx.Panel):
         open_install_btn.Bind(wx.EVT_BUTTON, lambda *_: os.startfile(local_path('.')))
         open_github_btn.Bind(wx.EVT_BUTTON, lambda *_: os.startfile('https://github.com/Crozzers/RestoreWindowPos'))
 
+        self._latest_version = None
+        check_updates_btn.Bind(wx.EVT_BUTTON, self.check_update)
+
         # place
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(panel, 0, wx.ALL | wx.EXPAND, 5)
-        self.SetSizerAndFit(sizer)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(panel, 0, wx.ALL | wx.EXPAND, 5)
+        self.SetSizerAndFit(self.sizer)
 
     def on_setting(self, event: wx.Event):
         widget = event.GetEventObject()
@@ -125,3 +133,26 @@ class SettingsPanel(wx.Panel):
         elif isinstance(widget, TimeSpanSelector):
             if event.Id == 5:
                 self.settings.set('window_history_ttl', widget.GetTime())
+
+    def check_update(self, event: wx.Event):
+        widget: wx.Button = event.GetEventObject()
+        if 'check for' in widget.GetLabelText().lower():
+            data = json.loads(
+                urllib.request.urlopen('https://api.github.com/repos/Crozzers/RestoreWindowPos/tags').read().decode()
+            )
+            self._latest_version = data[0]['name']
+
+            # convert both to an int tuple for simple comparison without requiring the `packaging` package
+            latest_version_num = tuple(int(i) for i in self._latest_version.split('.'))
+            current_version_num = tuple(int(i) for i in __version__.split('.'))
+
+            if latest_version_num > current_version_num:
+                widget.SetLabel(f'Update Available ({__version__} -> {self._latest_version}). Click to download')
+            else:
+                widget.SetLabel('Check for updates (none available)')
+            widget.Layout()
+            self.sizer.Layout()
+        else:
+            os.startfile(
+                f'https://github.com/Crozzers/RestoreWindowPos/releases/download/{self._latest_version}/RestoreWindowPos_install.exe'
+            )
