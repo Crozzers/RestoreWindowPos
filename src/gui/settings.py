@@ -12,6 +12,7 @@ from gui.widgets import EVT_TIME_SPAN_SELECT, TimeSpanSelector, simple_box_sizer
 
 class SettingsPanel(wx.Panel):
     def __init__(self, parent: wx.Frame):
+        self.log = logging.getLogger(__name__).getChild(f'{self.__class__.__name__}.{id(self)}')
         wx.Panel.__init__(self, parent, id=wx.ID_ANY)
         self.settings = load_json('settings')
 
@@ -137,19 +138,23 @@ class SettingsPanel(wx.Panel):
     def check_update(self, event: wx.Event):
         widget: wx.Button = event.GetEventObject()
         if 'check for' in widget.GetLabelText().lower():
-            data = json.loads(
-                urllib.request.urlopen('https://api.github.com/repos/Crozzers/RestoreWindowPos/tags').read().decode()
-            )
-            self._latest_version = data[0]['name']
-
-            # convert both to an int tuple for simple comparison without requiring the `packaging` package
-            latest_version_num = tuple(int(i) for i in self._latest_version.split('.'))
-            current_version_num = tuple(int(i) for i in __version__.split('.'))
-
-            if latest_version_num > current_version_num:
-                widget.SetLabel(f'Update Available ({__version__} -> {self._latest_version}). Click to download')
+            try:
+                data = json.loads(
+                    urllib.request.urlopen('https://api.github.com/repos/Crozzers/RestoreWindowPos/tags').read().decode()
+                )
+            except Exception as e:
+                self.log.error(f'failed to check for updates: {e!r}')
+                widget.SetLabel('Check for updates (error: failed to query GitHub)')
             else:
-                widget.SetLabel('Check for updates (none available)')
+                self._latest_version = data[0]['name']
+                # convert both to an int tuple for simple comparison without requiring the `packaging` package
+                latest_version_num = tuple(int(i) for i in self._latest_version.split('.'))
+                current_version_num = tuple(int(i) for i in __version__.split('.'))
+
+                if latest_version_num > current_version_num:
+                    widget.SetLabel(f'Update Available ({__version__} -> {self._latest_version}). Click to download')
+                else:
+                    widget.SetLabel('Check for updates (none available)')
             widget.Layout()
             self.sizer.Layout()
         else:
